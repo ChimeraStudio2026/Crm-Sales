@@ -272,6 +272,35 @@ export function CrmProvider({ children }: CrmProviderProps) {
   }, [db]);
 
   useEffect(() => {
+    async function reloadFromJonny(): Promise<void> {
+      if (!db) return;
+      try {
+        const [loadedClients, loadedIdeas, loadedTasks, loadedOkr, loadedForecasts] = await Promise.all([
+          fetchClients(db),
+          fetchIdeas(db),
+          fetchClientTasks(db),
+          fetchAllOkrRecords(db),
+          fetchAnalysisForecasts(db),
+        ]);
+        let normalized = normalizeClients(loadedClients);
+        normalized = applyColdClientPromotionToAll(normalized);
+        normalized = recalculateRelationships(normalized);
+        setClients(normalized);
+        setIdeas(loadedIdeas);
+        setClientTasks(loadedTasks);
+        setOkrRecords(loadedOkr);
+        if (Object.keys(loadedForecasts).length > 0) {
+          setAnalysisForecasts({ ...createDefaultForecasts(), ...loadedForecasts });
+        }
+      } catch (reloadError) {
+        console.error('Jonny reload failed:', reloadError);
+      }
+    }
+    window.addEventListener('jonny:crm-updated', reloadFromJonny);
+    return () => window.removeEventListener('jonny:crm-updated', reloadFromJonny);
+  }, [db]);
+
+  useEffect(() => {
     async function loadState(): Promise<void> {
       try {
         if (db) {

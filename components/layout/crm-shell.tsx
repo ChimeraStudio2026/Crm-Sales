@@ -1,6 +1,7 @@
 'use client';
 
 import { ToastContainer } from '@/components/ui/toast-container';
+import { JonnyChat } from '@/components/jonny/jonny-chat';
 import { Sidebar } from '@/components/layout/sidebar';
 import { CrmProvider, useCrm } from '@/providers/crm-provider';
 
@@ -34,6 +35,7 @@ function CrmShellInner({ children }: CrmShellProps) {
     <>
       <Sidebar />
       <main className="main-content">{children}</main>
+      <JonnyChat />
       <ToastContainer />
     </>
   );

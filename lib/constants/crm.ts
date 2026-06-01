@@ -109,7 +109,7 @@ export const PAGE_META: Record<string, { title: string; subtitle: string }> = {
   '/tasks': { title: 'Task', subtitle: 'Task collegate ai clienti: progress, scadenze e assegnazioni.' },
   '/recall': { title: 'Random Recall', subtitle: '5 clienti al giorno da ricontattare, scelti a caso per rapporto.' },
   '/ideas': { title: 'Idee Random', subtitle: 'Spazio creativo e proposte commerciali ai clienti.' },
-  '/cold': { title: 'Clienti Freddi', subtitle: 'Prospect non ancora attivati. Promozione automatica con fatturato 2026 > €1.' },
+  '/cold': { title: 'Clienti Freddi', subtitle: 'Prospect con cui non hai mai lavorato. I clienti importati da OKR restano in Lista Clienti.' },
   '/import': { title: 'Importazione Dati', subtitle: 'Carica fatturati 2025 o 2026 da foglio di calcolo.' },
   '/settings': { title: 'Impostazioni', subtitle: 'Manutenzione database e regole.' },
 };

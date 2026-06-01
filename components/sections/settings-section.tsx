@@ -157,7 +157,7 @@ export function SettingsSection() {
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.6 }}>
                 • <strong>Top 20%:</strong> clienti nel top 20% per fatturato 2026<br />
                 • <strong>Ricorrente:</strong> fatturato 2025 &gt; €15.000<br />
-                • <strong>Clienti freddi:</strong> promozione automatica quando fatturato 2026 &gt; €1
+                • <strong>Clienti freddi:</strong> prospect mai lavorati (solo inserimento manuale). Import OKR → sempre Lista Clienti
               </p>
             </div>
           </div>

@@ -42,6 +42,7 @@ import {
   isClientInColdSection,
   normalizeClients,
   recalculateRelationships,
+  reconcileImportedClientsToMainList,
   syncClientLegacyFields,
   updateClientProfileCompletion,
 } from '@/lib/crm/utils';
@@ -284,6 +285,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
           fetchAnalysisForecasts(db),
         ]);
         let normalized = normalizeClients(loadedClients);
+        normalized = reconcileImportedClientsToMainList(normalized);
         normalized = applyColdClientPromotionToAll(normalized);
         normalized = recalculateRelationships(normalized);
         setClients(normalized);
@@ -315,6 +317,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
             fetchAnalysisForecasts(db),
           ]);
           let normalized = normalizeClients(loadedClients);
+          normalized = reconcileImportedClientsToMainList(normalized);
           normalized = applyColdClientPromotionToAll(normalized);
           normalized = recalculateRelationships(normalized);
           setClients(normalized);
@@ -705,12 +708,11 @@ export function CrmProvider({ children }: CrmProviderProps) {
           return;
         }
         existing[revField] = imported.revenue;
+        existing.isColdClient = false;
         if (existing.relationship !== 'Perso' && existing.relationship !== 'Eliminato') {
           existing.manualRelationship = false;
         }
-        nextClients[existingIdx] = revField === 'rev2026'
-          ? applyColdClientPromotion(existing).client
-          : existing;
+        nextClients[existingIdx] = existing;
         clientUpdated += 1;
         return;
       }
@@ -730,13 +732,12 @@ export function CrmProvider({ children }: CrmProviderProps) {
         contacts: [],
         productOffers: resolveClientProductOffers('Cliente Diretto', []),
         needsProfileCompletion: true,
-        isColdClient: revField === 'rev2026'
-          ? imported.revenue <= COLD_CLIENT_REV_THRESHOLD
-          : true,
+        isColdClient: false,
       });
       clientAdded += 1;
     });
     nextClients = recalculateRelationships(nextClients);
+    nextClients = reconcileImportedClientsToMainList(nextClients);
     const okrMerge = mergeOkrRecordsWithImport(okrRecords, newOkrRecords, nextClients);
     setClients(nextClients);
     setOkrRecords(okrMerge.merged);
@@ -785,7 +786,9 @@ export function CrmProvider({ children }: CrmProviderProps) {
       okrRecords?: OkrRecord[];
       analysisForecasts?: AnalysisForecasts;
     };
-    const nextClients = recalculateRelationships(normalizeClients(data.clients || []));
+    const nextClients = recalculateRelationships(
+      reconcileImportedClientsToMainList(normalizeClients(data.clients || [])),
+    );
     setClients(nextClients);
     setIdeas(data.ideas || []);
     setClientTasks(data.clientTasks || []);

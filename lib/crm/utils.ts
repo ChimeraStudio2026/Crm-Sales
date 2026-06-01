@@ -1,5 +1,5 @@
 import type { Client, ClientContact } from '@/lib/types/crm';
-import { ACTION_DATE_STALE_DAYS, COLD_CLIENT_REV_THRESHOLD } from '@/lib/constants/crm';
+import { ACTION_DATE_STALE_DAYS, COLD_CLIENT_REV_THRESHOLD, EXCEL_IMPORT_ACTION_PREFIX } from '@/lib/constants/crm';
 import { normalizeClientProductOffers } from '@/lib/crm/product-offers';
 
 export function createUniqueId(prefix: string): string {
@@ -210,6 +210,20 @@ export function applyColdClientPromotion(
 
 export function applyColdClientPromotionToAll(clients: Client[]): Client[] {
   return clients.map((client) => applyColdClientPromotion(client).client);
+}
+
+/** Clients from OKR/Excel imports belong in the main list, not cold prospects. */
+export function reconcileImportedClientsToMainList(clients: Client[]): Client[] {
+  return clients.map((client) => {
+    if (!client.isColdClient) return client;
+    if ((client.rev2025 || 0) > 0) {
+      return { ...client, isColdClient: false };
+    }
+    if ((client.action || '').startsWith(EXCEL_IMPORT_ACTION_PREFIX)) {
+      return { ...client, isColdClient: false };
+    }
+    return client;
+  });
 }
 
 export function normalizeClients(clients: Client[]): Client[] {

@@ -122,7 +122,8 @@ export function ColdClientsSection() {
             </div>
           </div>
           <p className="cold-section-hint">
-            Clienti con cui non avete ancora lavorato. Clicca sul <strong>Fatturato 2026</strong> per modificarlo: se supera <strong>€1</strong>, il cliente passa automaticamente alla Lista Clienti.
+            Prospect con cui non avete <strong>mai lavorato</strong>. I clienti importati da OKR/Excel restano in Lista Clienti.
+            Se imposti <strong>Fatturato 2026</strong> &gt; €1 qui, il cliente passa alla lista principale.
           </p>
           <div className="cold-clients-accordion">
             {COLD_CLIENT_CATEGORIES.map((category) => {

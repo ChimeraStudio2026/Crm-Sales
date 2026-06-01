@@ -994,23 +994,6 @@ body.crm-col-resizing {
     background: var(--bg-hover);
 }
 
-.crm-table tbody tr.client-row-draft td:first-child {
-    box-shadow: inset 3px 0 0 rgba(38, 109, 240, 0.45);
-}
-
-.crm-table tbody tr.client-row-draft {
-    background: rgba(229, 238, 255, 0.22);
-}
-
-.crm-table tbody tr.client-row-draft:hover {
-    background: rgba(229, 238, 255, 0.38);
-}
-
-.crm-table tbody tr.client-row-draft.is-row-expanded td {
-    background: rgba(229, 238, 255, 0.42);
-    border-bottom-color: transparent;
-}
-
 .client-name-cell strong {
     min-width: 0;
     overflow: hidden;
@@ -1039,25 +1022,6 @@ body.crm-col-resizing {
     border-radius: 50%;
     background: var(--primary);
     opacity: 0.75;
-}
-
-.clients-draft-banner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 12px;
-    padding: 10px 14px;
-    border-radius: var(--radius-sm);
-    border: 1px solid rgba(38, 109, 240, 0.14);
-    background: linear-gradient(90deg, rgba(229, 238, 255, 0.55) 0%, rgba(244, 245, 246, 0.9) 100%);
-    color: var(--text-secondary);
-    font-size: 0.8125rem;
-}
-
-.clients-draft-banner strong {
-    color: var(--text-primary);
-    font-weight: 600;
 }
 
 .clients-filter-chip {
@@ -2674,9 +2638,6 @@ body.drawer-open {
 .client-row-expandable.is-row-expanded td {
     background: var(--primary-glow);
     border-bottom-color: transparent;
-}
-.client-row-expandable.client-row-draft.is-row-expanded td {
-    background: rgba(229, 238, 255, 0.42);
 }
 .client-name-cell {
     display: flex;

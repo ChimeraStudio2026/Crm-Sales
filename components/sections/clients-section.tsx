@@ -293,22 +293,6 @@ export function ClientsSection() {
               </button>
             </div>
           </div>
-          {incompleteCount > 0 && !filterIncomplete && (
-            <div className="clients-draft-banner">
-              <span>
-                <strong>{incompleteCount}</strong>{' '}
-                {incompleteCount === 1 ? 'cliente importato' : 'clienti importati'} con profilo in bozza — apri la riga per aggiungere contatti e azione.
-              </span>
-              <button
-                type="button"
-                className="clients-filter-chip is-active"
-                onClick={() => setFilterIncomplete(true)}
-              >
-                Mostra solo bozze
-                <span className="clients-filter-chip-count">{incompleteCount}</span>
-              </button>
-            </div>
-          )}
           <div className="table-container">
             <div className="crm-table-scroll-viewport">
               <table className="crm-table">
@@ -344,7 +328,6 @@ export function ClientsSection() {
                             className={[
                               'client-row-expandable',
                               isExpanded ? 'is-row-expanded' : '',
-                              shouldHighlightIncompleteClient(client) ? 'client-row-draft' : '',
                             ].filter(Boolean).join(' ')}
                             onClick={(event) => {
                               if (isInteractiveTableTarget(event.target)) return;

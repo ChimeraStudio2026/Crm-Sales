@@ -89,7 +89,7 @@ function rowToClient(row: ClientRow): Client {
     action: row.action || '',
     actionDate: row.action_date || '',
     email: contacts[0]?.email || row.email || '',
-    description: contacts[0]?.description || row.description || '',
+    description: row.description || '',
     contacts,
     needsProfileCompletion: row.needs_profile_completion || false,
     isColdClient: row.is_cold_client === true,

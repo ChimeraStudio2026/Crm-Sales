@@ -125,9 +125,9 @@ export function aggregateExcelClients(
   for (let i = 1; i < rows.length; i += 1) {
     const row = rows[i];
     if (!row || row.length === 0) continue;
-    let clientName = row[clientColIndex];
-    if (!clientName) continue;
-    clientName = clientName.toString().trim().replace(/\s+/g, ' ');
+    const rawName = row[clientColIndex];
+    if (!rawName) continue;
+    const clientName = String(rawName).trim().replace(/\s+/g, ' ');
     if (!clientName) continue;
     const revenueRaw = getExcelCellValue(worksheet, rows, i, revColIndex);
     if (revenueRaw === null || revenueRaw === undefined || revenueRaw === '') continue;

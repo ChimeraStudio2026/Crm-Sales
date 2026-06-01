@@ -11,7 +11,7 @@ import type {
   RecallItem,
 } from '@/lib/types/crm';
 import { ANALYSIS_YEAR, PREVIOUS_ANALYSIS_YEAR } from '@/lib/constants/crm';
-import { createDefaultForecasts } from '@/lib/analysis/index';
+import { createDefaultForecasts, parseOkrMonthNumber } from '@/lib/analysis/index';
 import { resolveClientProductOffers } from '@/lib/crm/product-offers';
 import { parseFunctionInvokeError } from '@/lib/supabase/function-errors';
 
@@ -257,6 +257,7 @@ export async function fetchAllOkrRecords(db: SupabaseClient): Promise<OkrRecord[
     productType: row.product_type,
     amount: Number(row.amount) || 0,
     monthLabel: row.month_label || '',
+    monthNumber: Number(row.month_number) || parseOkrMonthNumber(row.month_label),
     quarter: Number(row.quarter) || 0,
     projectCode: row.project_code || '',
     owner: row.owner || '',
@@ -277,6 +278,7 @@ export async function fetchOkrRecords(
     productType: row.product_type,
     amount: Number(row.amount) || 0,
     monthLabel: row.month_label || '',
+    monthNumber: Number(row.month_number) || parseOkrMonthNumber(row.month_label),
     quarter: Number(row.quarter) || 0,
     projectCode: row.project_code || '',
     owner: row.owner || '',
@@ -299,6 +301,7 @@ export async function upsertOkrRecords(
     product_type: record.productType,
     amount: Number(record.amount) || 0,
     month_label: record.monthLabel || '',
+    month_number: record.monthNumber || parseOkrMonthNumber(record.monthLabel),
     quarter: Number(record.quarter) || 0,
     project_code: record.projectCode || '',
     owner: record.owner || '',

@@ -46,24 +46,36 @@ export function normalizeProductType(raw: string): string {
 }
 
 export function parseQuarterFromMonth(raw: unknown): number {
+  const monthNumber = parseOkrMonthNumber(raw);
+  if (monthNumber <= 0) return 0;
+  return Math.ceil(monthNumber / 3);
+}
+
+export function parseOkrMonthNumber(raw: unknown): number {
   if (raw === undefined || raw === null || raw === '') return 0;
   const text = String(raw).trim().toLowerCase();
   if (!text) return 0;
-  if (text.includes('q1') || text === '1') return 1;
-  if (text.includes('q2') || text === '2') return 2;
-  if (text.includes('q3') || text === '3') return 3;
-  if (text.includes('q4') || text === '4') return 4;
   const monthMap: Record<string, number> = {
-    gennaio: 1, gen: 1, febbraio: 2, feb: 2, marzo: 3, mar: 3,
-    aprile: 4, apr: 4, maggio: 5, mag: 5, giugno: 6, giu: 6,
-    luglio: 7, lug: 7, agosto: 8, ago: 8, settembre: 9, set: 9,
-    ottobre: 10, ott: 10, novembre: 11, nov: 11, dicembre: 12, dic: 12,
+    gennaio: 1, gen: 1, '1': 1, '01': 1,
+    febbraio: 2, feb: 2, '2': 2, '02': 2,
+    marzo: 3, mar: 3, '3': 3, '03': 3,
+    aprile: 4, apr: 4, '4': 4, '04': 4,
+    maggio: 5, mag: 5, '5': 5, '05': 5,
+    giugno: 6, giu: 6, '6': 6, '06': 6,
+    luglio: 7, lug: 7, '7': 7, '07': 7,
+    agosto: 8, ago: 8, '8': 8, '08': 8,
+    settembre: 9, set: 9, '9': 9, '09': 9,
+    ottobre: 10, ott: 10, '10': 10,
+    novembre: 11, nov: 11, '11': 11,
+    dicembre: 12, dic: 12, '12': 12,
   };
-  if (monthMap[text]) return Math.ceil(monthMap[text] / 3);
+  if (monthMap[text]) return monthMap[text];
+  if (text.includes('q1')) return 3;
+  if (text.includes('q2')) return 6;
+  if (text.includes('q3')) return 9;
+  if (text.includes('q4')) return 12;
   const numeric = parseInt(text, 10);
-  if (!Number.isNaN(numeric) && numeric >= 1 && numeric <= 12) {
-    return Math.ceil(numeric / 3);
-  }
+  if (!Number.isNaN(numeric) && numeric >= 1 && numeric <= 12) return numeric;
   return 0;
 }
 

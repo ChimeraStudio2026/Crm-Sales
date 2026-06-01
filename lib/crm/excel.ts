@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
 import type { OkrRecord, ParsedExcelClient } from '@/lib/types/crm';
-import { normalizeProductType, parseQuarterFromMonth } from '@/lib/analysis/index';
+import { normalizeProductType, parseOkrMonthNumber, parseQuarterFromMonth } from '@/lib/analysis/index';
 import {
   ANALYSIS_YEAR,
   PREVIOUS_ANALYSIS_YEAR,
@@ -262,6 +262,7 @@ export function buildOkrRecordsFromExcel(
       productType: normalizeProductType(String(productRaw || '')),
       amount,
       monthLabel: String(monthRaw || ''),
+      monthNumber: parseOkrMonthNumber(monthRaw),
       quarter: parseQuarterFromMonth(monthRaw),
       projectCode: String(projectRaw || ''),
       owner: String(ownerRaw || ''),

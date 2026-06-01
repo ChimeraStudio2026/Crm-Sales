@@ -65,6 +65,7 @@ export interface OkrRecord {
   projectCode: string;
   owner: string;
   year: number;
+  monthNumber?: number;
 }
 
 export interface AnalysisForecastScope {

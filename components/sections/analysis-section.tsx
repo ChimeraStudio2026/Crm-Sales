@@ -16,6 +16,7 @@ import {
 import { ANALYSIS_YEAR, PREVIOUS_ANALYSIS_YEAR } from '@/lib/constants/crm';
 import { formatCurrency } from '@/lib/crm/utils';
 import { TopHeader } from '@/components/layout/top-header';
+import { OkrYearComparisonPanel } from '@/components/analysis/okr-year-comparison-panel';
 import { useCrm } from '@/providers/crm-provider';
 
 function ScopeContent({
@@ -177,6 +178,7 @@ export function AnalysisSection() {
       <div className="content-body">
       <section className="app-section active">
         <div className="analysis-dashboard">
+          <OkrYearComparisonPanel />
           <div className="analysis-intro glass-card">
             <h3><BarChart3 size={20} /> Analisi {analysisYear}</h3>
             <p>

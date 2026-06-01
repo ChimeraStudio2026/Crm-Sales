@@ -2,13 +2,17 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { UserPlus, X } from 'lucide-react';
+import type { ProductOfferId } from '@/lib/constants/product-offers';
+import { getDefaultProductOfferIds, resolveClientProductOffers } from '@/lib/crm/product-offers';
 import { createUniqueId, formatActionDateDisplay } from '@/lib/crm/utils';
+import { ProductOffersTags } from '@/components/clients/product-offers-tags';
 import type { Client, ClientContact } from '@/lib/types/crm';
 
 interface ClientDetailPanelProps {
   client: Client;
   onUpdateContacts: (contacts: ClientContact[]) => Promise<void>;
   onUpdateAction: (action: string) => Promise<void>;
+  onUpdateProductOffers: (offerIds: ProductOfferId[]) => Promise<void>;
 }
 
 function createEmptyContact(): ClientContact {
@@ -24,10 +28,12 @@ export function ClientDetailPanel({
   client,
   onUpdateContacts,
   onUpdateAction,
+  onUpdateProductOffers,
 }: ClientDetailPanelProps) {
   const [contacts, setContacts] = useState<ClientContact[]>(client.contacts);
   const [actionText, setActionText] = useState(client.action);
   const saveActionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const enabledOfferIds = resolveClientProductOffers(client.type, client.productOffers);
 
   useEffect(() => {
     setContacts(client.contacts.length > 0 ? client.contacts : [createEmptyContact()]);
@@ -44,7 +50,8 @@ export function ClientDetailPanel({
     const filtered = nextContacts.filter(
       (contact) => contact.email.trim() || contact.name.trim() || contact.role.trim(),
     );
-    setContacts(filtered.length > 0 ? nextContacts : [createEmptyContact()]);
+    const displayContacts = filtered.length > 0 ? nextContacts : [createEmptyContact()];
+    setContacts(displayContacts);
     await onUpdateContacts(filtered);
   };
 
@@ -52,14 +59,22 @@ export function ClientDetailPanel({
     await persistContacts(contacts);
   };
 
-  const handleAddContact = async () => {
-    const nextContacts = [...contacts, createEmptyContact()];
-    setContacts(nextContacts);
+  const handleAddContact = () => {
+    setContacts((prev) => [...prev, createEmptyContact()]);
   };
 
   const handleDeleteContact = async (contactId: string) => {
     const nextContacts = contacts.filter((contact) => contact.id !== contactId);
     await persistContacts(nextContacts.length > 0 ? nextContacts : [createEmptyContact()]);
+  };
+
+  const handleToggleOffer = async (offerId: ProductOfferId) => {
+    const applicable = getDefaultProductOfferIds(client.type);
+    if (!applicable.includes(offerId)) return;
+    const next = enabledOfferIds.includes(offerId)
+      ? enabledOfferIds.filter((id) => id !== offerId)
+      : [...enabledOfferIds, offerId];
+    await onUpdateProductOffers(next);
   };
 
   const scheduleActionSave = (value: string) => {
@@ -88,6 +103,11 @@ export function ClientDetailPanel({
 
   return (
     <div className="client-detail-panel" onClick={(event) => event.stopPropagation()}>
+      <ProductOffersTags
+        client={client}
+        enabledOfferIds={enabledOfferIds}
+        onToggleOffer={handleToggleOffer}
+      />
       <div className="client-actions-panel">
         <div className="client-actions-header">
           <strong>Sezione azione</strong>
@@ -108,15 +128,13 @@ export function ClientDetailPanel({
       <div className="contacts-panel-section">
         <div className="contacts-panel-header">
           <strong>Sezione contatti</strong>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={() => void handleAddContact()}>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={handleAddContact}>
             <UserPlus size={14} />
             <span>Aggiungi contatto</span>
           </button>
         </div>
         <div className="contacts-panel-list">
-          {contacts.every(
-            (contact) => !contact.email.trim() && !contact.name.trim() && !contact.role.trim(),
-          ) ? (
+          {contacts.length === 0 ? (
             <p className="contacts-panel-empty">Nessun contatto. Aggiungine uno con il pulsante sopra.</p>
           ) : (
             contacts.map((contact) => (

@@ -1,5 +1,6 @@
 import type { Client, ClientContact } from '@/lib/types/crm';
 import { ACTION_DATE_STALE_DAYS, COLD_CLIENT_REV_THRESHOLD } from '@/lib/constants/crm';
+import { normalizeClientProductOffers } from '@/lib/crm/product-offers';
 
 export function createUniqueId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -215,6 +216,7 @@ export function normalizeClients(clients: Client[]): Client[] {
   return clients.map((client) => {
     const normalized = { ...client };
     normalizeClientContacts(normalized);
+    normalizeClientProductOffers(normalized);
     if (!Array.isArray(normalized.actionLog)) {
       normalized.actionLog = [];
     }

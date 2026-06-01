@@ -25,6 +25,7 @@ export interface Client {
   email: string;
   description: string;
   contacts: ClientContact[];
+  productOffers: string[];
   actionLog?: ClientActionLogEntry[];
   needsProfileCompletion: boolean;
   isColdClient: boolean;

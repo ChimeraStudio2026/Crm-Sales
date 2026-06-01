@@ -46,6 +46,11 @@ import {
   updateClientProfileCompletion,
 } from '@/lib/crm/utils';
 import {
+  reconcileProductOffersForTypeChange,
+  resolveClientProductOffers,
+} from '@/lib/crm/product-offers';
+import type { ProductOfferId } from '@/lib/constants/product-offers';
+import {
   filterValidRecallItems,
   generateRandomRecallSelection,
   isRecallSelectionValid,
@@ -104,6 +109,7 @@ interface CrmContextValue {
   updateClientField: (clientId: string, field: keyof Client, value: unknown) => Promise<void>;
   updateClientContacts: (clientId: string, contacts: ClientContact[]) => Promise<void>;
   updateClientAction: (clientId: string, action: string) => Promise<void>;
+  updateClientProductOffers: (clientId: string, offerIds: ProductOfferId[]) => Promise<void>;
   saveIdea: (idea: Partial<Idea> & { name: string; description: string; clientId: string }) => Promise<void>;
   deleteIdea: (ideaId: string) => Promise<void>;
   moveIdeaStatus: (ideaId: string, newStatus: Idea['status']) => Promise<void>;
@@ -336,8 +342,9 @@ export function CrmProvider({ children }: CrmProviderProps) {
           ...c,
           ...input,
           id: c.id,
-          contacts: input.contacts ?? c.contacts,
-          manualRelationship: input.manualRelationship ?? c.manualRelationship,
+        contacts: input.contacts ?? c.contacts,
+        productOffers: input.productOffers ?? c.productOffers,
+        manualRelationship: input.manualRelationship ?? c.manualRelationship,
         };
         if (trimmedAction !== undefined) {
           updated.action = trimmedAction;
@@ -368,6 +375,10 @@ export function CrmProvider({ children }: CrmProviderProps) {
         email: input.email || '',
         description: input.description || '',
         contacts: input.contacts || [],
+        productOffers: resolveClientProductOffers(
+          input.type || 'Cliente Diretto',
+          input.productOffers,
+        ),
         needsProfileCompletion: true,
         isColdClient: isCold || (input.rev2026 || 0) <= COLD_CLIENT_REV_THRESHOLD,
       };
@@ -396,6 +407,12 @@ export function CrmProvider({ children }: CrmProviderProps) {
       if (c.id !== clientId) return c;
       const updated = { ...c, [field]: value } as Client;
       if (field === 'relationship') updated.manualRelationship = true;
+      if (field === 'type') {
+        updated.productOffers = reconcileProductOffersForTypeChange(
+          updated.type,
+          updated.productOffers,
+        );
+      }
       updateClientProfileCompletion(updated);
       return applyColdClientPromotion(updated).client;
     });
@@ -440,6 +457,19 @@ export function CrmProvider({ children }: CrmProviderProps) {
           : '',
       };
       updateClientProfileCompletion(updated);
+      return updated;
+    });
+    setClients(nextClients);
+    await persistClientsNow(nextClients);
+  }, [clients, persistClientsNow]);
+
+  const updateClientProductOffers = useCallback(async (
+    clientId: string,
+    offerIds: ProductOfferId[],
+  ) => {
+    let nextClients = clients.map((c) => {
+      if (c.id !== clientId) return c;
+      const updated = { ...c, productOffers: offerIds };
       return updated;
     });
     setClients(nextClients);
@@ -654,6 +684,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
           email: '',
           description: `${EXCEL_IMPORT_DESC_PREFIX}. Completa contatti, azione e note.`,
           contacts: [],
+          productOffers: resolveClientProductOffers('Cliente Diretto', []),
           needsProfileCompletion: true,
           isColdClient: imported.revenue <= COLD_CLIENT_REV_THRESHOLD,
         });
@@ -792,6 +823,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
     updateClientField,
     updateClientContacts,
     updateClientAction,
+    updateClientProductOffers,
     saveIdea,
     deleteIdea,
     moveIdeaStatus,

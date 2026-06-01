@@ -9,6 +9,7 @@ import type {
   RecallItem,
 } from '@/lib/types/crm';
 import { ANALYSIS_YEAR } from '@/lib/constants/crm';
+import { resolveClientProductOffers } from '@/lib/crm/product-offers';
 
 interface ClientRow {
   id: string;
@@ -24,6 +25,7 @@ interface ClientRow {
   email: string;
   description: string;
   contacts: ClientContact[] | null;
+  product_offers: string[] | null;
   needs_profile_completion: boolean;
   is_cold_client: boolean;
 }
@@ -72,6 +74,7 @@ function clientToRow(client: Client): ClientRow {
     email: normalizedContacts[0]?.email || client.email || '',
     description: client.description || '',
     contacts: normalizedContacts,
+    product_offers: client.productOffers || [],
     needs_profile_completion: !!client.needsProfileCompletion,
     is_cold_client: !!client.isColdClient,
   };
@@ -79,10 +82,11 @@ function clientToRow(client: Client): ClientRow {
 
 function rowToClient(row: ClientRow): Client {
   const contacts = normalizeContactsArray(row.contacts, row.email, row.description);
+  const clientType = row.type as Client['type'];
   return {
     id: row.id,
     name: row.name,
-    type: row.type as Client['type'],
+    type: clientType,
     owner: row.owner as Client['owner'],
     relationship: row.relationship as Client['relationship'],
     manualRelationship: row.manual_relationship,
@@ -93,6 +97,7 @@ function rowToClient(row: ClientRow): Client {
     email: contacts[0]?.email || row.email || '',
     description: row.description || '',
     contacts,
+    productOffers: resolveClientProductOffers(clientType, row.product_offers),
     needsProfileCompletion: row.needs_profile_completion || false,
     isColdClient: row.is_cold_client === true,
   };

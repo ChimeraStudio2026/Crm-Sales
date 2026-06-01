@@ -2725,6 +2725,25 @@ body.drawer-open {
     font-size: 0.78rem;
     font-weight: 700;
     white-space: nowrap;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: var(--transition-fast);
+    font-family: inherit;
+}
+.product-offer-tag.is-inactive {
+    opacity: 0.72;
+}
+.product-offer-tag.is-inactive:hover {
+    opacity: 1;
+    background: #f8fafc !important;
+}
+.product-offer-tag.is-active:hover {
+    filter: brightness(0.97);
+}
+.product-offers-hint {
+    margin: 0 0 8px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
 }
 .product-offer-dot {
     width: 8px;

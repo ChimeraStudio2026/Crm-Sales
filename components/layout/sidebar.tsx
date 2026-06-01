@@ -70,6 +70,7 @@ export function Sidebar() {
             <span className="logo-text">CRM Sales</span>
           </div>
         </div>
+        <div className="sidebar-nav-label">Navigazione</div>
         <ul className="sidebar-menu">
           {NAV_ITEMS.map((item) => {
             const Icon = ICON_MAP[item.icon];

@@ -1593,6 +1593,27 @@ body.drawer-open {
     }
 }
 
+.import-preview-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.import-preview-toolbar label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.import-preview-note {
+    margin: 0;
+    flex: 1 1 100%;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
 .import-preview-wrapper {
     margin-top: 12px;
     border: 1px solid var(--border-color);

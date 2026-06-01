@@ -1,7 +1,11 @@
 import * as XLSX from 'xlsx';
 import type { OkrRecord, ParsedExcelClient } from '@/lib/types/crm';
 import { normalizeProductType, parseQuarterFromMonth } from '@/lib/analysis/index';
-import { ANALYSIS_YEAR } from '@/lib/constants/crm';
+import {
+  ANALYSIS_YEAR,
+  PREVIOUS_ANALYSIS_YEAR,
+  SUPPORTED_IMPORT_YEARS,
+} from '@/lib/constants/crm';
 import { createUniqueId } from '@/lib/crm/utils';
 
 export function parseExcelImporto(value: unknown): number {
@@ -60,6 +64,7 @@ function findExcelColumnIndex(headers: unknown[], targetName: string): number {
 export interface DetectedExcelColumns {
   clientCol: number;
   importoCol: number;
+  yearCol: number;
   productCol: number;
   monthCol: number;
   projectCol: number;
@@ -67,9 +72,11 @@ export interface DetectedExcelColumns {
 }
 
 export function detectExcelColumns(headers: unknown[]): DetectedExcelColumns {
+  const yearCol = findExcelColumnIndex(headers, 'anno');
   return {
     clientCol: findExcelColumnIndex(headers, 'cliente'),
     importoCol: findExcelColumnIndex(headers, 'importo'),
+    yearCol: yearCol >= 0 ? yearCol : findExcelColumnIndex(headers, 'year'),
     productCol: findExcelColumnIndex(headers, 'prodotto'),
     monthCol: findExcelColumnIndex(headers, 'mese'),
     projectCol: findExcelColumnIndex(headers, 'codice progetto'),
@@ -77,13 +84,73 @@ export function detectExcelColumns(headers: unknown[]): DetectedExcelColumns {
   };
 }
 
-export interface ExcelParseResult {
+export function isSupportedImportYear(year: number): boolean {
+  return SUPPORTED_IMPORT_YEARS.includes(year as (typeof SUPPORTED_IMPORT_YEARS)[number]);
+}
+
+export function getRevenueFieldForImportYear(year: number): 'rev2025' | 'rev2026' {
+  if (year === PREVIOUS_ANALYSIS_YEAR) return 'rev2025';
+  return 'rev2026';
+}
+
+function parseRowYearValue(raw: unknown): number | null {
+  const parsed = parseInt(String(raw ?? '').trim(), 10);
+  if (!Number.isFinite(parsed) || !isSupportedImportYear(parsed)) return null;
+  return parsed;
+}
+
+export function detectExcelImportYear(
+  headers: unknown[],
+  rows: unknown[][],
+  detected: DetectedExcelColumns,
+  filename?: string,
+): number {
+  if (filename) {
+    const filenameMatch = filename.match(/\b(202[0-9])\b/);
+    if (filenameMatch) {
+      const yearFromFilename = parseInt(filenameMatch[1], 10);
+      if (isSupportedImportYear(yearFromFilename)) return yearFromFilename;
+    }
+  }
+  if (detected.yearCol >= 0) {
+    const yearCounts = new Map<number, number>();
+    for (let i = 1; i < rows.length; i += 1) {
+      const rowYear = parseRowYearValue(rows[i]?.[detected.yearCol]);
+      if (rowYear === null) continue;
+      yearCounts.set(rowYear, (yearCounts.get(rowYear) || 0) + 1);
+    }
+    let dominantYear = ANALYSIS_YEAR;
+    let dominantCount = 0;
+    yearCounts.forEach((count, year) => {
+      if (count > dominantCount) {
+        dominantCount = count;
+        dominantYear = year;
+      }
+    });
+    if (dominantCount > 0) return dominantYear;
+  }
+  return ANALYSIS_YEAR;
+}
+
+function resolveRowImportYear(
+  row: unknown[],
+  detected: DetectedExcelColumns,
+  fallbackYear: number,
+): number {
+  if (detected.yearCol >= 0) {
+    const rowYear = parseRowYearValue(row[detected.yearCol]);
+    if (rowYear !== null) return rowYear;
+  }
+  return fallbackYear;
+}
+
+export interface ExcelFileParseResult {
   headers: unknown[];
   rows: unknown[][];
   worksheet: XLSX.WorkSheet;
 }
 
-export function parseExcelFile(buffer: ArrayBuffer): ExcelParseResult {
+export function parseExcelFile(buffer: ArrayBuffer): ExcelFileParseResult {
   const workbook = XLSX.read(buffer, { type: 'array' });
   const firstSheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[firstSheetName];
@@ -120,6 +187,8 @@ export function aggregateExcelClients(
   worksheet: XLSX.WorkSheet,
   clientColIndex: number,
   revColIndex: number,
+  importYear: number,
+  detected: DetectedExcelColumns,
 ): ParsedExcelClient[] {
   const clientMap = new Map<string, ParsedExcelClient>();
   for (let i = 1; i < rows.length; i += 1) {
@@ -129,6 +198,8 @@ export function aggregateExcelClients(
     if (!rawName) continue;
     const clientName = String(rawName).trim().replace(/\s+/g, ' ');
     if (!clientName) continue;
+    const rowYear = resolveRowImportYear(row, detected, importYear);
+    if (rowYear !== importYear) continue;
     const revenueRaw = getExcelCellValue(worksheet, rows, i, revColIndex);
     if (revenueRaw === null || revenueRaw === undefined || revenueRaw === '') continue;
     const revenue = parseExcelImporto(revenueRaw);
@@ -138,7 +209,12 @@ export function aggregateExcelClients(
       exist.revenue += revenue;
       exist.recordCount += 1;
     } else {
-      clientMap.set(key, { name: clientName, revenue, recordCount: 1 });
+      clientMap.set(key, {
+        name: clientName,
+        revenue,
+        recordCount: 1,
+        year: importYear,
+      });
     }
   }
   const result = Array.from(clientMap.values());
@@ -149,13 +225,14 @@ export function aggregateExcelClients(
 export function buildOkrRecordsFromExcel(
   rows: unknown[][],
   worksheet: XLSX.WorkSheet,
-  headers: unknown[],
   clientColIndex: number,
   revColIndex: number,
   productColIndex: number,
   monthColIndex: number,
   projectColIndex: number,
   ownerColIndex: number,
+  importYear: number,
+  detected: DetectedExcelColumns,
 ): OkrRecord[] {
   const records: OkrRecord[] = [];
   for (let i = 1; i < rows.length; i += 1) {
@@ -164,6 +241,8 @@ export function buildOkrRecordsFromExcel(
     const clientNameRaw = row[clientColIndex];
     if (!clientNameRaw) continue;
     const clientName = clientNameRaw.toString().trim().replace(/\s+/g, ' ');
+    const rowYear = resolveRowImportYear(row, detected, importYear);
+    if (rowYear !== importYear) continue;
     const amountRaw = getExcelCellValue(worksheet, rows, i, revColIndex);
     if (amountRaw === null || amountRaw === undefined || amountRaw === '') continue;
     const amount = parseExcelImporto(amountRaw);
@@ -185,8 +264,65 @@ export function buildOkrRecordsFromExcel(
       quarter: parseQuarterFromMonth(monthRaw),
       projectCode: String(projectRaw || ''),
       owner: String(ownerRaw || ''),
-      year: ANALYSIS_YEAR,
+      year: rowYear,
     });
   }
   return records;
+}
+
+export interface ExcelImportParseResult {
+  headers: unknown[];
+  parsedClients: ParsedExcelClient[];
+  okrRecords: OkrRecord[];
+  importYear: number;
+  detected: DetectedExcelColumns;
+}
+
+export function parseExcelImportBufferWithYear(
+  buffer: ArrayBuffer,
+  importYear: number,
+  filename?: string,
+): ExcelImportParseResult {
+  const { headers, rows, worksheet } = parseExcelFile(buffer);
+  const detected = detectExcelColumns(headers);
+  const resolvedYear = isSupportedImportYear(importYear)
+    ? importYear
+    : detectExcelImportYear(headers, rows, detected, filename);
+  const parsedClients = aggregateExcelClients(
+    rows,
+    worksheet,
+    detected.clientCol,
+    detected.importoCol,
+    resolvedYear,
+    detected,
+  );
+  const okrRecords = buildOkrRecordsFromExcel(
+    rows,
+    worksheet,
+    detected.clientCol,
+    detected.importoCol,
+    detected.productCol,
+    detected.monthCol,
+    detected.projectCol,
+    detected.ownerCol,
+    resolvedYear,
+    detected,
+  );
+  return {
+    headers,
+    parsedClients,
+    okrRecords,
+    importYear: resolvedYear,
+    detected,
+  };
+}
+
+export function parseExcelImportBuffer(
+  buffer: ArrayBuffer,
+  filename?: string,
+): ExcelImportParseResult {
+  const { headers, rows, worksheet } = parseExcelFile(buffer);
+  const detected = detectExcelColumns(headers);
+  const importYear = detectExcelImportYear(headers, rows, detected, filename);
+  return parseExcelImportBufferWithYear(buffer, importYear, filename);
 }

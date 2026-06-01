@@ -27,11 +27,11 @@ import {
 } from '@/lib/constants/crm';
 import { createDefaultForecasts } from '@/lib/analysis/index';
 import {
-  aggregateExcelClients,
-  buildOkrRecordsFromExcel,
-  detectExcelColumns,
-  parseExcelFile,
+  getRevenueFieldForImportYear,
+  parseExcelImportBuffer,
+  type ExcelImportParseResult,
 } from '@/lib/crm/excel';
+import { mergeOkrRecordsWithImport } from '@/lib/crm/import-merge';
 import {
   applyColdClientPromotion,
   applyColdClientPromotionToAll,
@@ -67,12 +67,14 @@ import {
   fetchClients,
   fetchDailyRecall,
   fetchIdeas,
+  fetchAllOkrRecords,
   fetchOkrRecords,
   getApolloStatus,
   persistAnalysisForecasts,
   persistClientTasks,
   persistClients,
   persistIdeas,
+  upsertOkrRecords,
   persistOkrRecords,
   saveDailyRecall,
   testSupabaseConnection,
@@ -121,13 +123,12 @@ interface CrmContextValue {
   refreshRecall: () => Promise<void>;
   updateRecallStatus: (clientId: string, status: RecallItem['status']) => Promise<void>;
   completeRecallWithAction: (clientId: string, action: string) => Promise<void>;
-  processExcelImport: (parsedClients: ParsedExcelClient[], okrRecords: OkrRecord[]) => Promise<void>;
-  parseExcelBuffer: (buffer: ArrayBuffer) => {
-    headers: unknown[];
-    parsedClients: ParsedExcelClient[];
-    okrRecords: OkrRecord[];
-    detected: ReturnType<typeof detectExcelColumns>;
-  };
+  processExcelImport: (
+    parsedClients: ParsedExcelClient[],
+    okrRecords: OkrRecord[],
+    importYear: number,
+  ) => Promise<void>;
+  parseExcelBuffer: (buffer: ArrayBuffer, filename?: string) => ExcelImportParseResult;
   resetAllData: () => Promise<void>;
   exportJsonBackup: () => void;
   importJsonBackup: (json: string) => Promise<void>;
@@ -214,7 +215,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
     nextForecasts?: AnalysisForecasts,
   ) => {
     if (!db) return;
-    await persistOkrRecords(db, nextOkr ?? okrRecords);
+    await upsertOkrRecords(db, nextOkr ?? okrRecords);
     await persistAnalysisForecasts(db, nextForecasts ?? analysisForecasts);
     setIsSupabaseConnected(true);
   }, [analysisForecasts, db, okrRecords]);
@@ -280,7 +281,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
             fetchClients(db),
             fetchIdeas(db),
             fetchClientTasks(db),
-            fetchOkrRecords(db),
+            fetchAllOkrRecords(db),
             fetchAnalysisForecasts(db),
           ]);
           let normalized = normalizeClients(loadedClients);
@@ -655,70 +656,73 @@ export function CrmProvider({ children }: CrmProviderProps) {
   const processExcelImport = useCallback(async (
     parsedClients: ParsedExcelClient[],
     newOkrRecords: OkrRecord[],
+    importYear: number,
   ) => {
+    const revField = getRevenueFieldForImportYear(importYear);
     let nextClients = [...clients];
+    let clientUpdated = 0;
+    let clientAdded = 0;
+    let clientSkipped = 0;
     parsedClients.forEach((imported) => {
       const existingIdx = nextClients.findIndex(
         (c) => c.name.toLowerCase() === imported.name.toLowerCase(),
       );
       if (existingIdx > -1) {
         const existing = nextClients[existingIdx];
-        if (!hasExcelRevenueDifference(existing.rev2026, imported.revenue)) return;
-        existing.rev2026 = imported.revenue;
+        const currentRevenue = existing[revField];
+        if (!hasExcelRevenueDifference(currentRevenue, imported.revenue)) {
+          clientSkipped += 1;
+          return;
+        }
+        existing[revField] = imported.revenue;
         if (existing.relationship !== 'Perso' && existing.relationship !== 'Eliminato') {
           existing.manualRelationship = false;
         }
-        nextClients[existingIdx] = applyColdClientPromotion(existing).client;
-      } else {
-        nextClients.push({
-          id: createUniqueId('client'),
-          name: imported.name,
-          type: 'Cliente Diretto',
-          owner: 'Jeck',
-          relationship: 'Nuovo Cliente',
-          manualRelationship: false,
-          rev2025: 0,
-          rev2026: imported.revenue,
-          action: `${EXCEL_IMPORT_ACTION_PREFIX} (${imported.recordCount} record uniti)`,
-          actionDate: getTodayString(),
-          email: '',
-          description: `${EXCEL_IMPORT_DESC_PREFIX}. Completa contatti, azione e note.`,
-          contacts: [],
-          productOffers: resolveClientProductOffers('Cliente Diretto', []),
-          needsProfileCompletion: true,
-          isColdClient: imported.revenue <= COLD_CLIENT_REV_THRESHOLD,
-        });
+        nextClients[existingIdx] = revField === 'rev2026'
+          ? applyColdClientPromotion(existing).client
+          : existing;
+        clientUpdated += 1;
+        return;
       }
+      nextClients.push({
+        id: createUniqueId('client'),
+        name: imported.name,
+        type: 'Cliente Diretto',
+        owner: 'Jeck',
+        relationship: 'Nuovo Cliente',
+        manualRelationship: false,
+        rev2025: revField === 'rev2025' ? imported.revenue : 0,
+        rev2026: revField === 'rev2026' ? imported.revenue : 0,
+        action: `${EXCEL_IMPORT_ACTION_PREFIX} (${imported.recordCount} record uniti)`,
+        actionDate: getTodayString(),
+        email: '',
+        description: `${EXCEL_IMPORT_DESC_PREFIX}. Completa contatti, azione e note.`,
+        contacts: [],
+        productOffers: resolveClientProductOffers('Cliente Diretto', []),
+        needsProfileCompletion: true,
+        isColdClient: revField === 'rev2026'
+          ? imported.revenue <= COLD_CLIENT_REV_THRESHOLD
+          : true,
+      });
+      clientAdded += 1;
     });
     nextClients = recalculateRelationships(nextClients);
+    const okrMerge = mergeOkrRecordsWithImport(okrRecords, newOkrRecords, nextClients);
     setClients(nextClients);
-    setOkrRecords(newOkrRecords);
+    setOkrRecords(okrMerge.merged);
     await persistClientsNow(nextClients);
-    await persistAnalysisNow(newOkrRecords, analysisForecasts);
-    showToast('Import Excel completato.', 'success');
-  }, [analysisForecasts, clients, persistAnalysisNow, persistClientsNow, showToast]);
+    if (db && okrMerge.upserted.length > 0) {
+      await upsertOkrRecords(db, okrMerge.upserted);
+      setIsSupabaseConnected(true);
+    }
+    showToast(
+      `Import ${importYear}: ${clientAdded} nuovi, ${clientUpdated} aggiornati, ${clientSkipped} invariati. OKR +${okrMerge.addedCount}, aggiornati ${okrMerge.updatedCount}.`,
+      'success',
+    );
+  }, [clients, db, okrRecords, persistClientsNow, showToast]);
 
-  const parseExcelBuffer = useCallback((buffer: ArrayBuffer) => {
-    const { headers, rows, worksheet } = parseExcelFile(buffer);
-    const detected = detectExcelColumns(headers);
-    const parsedClients = aggregateExcelClients(
-      rows,
-      worksheet,
-      detected.clientCol,
-      detected.importoCol,
-    );
-    const okr = buildOkrRecordsFromExcel(
-      rows,
-      worksheet,
-      headers,
-      detected.clientCol,
-      detected.importoCol,
-      detected.productCol,
-      detected.monthCol,
-      detected.projectCol,
-      detected.ownerCol,
-    );
-    return { headers, parsedClients, okrRecords: okr, detected };
+  const parseExcelBuffer = useCallback((buffer: ArrayBuffer, filename?: string) => {
+    return parseExcelImportBuffer(buffer, filename);
   }, []);
 
   const resetAllData = useCallback(async () => {

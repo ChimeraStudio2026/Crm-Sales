@@ -243,6 +243,23 @@ export async function persistClientTasks(
   if (error) throw error;
 }
 
+export async function fetchAllOkrRecords(db: SupabaseClient): Promise<OkrRecord[]> {
+  const { data, error } = await db.from('okr_records').select('*').order('year', { ascending: false });
+  if (error) throw error;
+  return (data || []).map((row) => ({
+    id: row.id,
+    clientName: row.client_name,
+    clientId: row.client_id || '',
+    productType: row.product_type,
+    amount: Number(row.amount) || 0,
+    monthLabel: row.month_label || '',
+    quarter: Number(row.quarter) || 0,
+    projectCode: row.project_code || '',
+    owner: row.owner || '',
+    year: Number(row.year) || ANALYSIS_YEAR,
+  }));
+}
+
 export async function fetchOkrRecords(
   db: SupabaseClient,
   year = ANALYSIS_YEAR,
@@ -263,12 +280,10 @@ export async function fetchOkrRecords(
   }));
 }
 
-export async function persistOkrRecords(
+export async function upsertOkrRecords(
   db: SupabaseClient,
   records: OkrRecord[],
-  year = ANALYSIS_YEAR,
 ): Promise<void> {
-  await db.from('okr_records').delete().eq('year', year);
   if (records.length === 0) return;
   const rows = records.map((record) => ({
     id: record.id,
@@ -280,10 +295,18 @@ export async function persistOkrRecords(
     quarter: Number(record.quarter) || 0,
     project_code: record.projectCode || '',
     owner: record.owner || '',
-    year: Number(record.year) || year,
+    year: Number(record.year) || ANALYSIS_YEAR,
   }));
   const { error } = await db.from('okr_records').upsert(rows, { onConflict: 'id' });
   if (error) throw error;
+}
+
+export async function persistOkrRecords(
+  db: SupabaseClient,
+  records: OkrRecord[],
+  year = ANALYSIS_YEAR,
+): Promise<void> {
+  await upsertOkrRecords(db, records);
 }
 
 export async function fetchAnalysisForecasts(db: SupabaseClient): Promise<AnalysisForecasts> {

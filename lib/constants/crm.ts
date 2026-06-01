@@ -1,6 +1,8 @@
 import type { ClientType, IdeaCategory, Owner, Relationship } from '@/lib/types/crm';
 
 export const ANALYSIS_YEAR = 2026;
+export const PREVIOUS_ANALYSIS_YEAR = ANALYSIS_YEAR - 1;
+export const SUPPORTED_IMPORT_YEARS = [PREVIOUS_ANALYSIS_YEAR, ANALYSIS_YEAR] as const;
 export const COLD_CLIENT_REV_THRESHOLD = 1;
 export const RECURRENT_REV_2025_THRESHOLD = 15000;
 export const EXCEL_REV_EPSILON = 0.005;
@@ -108,6 +110,6 @@ export const PAGE_META: Record<string, { title: string; subtitle: string }> = {
   '/recall': { title: 'Random Recall', subtitle: '5 clienti al giorno da ricontattare, scelti a caso per rapporto.' },
   '/ideas': { title: 'Idee Random', subtitle: 'Spazio creativo e proposte commerciali ai clienti.' },
   '/cold': { title: 'Clienti Freddi', subtitle: 'Prospect non ancora attivati. Promozione automatica con fatturato 2026 > €1.' },
-  '/import': { title: 'Importazione Dati', subtitle: 'Carica fatturati 2026 da foglio di calcolo.' },
+  '/import': { title: 'Importazione Dati', subtitle: 'Carica fatturati 2025 o 2026 da foglio di calcolo.' },
   '/settings': { title: 'Impostazioni', subtitle: 'Manutenzione database e regole.' },
 };

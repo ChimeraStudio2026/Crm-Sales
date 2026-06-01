@@ -86,6 +86,7 @@ export interface ParsedExcelClient {
   name: string;
   revenue: number;
   recordCount: number;
+  year: number;
 }
 
 export type ClientType =

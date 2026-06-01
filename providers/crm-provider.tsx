@@ -294,7 +294,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
         console.error('Load failed:', error);
         setIsSupabaseConnected(false);
         showToast(
-          `Supabase offline: ${error instanceof Error ? error.message : 'errore'}`,
+          `Errore dati: ${error instanceof Error ? error.message : 'errore'}. Verifica di essere autenticato.`,
           'warning',
         );
       } finally {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { CheckCircle2, CloudUpload, Eye, RefreshCw, X } from 'lucide-react';
+import { CheckCircle2, CloudUpload, Eye, X } from 'lucide-react';
 import { formatCurrency, hasExcelRevenueDifference } from '@/lib/crm/utils';
 import { useCrm } from '@/providers/crm-provider';
 import { TopHeader } from '@/components/layout/top-header';

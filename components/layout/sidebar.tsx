@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   BarChart3,
   CheckSquare,
   FileSpreadsheet,
   Lightbulb,
+  LogOut,
   Menu,
   PhoneCall,
   Settings,
@@ -14,8 +15,9 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { NAV_ITEMS } from '@/lib/constants/crm';
-import { useState } from 'react';
+import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 
 const ICON_MAP: Record<string, LucideIcon> = {
   BarChart3,
@@ -30,7 +32,24 @@ const ICON_MAP: Record<string, LucideIcon> = {
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [userEmail, setUserEmail] = useState<string>('');
+
+  useEffect(() => {
+    const supabase = createBrowserSupabaseClient();
+    if (!supabase) return;
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUserEmail(user?.email || '');
+    });
+  }, []);
+
+  const handleSignOut = async () => {
+    const supabase = createBrowserSupabaseClient();
+    if (supabase) await supabase.auth.signOut();
+    router.push('/login');
+    router.refresh();
+  };
 
   return (
     <>
@@ -66,11 +85,14 @@ export function Sidebar() {
           })}
         </ul>
         <div className="sidebar-footer">
-          <div className="user-avatar">A</div>
+          <div className="user-avatar">{userEmail ? userEmail[0].toUpperCase() : 'A'}</div>
           <div className="user-info">
-            <span className="user-name">Amministratore</span>
-            <span className="user-role">Sales Manager</span>
+            <span className="user-name">{userEmail || 'Utente'}</span>
+            <span className="user-role">Sales Team</span>
           </div>
+          <button type="button" className="sidebar-signout" onClick={() => void handleSignOut()} title="Esci">
+            <LogOut size={18} />
+          </button>
         </div>
       </aside>
       {mobileOpen && (

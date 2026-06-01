@@ -9,14 +9,14 @@
 ## 2. Crea le tabelle
 
 1. Apri **SQL Editor** nel dashboard Supabase.
-2. Copia e incolla tutto il contenuto di:
-   `supabase/migrations/20260524120000_crm_schema.sql`
-3. Clicca **Run**.
+2. Esegui **tutte** le migration in ordine da `supabase/migrations/`:
+   - `20260524120000_crm_schema.sql`
+   - `20260524130000_cold_clients.sql`
+   - `20260524140000_client_contacts.sql`
+   - `20260524150000_analysis_okr.sql`
+   - `20260524160000_client_tasks.sql`
 
-Vengono create 3 tabelle:
-- `clients` — lista clienti (Sezione 1)
-- `ideas` — idee kanban
-- `daily_recall` — selezione Random Recall giornaliera
+Vengono create le tabelle: `clients`, `ideas`, `daily_recall`, `okr_records`, `analysis_forecasts`, `client_tasks`.
 
 ## 3. Prendi le credenziali API
 
@@ -27,45 +27,59 @@ Vengono create 3 tabelle:
 
 > Non usare mai la `service_role` key nel browser.
 
-## 4. Configura il CRM in locale
+## 4. Configura il CRM in locale (Next.js)
 
 ```bash
-cp config.example.js config.js
+cp .env.example .env.local
 ```
 
-Apri `config.js` e incolla URL + anon key:
+Apri `.env.local` e incolla URL + anon key:
 
-```javascript
-window.CRM_SUPABASE_CONFIG = {
-    url: 'https://TUO-PROJECT.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
-};
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://TUO-PROJECT.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
-Avvia il CRM (es. con Live Server o `npx serve .`) e apri **Impostazioni**:  
-dovresti vedere **Supabase: connesso**.
+Avvia il CRM:
+
+```bash
+npm install
+npm run dev
+```
+
+Apri [http://localhost:3000/settings](http://localhost:3000/settings) — dovresti vedere **Supabase: connesso**.
 
 ## 5. Migrazione da localStorage
 
-Se avevi già dati nel browser e Supabase è vuoto, al primo avvio il CRM **copia automaticamente** clienti e idee da `localStorage` su Supabase.
+Se usavi la versione statica legacy (`legacy/`), i dati erano in `localStorage`. Con Supabase configurato, importa un backup JSON da **Impostazioni** oppure reinserisci i dati.
 
 ## 6. Deploy su Vercel
 
-1. Nel progetto Vercel → **Settings** → **Environment Variables**:
-   - `SUPABASE_URL` = Project URL
-   - `SUPABASE_ANON_KEY` = anon public key
-2. Rideploy: il build genera `config.js` da `scripts/generate-config.js`.
+1. Importa il repo su Vercel (framework: **Next.js**, auto-detect)
+2. **Settings** → **Environment Variables**:
+   - `NEXT_PUBLIC_SUPABASE_URL` = Project URL
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = anon public key
+3. Deploy — nessuno script di build custom necessario.
 
-## 7. Comportamento
+## 7. Autenticazione
+
+Il CRM richiede login Supabase. Le policy RLS bloccano l'accesso anonimo.
+
+1. **Authentication → Providers → Email** — abilitato
+2. Per sviluppo rapido: disabilita **Confirm email** nelle impostazioni Email
+3. Crea account da `/login` (tab Registrati) per Jeck e Virgi
+4. Utenti autenticati condividono accesso completo ai dati CRM
+
+## 8. Comportamento
 
 | Azione | Con Supabase | Senza config |
 |--------|--------------|--------------|
-| Salva cliente | Postgres | localStorage |
-| Import Excel | Postgres | localStorage |
-| Random Recall | Postgres | localStorage |
-| Svuota tutto | Cancella tabelle | Cancella localStorage |
+| Salva cliente | Postgres | Solo in-memory (perso al refresh) |
+| Import Excel | Postgres | Solo in-memory |
+| Random Recall | Postgres | Solo in-memory |
+| Svuota tutto | Cancella tabelle | Reset stato locale |
 
-## 8. Sicurezza (importante)
+## 9. Sicurezza (importante)
 
 Le policy attuali permettono accesso completo con la anon key (ok per uso personale).
 
@@ -74,7 +88,7 @@ Per un CRM con più utenti:
 2. Sostituisci le policy RLS con regole `auth.uid()`
 3. Vedi [Supabase RLS docs](https://supabase.com/docs/guides/auth/row-level-security)
 
-## 9. Supabase CLI (opzionale)
+## 10. Supabase CLI (opzionale)
 
 ```bash
 npm install -g supabase
@@ -83,7 +97,7 @@ supabase link --project-ref TUO-PROJECT-REF
 supabase db push
 ```
 
-## 10. Cursor MCP Supabase
+## 11. Cursor MCP Supabase
 
 In `.cursor/mcp.json` puoi aggiungere il server Supabase MCP per gestire il database da Cursor:
 

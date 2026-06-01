@@ -35,8 +35,8 @@ export function SettingsSection() {
                 <span className="quick-stats-badge">{supabaseBadge}</span>
               </div>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.5 }}>
-                Configura <code>NEXT_PUBLIC_SUPABASE_URL</code> e <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> in{' '}
-                <code>.env.local</code> (locale) o nelle Environment Variables su Vercel.
+                Configura le variabili Supabase in <code>.env.local</code> o su Vercel.
+                Il database richiede <strong>login</strong> — RLS consente solo utenti autenticati.
               </p>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>
                 Guida: <strong>SUPABASE_SETUP.md</strong> · Migrazioni in <strong>supabase/migrations/</strong>

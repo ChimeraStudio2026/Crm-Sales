@@ -88,8 +88,8 @@ export function JonnyChat() {
             ) : null}
             {error ? (
               <div className="jonny-chat-error" role="alert">
-                {error.message.includes('503') || error.message.includes('OPENAI')
-                  ? 'Jonny non è configurato. Aggiungi OPENAI_API_KEY in .env.local e riavvia il server.'
+                {error.message.includes('503') || error.message.includes('API')
+                  ? 'Jonny non è configurato. Aggiungi ANTHROPIC_API_KEY (Claude) in .env.local e riavvia il server.'
                   : error.message}
               </div>
             ) : null}

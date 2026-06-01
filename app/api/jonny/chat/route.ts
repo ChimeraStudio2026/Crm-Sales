@@ -5,7 +5,7 @@ import {
   type UIMessage,
 } from 'ai';
 import { createCrmTools } from '@/lib/jonny/create-crm-tools';
-import { getJonnyModel, isJonnyConfigured } from '@/lib/jonny/get-model';
+import { getJonnyConfigHint, getJonnyModel, isJonnyConfigured } from '@/lib/jonny/get-model';
 import { JONNY_SYSTEM_PROMPT } from '@/lib/jonny/system-prompt';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
@@ -23,7 +23,7 @@ export async function POST(request: Request): Promise<Response> {
   }
   if (!isJonnyConfigured()) {
     return Response.json(
-      { error: 'Jonny non configurato. Aggiungi OPENAI_API_KEY in .env.local' },
+      { error: `Jonny non configurato. ${getJonnyConfigHint()}` },
       { status: 503 },
     );
   }

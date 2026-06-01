@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
   AnalysisForecasts,
+  AnalysisForecastsByYear,
   ApolloEnrichResult,
   Client,
   ClientContact,
@@ -9,7 +10,8 @@ import type {
   OkrRecord,
   RecallItem,
 } from '@/lib/types/crm';
-import { ANALYSIS_YEAR } from '@/lib/constants/crm';
+import { ANALYSIS_YEAR, PREVIOUS_ANALYSIS_YEAR } from '@/lib/constants/crm';
+import { createDefaultForecasts } from '@/lib/analysis/index';
 import { resolveClientProductOffers } from '@/lib/crm/product-offers';
 import { parseFunctionInvokeError } from '@/lib/supabase/function-errors';
 
@@ -311,31 +313,49 @@ export async function persistOkrRecords(
   await upsertOkrRecords(db, records);
 }
 
-export async function fetchAnalysisForecasts(db: SupabaseClient): Promise<AnalysisForecasts> {
+export async function fetchAnalysisForecasts(
+  db: SupabaseClient,
+  year = ANALYSIS_YEAR,
+): Promise<AnalysisForecasts> {
+  const all = await fetchAllAnalysisForecasts(db);
+  return all[year] ?? createDefaultForecasts();
+}
+
+export async function fetchAllAnalysisForecasts(
+  db: SupabaseClient,
+): Promise<AnalysisForecastsByYear> {
   const { data, error } = await db.from('analysis_forecasts').select('*');
   if (error) throw error;
-  const forecasts: AnalysisForecasts = {};
+  const byYear: AnalysisForecastsByYear = {
+    [PREVIOUS_ANALYSIS_YEAR]: createDefaultForecasts(),
+    [ANALYSIS_YEAR]: createDefaultForecasts(),
+  };
   (data || []).forEach((row) => {
-    forecasts[row.scope] = {
+    const year = Number(row.year) || ANALYSIS_YEAR;
+    if (!byYear[year]) {
+      byYear[year] = createDefaultForecasts();
+    }
+    byYear[year][row.scope] = {
       totalForecast: Number(row.total_forecast) || 0,
       productPct: (row.product_forecast_pct as Record<string, number>) || {},
     };
   });
-  return forecasts;
+  return byYear;
 }
 
 export async function persistAnalysisForecasts(
   db: SupabaseClient,
   forecasts: AnalysisForecasts,
+  year = ANALYSIS_YEAR,
 ): Promise<void> {
   const rows = Object.keys(forecasts).map((scope) => ({
     scope,
-    year: ANALYSIS_YEAR,
+    year,
     total_forecast: Number(forecasts[scope].totalForecast) || 0,
     product_forecast_pct: forecasts[scope].productPct || {},
   }));
   if (rows.length === 0) return;
-  const { error } = await db.from('analysis_forecasts').upsert(rows, { onConflict: 'scope' });
+  const { error } = await db.from('analysis_forecasts').upsert(rows, { onConflict: 'scope,year' });
   if (error) throw error;
 }
 

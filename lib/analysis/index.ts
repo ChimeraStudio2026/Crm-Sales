@@ -1,5 +1,4 @@
 import type { AnalysisForecasts, Client, OkrRecord } from '@/lib/types/crm';
-import { ANALYSIS_YEAR } from '@/lib/constants/crm';
 
 export const ANALYSIS_SCOPES = [
   { id: 'total', label: 'Totale Anno', isQuarter: false, alwaysOpen: true },
@@ -71,12 +70,17 @@ export function parseQuarterFromMonth(raw: unknown): number {
 export function filterOkrByScope(
   records: OkrRecord[],
   scopeId: string,
+  year: number,
   quarter?: number,
 ): OkrRecord[] {
-  if (scopeId === 'total') return records.filter((r) => r.year === ANALYSIS_YEAR);
+  if (scopeId === 'total') return records.filter((r) => r.year === year);
   return records.filter(
-    (r) => r.year === ANALYSIS_YEAR && r.quarter === quarter,
+    (r) => r.year === year && r.quarter === quarter,
   );
+}
+
+export function filterOkrByYear(records: OkrRecord[], year: number): OkrRecord[] {
+  return records.filter((record) => record.year === year);
 }
 
 function findClientForOkr(clientName: string, clients: Client[]): Client | null {

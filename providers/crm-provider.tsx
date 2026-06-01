@@ -11,6 +11,7 @@ import {
 } from 'react';
 import type {
   AnalysisForecasts,
+  AnalysisForecastsByYear,
   Client,
   ClientContact,
   ClientTask,
@@ -21,9 +22,11 @@ import type {
   Relationship,
 } from '@/lib/types/crm';
 import {
+  ANALYSIS_YEAR,
   COLD_CLIENT_REV_THRESHOLD,
   EXCEL_IMPORT_ACTION_PREFIX,
   EXCEL_IMPORT_DESC_PREFIX,
+  PREVIOUS_ANALYSIS_YEAR,
 } from '@/lib/constants/crm';
 import { createDefaultForecasts } from '@/lib/analysis/index';
 import {
@@ -64,7 +67,7 @@ import { createBrowserSupabaseClient, isSupabaseConfigured } from '@/lib/supabas
 import {
   clearAllData,
   enrichClientWithApollo,
-  fetchAnalysisForecasts,
+  fetchAllAnalysisForecasts,
   fetchClientTasks,
   fetchClients,
   fetchDailyRecall,
@@ -99,6 +102,7 @@ interface CrmContextValue {
   ideas: Idea[];
   clientTasks: ClientTask[];
   okrRecords: OkrRecord[];
+  analysisYear: number;
   analysisForecasts: AnalysisForecasts;
   analysisExpanded: Set<string>;
   dailyRecallItems: RecallItem[];
@@ -121,6 +125,7 @@ interface CrmContextValue {
   deleteTask: (taskId: string) => Promise<void>;
   toggleTaskCompleted: (taskId: string, completed: boolean) => Promise<void>;
   setAnalysisForecast: (scope: string, field: 'totalForecast' | 'productPct', value: number, product?: string) => Promise<void>;
+  setAnalysisYear: (year: number) => void;
   toggleAnalysisScope: (scope: string) => void;
   refreshRecall: () => Promise<void>;
   updateRecallStatus: (clientId: string, status: RecallItem['status']) => Promise<void>;
@@ -143,7 +148,11 @@ interface CrmContextValue {
   persistClientsNow: (nextClients?: Client[]) => Promise<void>;
   persistIdeasNow: (nextIdeas?: Idea[]) => Promise<void>;
   persistTasksNow: (nextTasks?: ClientTask[]) => Promise<void>;
-  persistAnalysisNow: (nextOkr?: OkrRecord[], nextForecasts?: AnalysisForecasts) => Promise<void>;
+  persistAnalysisNow: (
+    nextOkr?: OkrRecord[],
+    nextForecasts?: AnalysisForecasts,
+    forecastYear?: number,
+  ) => Promise<void>;
   loadDailyRecall: () => Promise<RecallItem[]>;
 }
 
@@ -167,7 +176,15 @@ export function CrmProvider({ children }: CrmProviderProps) {
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [clientTasks, setClientTasks] = useState<ClientTask[]>([]);
   const [okrRecords, setOkrRecords] = useState<OkrRecord[]>([]);
-  const [analysisForecasts, setAnalysisForecasts] = useState<AnalysisForecasts>(createDefaultForecasts());
+  const [analysisYear, setAnalysisYear] = useState<number>(ANALYSIS_YEAR);
+  const [forecastsByYear, setForecastsByYear] = useState<AnalysisForecastsByYear>(() => ({
+    [PREVIOUS_ANALYSIS_YEAR]: createDefaultForecasts(),
+    [ANALYSIS_YEAR]: createDefaultForecasts(),
+  }));
+  const analysisForecasts = useMemo(
+    () => forecastsByYear[analysisYear] ?? createDefaultForecasts(),
+    [analysisYear, forecastsByYear],
+  );
   const [analysisExpanded, setAnalysisExpanded] = useState<Set<string>>(new Set());
   const [dailyRecallItems, setDailyRecallItems] = useState<RecallItem[]>([]);
   const [recallFilterStatus, setRecallFilterStatus] = useState('');
@@ -215,12 +232,16 @@ export function CrmProvider({ children }: CrmProviderProps) {
   const persistAnalysisNow = useCallback(async (
     nextOkr?: OkrRecord[],
     nextForecasts?: AnalysisForecasts,
+    forecastYear?: number,
   ) => {
     if (!db) return;
+    const year = forecastYear ?? analysisYear;
+    const forecasts = nextForecasts ?? forecastsByYear[year] ?? createDefaultForecasts();
     await upsertOkrRecords(db, nextOkr ?? okrRecords);
-    await persistAnalysisForecasts(db, nextForecasts ?? analysisForecasts);
+    await persistAnalysisForecasts(db, forecasts, year);
+    setForecastsByYear((prev) => ({ ...prev, [year]: forecasts }));
     setIsSupabaseConnected(true);
-  }, [analysisForecasts, db, okrRecords]);
+  }, [analysisYear, db, forecastsByYear, okrRecords]);
 
   const loadDailyRecall = useCallback(async (): Promise<RecallItem[]> => {
     const today = getTodayString();
@@ -282,7 +303,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
           fetchIdeas(db),
           fetchClientTasks(db),
           fetchAllOkrRecords(db),
-          fetchAnalysisForecasts(db),
+          fetchAllAnalysisForecasts(db),
         ]);
         let normalized = normalizeClients(loadedClients);
         normalized = reconcileImportedClientsToMainList(normalized);
@@ -293,7 +314,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
         setClientTasks(loadedTasks);
         setOkrRecords(loadedOkr);
         if (Object.keys(loadedForecasts).length > 0) {
-          setAnalysisForecasts({ ...createDefaultForecasts(), ...loadedForecasts });
+          setForecastsByYear(loadedForecasts);
         }
       } catch (reloadError) {
         console.error('Jonny reload failed:', reloadError);
@@ -314,7 +335,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
             fetchIdeas(db),
             fetchClientTasks(db),
             fetchAllOkrRecords(db),
-            fetchAnalysisForecasts(db),
+            fetchAllAnalysisForecasts(db),
           ]);
           let normalized = normalizeClients(loadedClients);
           normalized = reconcileImportedClientsToMainList(normalized);
@@ -325,7 +346,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
           setClientTasks(loadedTasks);
           setOkrRecords(loadedOkr);
           if (Object.keys(loadedForecasts).length > 0) {
-            setAnalysisForecasts({ ...createDefaultForecasts(), ...loadedForecasts });
+            setForecastsByYear(loadedForecasts);
           }
           setIsSupabaseConnected(true);
           await refreshApolloStatus();
@@ -596,7 +617,8 @@ export function CrmProvider({ children }: CrmProviderProps) {
     value: number,
     product?: string,
   ) => {
-    const next = { ...analysisForecasts };
+    const current = forecastsByYear[analysisYear] ?? createDefaultForecasts();
+    const next = { ...current };
     if (!next[scope]) next[scope] = { totalForecast: 0, productPct: {} };
     if (field === 'totalForecast') {
       next[scope] = { ...next[scope], totalForecast: value };
@@ -606,9 +628,14 @@ export function CrmProvider({ children }: CrmProviderProps) {
         productPct: { ...next[scope].productPct, [product]: value },
       };
     }
-    setAnalysisForecasts(next);
-    await persistAnalysisNow(okrRecords, next);
-  }, [analysisForecasts, okrRecords, persistAnalysisNow]);
+    setForecastsByYear((prev) => ({ ...prev, [analysisYear]: next }));
+    await persistAnalysisNow(okrRecords, next, analysisYear);
+  }, [analysisYear, forecastsByYear, okrRecords, persistAnalysisNow]);
+
+  const handleSetAnalysisYear = useCallback((year: number) => {
+    if (year !== PREVIOUS_ANALYSIS_YEAR && year !== ANALYSIS_YEAR) return;
+    setAnalysisYear(year);
+  }, []);
 
   const toggleAnalysisScope = useCallback((scope: string) => {
     setAnalysisExpanded((prev) => {
@@ -762,13 +789,24 @@ export function CrmProvider({ children }: CrmProviderProps) {
     setIdeas([]);
     setClientTasks([]);
     setOkrRecords([]);
-    setAnalysisForecasts(createDefaultForecasts());
+    setForecastsByYear({
+      [PREVIOUS_ANALYSIS_YEAR]: createDefaultForecasts(),
+      [ANALYSIS_YEAR]: createDefaultForecasts(),
+    });
+    setAnalysisYear(ANALYSIS_YEAR);
     setDailyRecallItems([]);
     showToast('Gestionale azzerato.', 'warning');
   }, [db, showToast]);
 
   const exportJsonBackup = useCallback(() => {
-    const payload = { clients, ideas, clientTasks, okrRecords, analysisForecasts };
+    const payload = {
+      clients,
+      ideas,
+      clientTasks,
+      okrRecords,
+      analysisForecastsByYear: forecastsByYear,
+      analysisYear,
+    };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -776,7 +814,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
     a.download = `crm-backup-${getTodayString()}.json`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [analysisForecasts, clientTasks, clients, ideas, okrRecords]);
+  }, [analysisYear, clientTasks, clients, forecastsByYear, ideas, okrRecords]);
 
   const importJsonBackup = useCallback(async (json: string) => {
     const data = JSON.parse(json) as {
@@ -785,6 +823,8 @@ export function CrmProvider({ children }: CrmProviderProps) {
       clientTasks?: ClientTask[];
       okrRecords?: OkrRecord[];
       analysisForecasts?: AnalysisForecasts;
+      analysisForecastsByYear?: AnalysisForecastsByYear;
+      analysisYear?: number;
     };
     const nextClients = recalculateRelationships(
       reconcileImportedClientsToMainList(normalizeClients(data.clients || [])),
@@ -793,11 +833,23 @@ export function CrmProvider({ children }: CrmProviderProps) {
     setIdeas(data.ideas || []);
     setClientTasks(data.clientTasks || []);
     setOkrRecords(data.okrRecords || []);
-    if (data.analysisForecasts) setAnalysisForecasts(data.analysisForecasts);
+    if (data.analysisForecastsByYear) {
+      setForecastsByYear(data.analysisForecastsByYear);
+    } else if (data.analysisForecasts) {
+      setForecastsByYear({
+        [PREVIOUS_ANALYSIS_YEAR]: createDefaultForecasts(),
+        [ANALYSIS_YEAR]: data.analysisForecasts,
+      });
+    }
+    if (data.analysisYear) setAnalysisYear(data.analysisYear);
     await persistClientsNow(nextClients);
     await persistIdeasNow(data.ideas || []);
     await persistTasksNow(data.clientTasks || []);
-    await persistAnalysisNow(data.okrRecords || [], data.analysisForecasts);
+    await persistAnalysisNow(
+      data.okrRecords || [],
+      data.analysisForecastsByYear?.[data.analysisYear ?? ANALYSIS_YEAR] ?? data.analysisForecasts,
+      data.analysisYear ?? ANALYSIS_YEAR,
+    );
     showToast('Backup importato.', 'success');
   }, [persistAnalysisNow, persistClientsNow, persistIdeasNow, persistTasksNow, showToast]);
 
@@ -850,6 +902,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
     ideas,
     clientTasks,
     okrRecords,
+    analysisYear,
     analysisForecasts,
     analysisExpanded,
     dailyRecallItems: filterValidRecallItems(dailyRecallItems, clients),
@@ -872,6 +925,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
     deleteTask,
     toggleTaskCompleted,
     setAnalysisForecast,
+    setAnalysisYear: handleSetAnalysisYear,
     toggleAnalysisScope,
     refreshRecall,
     updateRecallStatus,

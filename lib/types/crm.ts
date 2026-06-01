@@ -74,6 +74,8 @@ export interface AnalysisForecastScope {
 
 export type AnalysisForecasts = Record<string, AnalysisForecastScope>;
 
+export type AnalysisForecastsByYear = Record<number, AnalysisForecasts>;
+
 export interface RecallItem {
   clientId: string;
   relationship: Relationship;

@@ -9,22 +9,26 @@ import {
   buildProductStats,
   buildScopeMetrics,
   filterOkrByScope,
+  filterOkrByYear,
   formatPct,
   formatPctPlain,
 } from '@/lib/analysis/index';
+import { ANALYSIS_YEAR, PREVIOUS_ANALYSIS_YEAR } from '@/lib/constants/crm';
 import { formatCurrency } from '@/lib/crm/utils';
 import { TopHeader } from '@/components/layout/top-header';
 import { useCrm } from '@/providers/crm-provider';
 
 function ScopeContent({
   scopeId,
+  year,
   quarter,
 }: {
   scopeId: string;
+  year: number;
   quarter?: number;
 }) {
   const { okrRecords, analysisForecasts, clients, setAnalysisForecast } = useCrm();
-  const records = filterOkrByScope(okrRecords, scopeId, quarter);
+  const records = filterOkrByScope(okrRecords, scopeId, year, quarter);
   const forecastScope = analysisForecasts[scopeId] || { totalForecast: 0, productPct: {} };
   const metrics = buildScopeMetrics(records, forecastScope);
   const productStats = buildProductStats(records, forecastScope);
@@ -160,9 +164,12 @@ function ScopeContent({
   );
 }
 
+const ANALYSIS_YEAR_OPTIONS = [PREVIOUS_ANALYSIS_YEAR, ANALYSIS_YEAR] as const;
+
 export function AnalysisSection() {
-  const { okrRecords, analysisExpanded, toggleAnalysisScope } = useCrm();
+  const { okrRecords, analysisYear, setAnalysisYear, analysisExpanded, toggleAnalysisScope } = useCrm();
   const quarterScopes = ANALYSIS_SCOPES.filter((s) => s.isQuarter);
+  const yearOkrRecords = filterOkrByYear(okrRecords, analysisYear);
 
   return (
     <>
@@ -171,30 +178,45 @@ export function AnalysisSection() {
       <section className="app-section active">
         <div className="analysis-dashboard">
           <div className="analysis-intro glass-card">
-            <h3><BarChart3 size={20} /> Analisi 2026</h3>
+            <h3><BarChart3 size={20} /> Analisi {analysisYear}</h3>
             <p>
               I dati di fatturato e N. Prop derivano dagli OKR importati via Excel.
               Big Prod e Motion sono unificati in <strong>Prod</strong>.
             </p>
-            {okrRecords.length === 0 && (
+            {yearOkrRecords.length === 0 && (
               <p className="analysis-empty-hint">
-                Nessun OKR caricato — importa un file Excel dalla sezione Importa Excel.
+                Nessun OKR caricato per {analysisYear} — importa un file Excel dalla sezione Importa Excel.
               </p>
             )}
           </div>
           <div className="analysis-block analysis-block-total is-open">
             <div className="analysis-block-header">
-              <h3><Layers size={20} /> Totale Anno 2026</h3>
-              <span className="quick-stats-badge">{okrRecords.length} OKR totali</span>
+              <h3><Layers size={20} /> Totale Anno {analysisYear}</h3>
+              <div className="analysis-block-header-actions">
+                <div className="analysis-year-switcher" role="group" aria-label="Seleziona anno analisi">
+                  {ANALYSIS_YEAR_OPTIONS.map((year) => (
+                    <button
+                      key={year}
+                      type="button"
+                      className={`analysis-year-switcher-btn${analysisYear === year ? ' is-active' : ''}`}
+                      aria-pressed={analysisYear === year}
+                      onClick={() => setAnalysisYear(year)}
+                    >
+                      {year}
+                    </button>
+                  ))}
+                </div>
+                <span className="quick-stats-badge">{yearOkrRecords.length} OKR totali</span>
+              </div>
             </div>
             <div className="analysis-block-body">
-              <ScopeContent scopeId="total" />
+              <ScopeContent scopeId="total" year={analysisYear} />
             </div>
           </div>
           <div className="analysis-quarters">
             {quarterScopes.map((scope) => {
               const isOpen = analysisExpanded.has(scope.id);
-              const scopedRecords = filterOkrByScope(okrRecords, scope.id, scope.quarter);
+              const scopedRecords = filterOkrByScope(okrRecords, scope.id, analysisYear, scope.quarter);
               const total = scopedRecords.reduce((s, r) => s + r.amount, 0);
               return (
                 <div key={scope.id} className={`analysis-accordion${isOpen ? ' is-open' : ''}`}>
@@ -211,7 +233,7 @@ export function AnalysisSection() {
                   </button>
                   {isOpen && (
                     <div className="analysis-accordion-body">
-                      <ScopeContent scopeId={scope.id} quarter={scope.quarter} />
+                      <ScopeContent scopeId={scope.id} year={analysisYear} quarter={scope.quarter} />
                     </div>
                   )}
                 </div>

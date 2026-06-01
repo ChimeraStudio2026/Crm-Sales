@@ -1,20 +1,24 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Download, Edit, FilterX, Search, Sparkles, Trash2 } from 'lucide-react';
+import { Fragment, useMemo, useState } from 'react';
+import { ChevronRight, Download, Edit, FilterX, Search, Sparkles, Trash2 } from 'lucide-react';
 import {
   CLIENT_TYPES,
+  CRM_TABLE_COLUMN_DEFS,
   DEFAULT_TABLE_COLUMN_ORDER,
   OWNERS,
   RELATIONSHIPS,
 } from '@/lib/constants/crm';
 import {
+  formatActionDateDisplay,
   formatCurrency,
+  isActionDateStale,
   isClientInActiveSection,
   shouldHighlightIncompleteClient,
 } from '@/lib/crm/utils';
 import { useCrm } from '@/providers/crm-provider';
 import { ClientDrawer } from '@/components/drawers/client-drawer';
+import { ClientDetailPanel } from '@/components/clients/client-detail-panel';
 import { TopHeader } from '@/components/layout/top-header';
 import type { Client, Relationship, SortState } from '@/lib/types/crm';
 
@@ -26,8 +30,22 @@ const RELATIONSHIP_LABELS: Record<Relationship, string> = {
   Eliminato: '🔴 Eliminato',
 };
 
+function isInteractiveTableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  return !!target.closest(
+    'button, select, input, textarea, a, .client-detail-panel, .table-row-actions, .btn-table-action',
+  );
+}
+
 export function ClientsSection() {
-  const { clients, deleteClient, updateClientField, enrichClientApollo } = useCrm();
+  const {
+    clients,
+    deleteClient,
+    updateClientField,
+    updateClientContacts,
+    updateClientAction,
+    enrichClientApollo,
+  } = useCrm();
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterOwner, setFilterOwner] = useState('');
@@ -35,6 +53,7 @@ export function ClientsSection() {
   const [sort, setSort] = useState<SortState>({ column: 'name', direction: 'asc' });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editClient, setEditClient] = useState<Client | null>(null);
+  const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
 
   const filtered = useMemo(() => {
     const query = search.toLowerCase().trim();
@@ -43,8 +62,9 @@ export function ClientsSection() {
       const matchesQuery =
         !query ||
         c.name.toLowerCase().includes(query) ||
+        c.action.toLowerCase().includes(query) ||
         c.contacts.some((ct) =>
-          `${ct.email} ${ct.role}`.toLowerCase().includes(query),
+          `${ct.name} ${ct.email} ${ct.role}`.toLowerCase().includes(query),
         );
       return (
         matchesQuery &&
@@ -72,12 +92,24 @@ export function ClientsSection() {
   }, [clients, filterOwner, filterRelationship, filterType, search, sort]);
 
   const totalActive = clients.filter(isClientInActiveSection).length;
+  const columnCount = DEFAULT_TABLE_COLUMN_ORDER.length;
 
   const handleSort = (column: string) => {
+    const columnDef = CRM_TABLE_COLUMN_DEFS[column as keyof typeof CRM_TABLE_COLUMN_DEFS];
+    if (!columnDef || !columnDef.sortKey || ('noSort' in columnDef && columnDef.noSort)) return;
     setSort((prev) => ({
       column,
       direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc',
     }));
+  };
+
+  const toggleExpanded = (clientId: string) => {
+    setExpandedClients((prev) => {
+      const next = new Set(prev);
+      if (next.has(clientId)) next.delete(clientId);
+      else next.add(clientId);
+      return next;
+    });
   };
 
   const openNew = () => {
@@ -88,6 +120,103 @@ export function ClientsSection() {
   const openEdit = (client: Client) => {
     setEditClient(client);
     setDrawerOpen(true);
+  };
+
+  const renderCell = (client: Client, columnId: string) => {
+    switch (columnId) {
+      case 'name':
+        return (
+          <td key={columnId} className="col-nome">
+            <div className="client-name-cell">
+              <ChevronRight
+                size={14}
+                className={`row-expand-icon ${expandedClients.has(client.id) ? 'is-expanded' : ''}`}
+              />
+              <strong>{client.name}</strong>
+            </div>
+          </td>
+        );
+      case 'type':
+        return (
+          <td key={columnId}>
+            <select
+              className="table-cell-select"
+              value={client.type}
+              onChange={(e) => void updateClientField(client.id, 'type', e.target.value)}
+            >
+              {CLIENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </td>
+        );
+      case 'owner':
+        return (
+          <td key={columnId}>
+            <select
+              className="table-cell-select"
+              value={client.owner}
+              onChange={(e) => void updateClientField(client.id, 'owner', e.target.value)}
+            >
+              {OWNERS.map((o) => <option key={o} value={o}>{o}</option>)}
+            </select>
+          </td>
+        );
+      case 'relationship':
+        return (
+          <td key={columnId}>
+            <select
+              className="table-cell-select"
+              value={client.relationship}
+              onChange={(e) => void updateClientField(client.id, 'relationship', e.target.value)}
+            >
+              {RELATIONSHIPS.map((r) => <option key={r} value={r}>{RELATIONSHIP_LABELS[r]}</option>)}
+            </select>
+          </td>
+        );
+      case 'rev2026':
+        return <td key={columnId} style={{ textAlign: 'right' }}>{formatCurrency(client.rev2026)}</td>;
+      case 'rev2025':
+        return <td key={columnId} style={{ textAlign: 'right' }}>{formatCurrency(client.rev2025)}</td>;
+      case 'action':
+        return (
+          <td key={columnId} className="col-azione" title={client.action || undefined}>
+            {client.action?.trim() ? client.action : '—'}
+          </td>
+        );
+      case 'actionDate': {
+        const isStale = isActionDateStale(client.actionDate);
+        return (
+          <td
+            key={columnId}
+            className="col-data-azione"
+            title={isStale ? 'Azione non aggiornata da oltre 10 giorni' : undefined}
+          >
+            {client.actionDate ? (
+              <span className={isStale ? 'table-cell-chip cell-date-stale' : undefined}>
+                {formatActionDateDisplay(client.actionDate)}
+              </span>
+            ) : '—'}
+          </td>
+        );
+      }
+      case 'actions':
+        return (
+          <td key={columnId}>
+            <div className="table-row-actions">
+              <button type="button" className="btn-table-action apollo" title="Apollo" onClick={() => void enrichClientApollo(client.id)}>
+                <Sparkles size={16} />
+              </button>
+              <button type="button" className="btn-table-action edit" title="Modifica" onClick={() => openEdit(client)}>
+                <Edit size={16} />
+              </button>
+              <button type="button" className="btn-table-action delete" title="Elimina" onClick={() => void deleteClient(client.id)}>
+                <Trash2 size={16} />
+              </button>
+            </div>
+          </td>
+        );
+      default:
+        return <td key={columnId} />;
+    }
   };
 
   return (
@@ -147,81 +276,59 @@ export function ClientsSection() {
               <table className="crm-table">
                 <thead>
                   <tr>
-                    {DEFAULT_TABLE_COLUMN_ORDER.map((colId) => (
-                      <th
-                        key={colId}
-                        onClick={() => handleSort(colId)}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        {colId === 'name' && 'Nome Cliente'}
-                        {colId === 'type' && 'Tipologia'}
-                        {colId === 'owner' && 'Owner'}
-                        {colId === 'relationship' && 'Rapporto'}
-                        {colId === 'rev2026' && 'Fatturato 2026'}
-                        {colId === 'rev2025' && 'Fatturato 2025'}
-                      </th>
-                    ))}
-                    <th>Azioni</th>
+                    {DEFAULT_TABLE_COLUMN_ORDER.map((colId) => {
+                      const columnDef = CRM_TABLE_COLUMN_DEFS[colId as keyof typeof CRM_TABLE_COLUMN_DEFS];
+                      return (
+                        <th
+                          key={colId}
+                          onClick={() => handleSort(colId)}
+                          style={{ cursor: ('noSort' in columnDef && columnDef.noSort) ? 'default' : 'pointer' }}
+                        >
+                          {columnDef.label}
+                        </th>
+                      );
+                    })}
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={DEFAULT_TABLE_COLUMN_ORDER.length + 1} style={{ textAlign: 'center', padding: 40 }}>
+                      <td colSpan={columnCount} style={{ textAlign: 'center', padding: 40 }}>
                         Nessun cliente corrisponde ai criteri di ricerca.
                       </td>
                     </tr>
                   ) : (
-                    filtered.map((client) => (
-                      <tr
-                        key={client.id}
-                        className={shouldHighlightIncompleteClient(client) ? 'client-row-incomplete' : ''}
-                      >
-                        <td><strong>{client.name}</strong></td>
-                        <td>
-                          <select
-                            className="table-cell-select"
-                            value={client.type}
-                            onChange={(e) => void updateClientField(client.id, 'type', e.target.value)}
+                    filtered.map((client) => {
+                      const isExpanded = expandedClients.has(client.id);
+                      return (
+                        <Fragment key={client.id}>
+                          <tr
+                            className={[
+                              'client-row-expandable',
+                              isExpanded ? 'is-row-expanded' : '',
+                              shouldHighlightIncompleteClient(client) ? 'client-row-incomplete' : '',
+                            ].filter(Boolean).join(' ')}
+                            onClick={(event) => {
+                              if (isInteractiveTableTarget(event.target)) return;
+                              toggleExpanded(client.id);
+                            }}
                           >
-                            {CLIENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                          </select>
-                        </td>
-                        <td>
-                          <select
-                            className="table-cell-select"
-                            value={client.owner}
-                            onChange={(e) => void updateClientField(client.id, 'owner', e.target.value)}
-                          >
-                            {OWNERS.map((o) => <option key={o} value={o}>{o}</option>)}
-                          </select>
-                        </td>
-                        <td>
-                          <select
-                            className="table-cell-select"
-                            value={client.relationship}
-                            onChange={(e) => void updateClientField(client.id, 'relationship', e.target.value)}
-                          >
-                            {RELATIONSHIPS.map((r) => <option key={r} value={r}>{RELATIONSHIP_LABELS[r]}</option>)}
-                          </select>
-                        </td>
-                        <td style={{ textAlign: 'right' }}>{formatCurrency(client.rev2026)}</td>
-                        <td style={{ textAlign: 'right' }}>{formatCurrency(client.rev2025)}</td>
-                        <td>
-                          <div className="table-row-actions">
-                            <button type="button" className="btn-table-action apollo" title="Apollo" onClick={() => void enrichClientApollo(client.id)}>
-                              <Sparkles size={16} />
-                            </button>
-                            <button type="button" className="btn-table-action edit" title="Modifica" onClick={() => openEdit(client)}>
-                              <Edit size={16} />
-                            </button>
-                            <button type="button" className="btn-table-action delete" title="Elimina" onClick={() => void deleteClient(client.id)}>
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                            {DEFAULT_TABLE_COLUMN_ORDER.map((colId) => renderCell(client, colId))}
+                          </tr>
+                          {isExpanded && (
+                            <tr className="client-contacts-detail-row is-visible">
+                              <td colSpan={columnCount}>
+                                <ClientDetailPanel
+                                  client={client}
+                                  onUpdateContacts={(contacts) => updateClientContacts(client.id, contacts)}
+                                  onUpdateAction={(action) => updateClientAction(client.id, action)}
+                                />
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      );
+                    })
                   )}
                 </tbody>
               </table>

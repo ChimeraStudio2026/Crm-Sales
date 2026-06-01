@@ -18,3 +18,5 @@ Password: 0987654321 (utilizza queste credenziali per entrambi)
 
 npm run dev
 e vai su localhost:3000
+
+suca

@@ -1,6 +1,7 @@
 export interface ClientContact {
   id: string;
   email: string;
+  name: string;
   role: string;
 }
 

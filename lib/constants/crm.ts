@@ -80,12 +80,13 @@ export const CRM_TABLE_COLUMN_DEFS = {
   actions: { label: 'Azioni', sortKey: null, align: 'center' as const, defaultWidth: 100, minWidth: 90, noExpand: true, noSort: true },
 };
 
-export const MAIN_TABLE_HIDDEN_COLUMNS = new Set(['contacts', 'action', 'actionDate']);
+export const MAIN_TABLE_HIDDEN_COLUMNS = new Set(['contacts']);
 
 export const DEFAULT_TABLE_COLUMN_ORDER = Object.keys(CRM_TABLE_COLUMN_DEFS).filter(
   (columnId) => !MAIN_TABLE_HIDDEN_COLUMNS.has(columnId),
 );
 
+export const ACTION_DATE_STALE_DAYS = 10;
 export const EXCEL_IMPORT_ACTION_PREFIX = 'Import Excel';
 export const EXCEL_IMPORT_DESC_PREFIX = 'Cliente creato da import Excel';
 

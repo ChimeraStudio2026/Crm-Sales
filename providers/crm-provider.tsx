@@ -42,6 +42,7 @@ import {
   isClientInColdSection,
   normalizeClients,
   recalculateRelationships,
+  syncClientLegacyFields,
   updateClientProfileCompletion,
 } from '@/lib/crm/utils';
 import {
@@ -100,6 +101,8 @@ interface CrmContextValue {
   saveClient: (client: Partial<Client> & { name: string }, options?: { isCold?: boolean; isEdit?: boolean; id?: string }) => Promise<void>;
   deleteClient: (clientId: string) => Promise<void>;
   updateClientField: (clientId: string, field: keyof Client, value: unknown) => Promise<void>;
+  updateClientContacts: (clientId: string, contacts: ClientContact[]) => Promise<void>;
+  updateClientAction: (clientId: string, action: string) => Promise<void>;
   saveIdea: (idea: Partial<Idea> & { name: string; description: string; clientId: string }) => Promise<void>;
   deleteIdea: (ideaId: string) => Promise<void>;
   moveIdeaStatus: (ideaId: string, newStatus: Idea['status']) => Promise<void>;
@@ -325,6 +328,8 @@ export function CrmProvider({ children }: CrmProviderProps) {
     if (id) {
       nextClients = nextClients.map((c) => {
         if (c.id !== id) return c;
+        const trimmedAction = input.action !== undefined ? input.action.trim() : undefined;
+        const actionChanged = trimmedAction !== undefined && trimmedAction !== (c.action || '').trim();
         const updated: Client = {
           ...c,
           ...input,
@@ -332,6 +337,14 @@ export function CrmProvider({ children }: CrmProviderProps) {
           contacts: input.contacts ?? c.contacts,
           manualRelationship: input.manualRelationship ?? c.manualRelationship,
         };
+        if (trimmedAction !== undefined) {
+          updated.action = trimmedAction;
+          if (trimmedAction) {
+            if (actionChanged) updated.actionDate = getTodayString();
+          } else {
+            updated.actionDate = '';
+          }
+        }
         updateClientProfileCompletion(updated);
         if (isCold || isClientInColdSection(updated)) {
           updated.isColdClient = (updated.rev2026 || 0) <= COLD_CLIENT_REV_THRESHOLD;
@@ -385,6 +398,48 @@ export function CrmProvider({ children }: CrmProviderProps) {
       return applyColdClientPromotion(updated).client;
     });
     nextClients = recalculateRelationships(nextClients);
+    setClients(nextClients);
+    await persistClientsNow(nextClients);
+  }, [clients, persistClientsNow]);
+
+  const updateClientContacts = useCallback(async (
+    clientId: string,
+    contacts: ClientContact[],
+  ) => {
+    const normalizedContacts = contacts.map((contact) => ({
+      id: contact.id || createUniqueId('contact'),
+      email: contact.email || '',
+      name: contact.name || '',
+      role: contact.role || '',
+    }));
+    let nextClients = clients.map((c) => {
+      if (c.id !== clientId) return c;
+      const updated = { ...c, contacts: normalizedContacts };
+      syncClientLegacyFields(updated);
+      updateClientProfileCompletion(updated);
+      return applyColdClientPromotion(updated).client;
+    });
+    nextClients = recalculateRelationships(nextClients);
+    setClients(nextClients);
+    await persistClientsNow(nextClients);
+  }, [clients, persistClientsNow]);
+
+  const updateClientAction = useCallback(async (clientId: string, action: string) => {
+    const trimmedAction = action.trim();
+    let nextClients = clients.map((c) => {
+      if (c.id !== clientId) return c;
+      const previousAction = (c.action || '').trim();
+      const hasChanged = trimmedAction !== previousAction;
+      const updated: Client = {
+        ...c,
+        action: trimmedAction,
+        actionDate: trimmedAction
+          ? (hasChanged ? getTodayString() : (c.actionDate || getTodayString()))
+          : '',
+      };
+      updateClientProfileCompletion(updated);
+      return updated;
+    });
     setClients(nextClients);
     await persistClientsNow(nextClients);
   }, [clients, persistClientsNow]);
@@ -663,7 +718,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
       const contacts: ClientContact[] = [...c.contacts];
       if (result.email && typeof result.email === 'string') {
         if (contacts.length === 0) {
-          contacts.push({ id: createUniqueId('contact'), email: result.email, role: '' });
+          contacts.push({ id: createUniqueId('contact'), email: result.email, name: '', role: '' });
         } else {
           contacts[0] = { ...contacts[0], email: result.email };
         }
@@ -699,6 +754,8 @@ export function CrmProvider({ children }: CrmProviderProps) {
     saveClient,
     deleteClient,
     updateClientField,
+    updateClientContacts,
+    updateClientAction,
     saveIdea,
     deleteIdea,
     moveIdeaStatus,

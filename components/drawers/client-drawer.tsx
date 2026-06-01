@@ -23,7 +23,7 @@ export function ClientDrawer({ client, isCold, onClose }: ClientDrawerProps) {
   const [rev2026, setRev2026] = useState(0);
   const [description, setDescription] = useState('');
   const [action, setAction] = useState('');
-  const [contacts, setContacts] = useState<ClientContact[]>([{ id: createUniqueId('contact'), email: '', role: '' }]);
+  const [contacts, setContacts] = useState<ClientContact[]>([{ id: createUniqueId('contact'), email: '', name: '', role: '' }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -36,7 +36,7 @@ export function ClientDrawer({ client, isCold, onClose }: ClientDrawerProps) {
       setRev2026(client.rev2026);
       setDescription(client.description);
       setAction(client.action);
-      setContacts(client.contacts.length > 0 ? client.contacts : [{ id: createUniqueId('contact'), email: '', role: '' }]);
+      setContacts(client.contacts.length > 0 ? client.contacts : [{ id: createUniqueId('contact'), email: '', name: '', role: '' }]);
     }
   }, [client]);
 
@@ -115,20 +115,25 @@ export function ClientDrawer({ client, isCold, onClose }: ClientDrawerProps) {
             <div className="form-group">
               <label>Contatti</label>
               {contacts.map((contact, index) => (
-                <div key={contact.id} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                  <input className="form-input" placeholder="Email" value={contact.email} onChange={(e) => {
+                <div key={contact.id} className="form-contact-row-inline">
+                  <input className="form-input" placeholder="Nome" value={contact.name} onChange={(e) => {
+                    const next = [...contacts];
+                    next[index] = { ...contact, name: e.target.value };
+                    setContacts(next);
+                  }} />
+                  <input className="form-input" placeholder="Mail" value={contact.email} onChange={(e) => {
                     const next = [...contacts];
                     next[index] = { ...contact, email: e.target.value };
                     setContacts(next);
                   }} />
-                  <input className="form-input" placeholder="Ruolo" value={contact.role} onChange={(e) => {
+                  <input className="form-input" placeholder="Posizione" value={contact.role} onChange={(e) => {
                     const next = [...contacts];
                     next[index] = { ...contact, role: e.target.value };
                     setContacts(next);
                   }} />
                 </div>
               ))}
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setContacts([...contacts, { id: createUniqueId('contact'), email: '', role: '' }])}>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setContacts([...contacts, { id: createUniqueId('contact'), email: '', name: '', role: '' }])}>
                 Aggiungi contatto
               </button>
             </div>

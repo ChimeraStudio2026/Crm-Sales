@@ -1,5 +1,5 @@
 import type { Client, ClientContact } from '@/lib/types/crm';
-import { COLD_CLIENT_REV_THRESHOLD } from '@/lib/constants/crm';
+import { ACTION_DATE_STALE_DAYS, COLD_CLIENT_REV_THRESHOLD } from '@/lib/constants/crm';
 
 export function createUniqueId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -105,12 +105,14 @@ export function normalizeClientContacts(client: Client): ClientContact[] {
     client.contacts.push({
       id: createUniqueId('contact'),
       email: client.email,
+      name: '',
       role: '',
     });
   }
   client.contacts = client.contacts.map((contact) => ({
     id: contact.id || createUniqueId('contact'),
     email: contact.email || '',
+    name: contact.name || '',
     role: contact.role || '',
   }));
   return client.contacts;
@@ -127,7 +129,7 @@ export function syncClientLegacyFields(client: Client): void {
 export function getClientContactsSearchText(client: Client): string {
   normalizeClientContacts(client);
   const contactText = client.contacts
-    .map((contact) => [contact.email || '', contact.role || ''].join(' '))
+    .map((contact) => [contact.name || '', contact.email || '', contact.role || ''].join(' '))
     .join(' ')
     .toLowerCase();
   return `${contactText} ${(client.description || '').toLowerCase()}`.trim();
@@ -147,6 +149,23 @@ export function getClientPrimaryEmail(client: Client): string {
   normalizeClientContacts(client);
   const withEmail = client.contacts.find((contact) => (contact.email || '').trim());
   return withEmail?.email || client.email || '';
+}
+
+export function isActionDateStale(actionDateStr: string): boolean {
+  if (!actionDateStr) return false;
+  const actionDate = new Date(`${actionDateStr}T00:00:00`);
+  if (Number.isNaN(actionDate.getTime())) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diffDays = Math.floor((today.getTime() - actionDate.getTime()) / (1000 * 60 * 60 * 24));
+  return diffDays >= ACTION_DATE_STALE_DAYS;
+}
+
+export function formatActionDateDisplay(actionDateStr: string): string {
+  if (!actionDateStr) return '—';
+  const date = new Date(`${actionDateStr}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return actionDateStr;
+  return date.toLocaleDateString('it-IT');
 }
 
 export function recalculateRelationships(clients: Client[]): Client[] {

@@ -37,6 +37,7 @@ function normalizeContactsArray(
     return contacts.map((contact) => ({
       id: contact.id || `contact-${Date.now()}`,
       email: contact.email || '',
+      name: contact.name || '',
       role: contact.role || '',
     }));
   }
@@ -44,6 +45,7 @@ function normalizeContactsArray(
     return [{
       id: `contact-legacy-${Date.now()}`,
       email: legacyEmail || '',
+      name: '',
       role: '',
     }];
   }

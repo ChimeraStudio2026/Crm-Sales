@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom CRM Sales | Dashboard & Gestione Clienti</title>
+    
+    <!-- Lucide Icons & FontAwesome for Premium Visuals -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Core External Libraries via CDN (SheetJS for Excel & Chart.js for graphs) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="styles.css?v=20260531i">
+</head>
+<body>
+
+    <!-- ==========================================================================
+       SIDEBAR NAVIGATION
+       ========================================================================== */ -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-logo">
+            <div class="logo-container">
+                <div class="logo-icon">C</div>
+                <span class="logo-text">CRM Sales</span>
+            </div>
+        </div>
+        
+        <ul class="sidebar-menu">
+            <li class="menu-item active" data-target="section-dashboard">
+                <i data-lucide="bar-chart-3"></i>
+                <span>Analisi</span>
+            </li>
+            <li class="menu-item" data-target="section-clients">
+                <i data-lucide="users"></i>
+                <span>Lista Clienti</span>
+            </li>
+            <li class="menu-item" data-target="section-tasks">
+                <i data-lucide="check-square"></i>
+                <span>Task</span>
+            </li>
+            <li class="menu-item" data-target="section-recall">
+                <i data-lucide="phone-call"></i>
+                <span>Random Recall</span>
+            </li>
+            <li class="menu-item" data-target="section-ideas">
+                <i data-lucide="lightbulb"></i>
+                <span>Idee Random</span>
+            </li>
+            <li class="menu-item" data-target="section-cold">
+                <i data-lucide="snowflake"></i>
+                <span>Clienti Freddi</span>
+            </li>
+            <li class="menu-item" data-target="section-import">
+                <i data-lucide="file-spreadsheet"></i>
+                <span>Importa Excel</span>
+            </li>
+            <li class="menu-item" data-target="section-settings">
+                <i data-lucide="settings"></i>
+                <span>Impostazioni</span>
+            </li>
+        </ul>
+        
+        <div class="sidebar-footer">
+            <div class="user-avatar">A</div>
+            <div class="user-info">
+                <span class="user-name">Amministratore</span>
+                <span class="user-role">Sales Manager</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ==========================================================================
+       MAIN CONTENT CONTAINER
+       ========================================================================== */ -->
+    <main class="main-content">
+        
+        <!-- Header Sticky Bar -->
+        <header class="top-header">
+            <div class="mobile-nav-toggle" id="mobile-toggle">
+                <i data-lucide="menu"></i>
+            </div>
+            
+            <div class="page-title">
+                <h1 id="header-title">Analisi</h1>
+                <p id="header-subtitle">OKR, previsioni e breakdown per quarter.</p>
+            </div>
+            
+            <div class="header-actions">
+                <div class="quick-stats-badge">
+                    <span>Fatturato 2026: </span>
+                    <strong id="header-total-revenue">€0</strong>
+                </div>
+                <button class="btn btn-primary" id="btn-quick-add">
+                    <i data-lucide="plus-circle"></i>
+                    <span>Nuovo Cliente</span>
+                </button>
+            </div>
+        </header>
+        
+        <!-- Scrollable Main Container -->
+        <div class="content-body">
+            
+            <!-- ==========================================================================
+               SECTION 1: ANALISI
+               ========================================================================== */ -->
+            <section id="section-dashboard" class="app-section active">
+                <div id="analysis-dashboard" class="analysis-dashboard"></div>
+            </section>
+            
+            <!-- ==========================================================================
+               SECTION 2: CLIENT LIST (LISTA GENERICA)
+               ========================================================================== */ -->
+            <section id="section-clients" class="app-section">
+                
+                <!-- Advanced Table Filter Bar -->
+                <div class="table-filter-bar">
+                    <div class="filter-left">
+                        <div class="search-box">
+                            <i data-lucide="search"></i>
+                            <input type="text" class="search-input" id="search-clients" placeholder="Cerca cliente o contatto...">
+                        </div>
+                        
+                        <div class="filter-group">
+                            <select class="filter-select" id="filter-type">
+                                <option value="">Tutte le Tipologie</option>
+                                <option value="Cliente Diretto">Cliente Diretto</option>
+                                <option value="Agenzia">Agenzia</option>
+                                <option value="Agenzia PR">Agenzia PR</option>
+                                <option value="CDP">CDP</option>
+                                <option value="Agenzia Eventi">Agenzia Eventi</option>
+                            </select>
+                            
+                            <select class="filter-select" id="filter-owner">
+                                <option value="">Tutti gli Owner</option>
+                                <option value="Jeck">Jeck</option>
+                                <option value="Virgi">Virgi</option>
+                            </select>
+                            
+                            <select class="filter-select" id="filter-relationship">
+                                <option value="">Tutti i Rapporti</option>
+                                <option value="Nuovo Cliente">⭐ Nuovo Cliente</option>
+                                <option value="Ricorrente">⭐⭐ Ricorrente</option>
+                                <option value="Top 20%">⭐⭐⭐ Top 20%</option>
+                                <option value="Perso">🟠 Perso</option>
+                                <option value="Eliminato">🔴 Eliminato</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-right">
+                        <button class="btn btn-secondary" id="btn-clear-filters" title="Pulisci Filtri">
+                            <i data-lucide="filter-x"></i>
+                            <span>Resetta</span>
+                        </button>
+                        <button class="btn btn-success" id="btn-export-clients">
+                            <i data-lucide="download"></i>
+                            <span>Esporta</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- CRM Table -->
+                <div class="table-container">
+                    <div class="crm-table-scroll-viewport" id="crm-table-scroll-viewport" tabindex="0" aria-label="Tabella clienti scrollabile">
+                        <table class="crm-table" id="crm-table">
+                            <thead id="crm-table-head">
+                                <tr id="crm-table-head-row"></tr>
+                            </thead>
+                            <tbody id="crm-table-body">
+                                <!-- Dynamic JS Population -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="table-h-scroll-bar table-h-scroll-bar-fixed" id="crm-table-h-scroll" aria-label="Trascina per scorrere le colonne"></div>
+                    <div class="table-footer">
+                        <div class="table-info">
+                            Mostrati <span id="lbl-shown-count">0</span> di <span id="lbl-total-count">0</span> clienti — trascina la barra grigia in basso per scorrere le colonne
+                        </div>
+                    </div>
+                </div>
+                
+            </section>
+            
+            <!-- ==========================================================================
+               SECTION 2.5: IDEE RANDOM (KANBAN)
+               ========================================================================== */ -->
+            <section id="section-ideas" class="app-section">
+                <!-- Kanban header / action bar -->
+                <div class="table-filter-bar">
+                    <div class="filter-left">
+                        <div class="search-box">
+                            <i data-lucide="search"></i>
+                            <input type="text" class="search-input" id="search-ideas" placeholder="Cerca idea, cliente o descrizione...">
+                        </div>
+                        <div class="filter-group">
+                            <select class="filter-select" id="filter-idea-category">
+                                <option value="">Tutte le Categorie</option>
+                                <option value="Content">Content</option>
+                                <option value="Mini prod">Mini prod</option>
+                                <option value="Evento">Evento</option>
+                                <option value="Prod">Prod</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="filter-right">
+                        <button class="btn btn-primary" id="btn-quick-add-idea">
+                            <i data-lucide="plus-circle"></i>
+                            <span>+ IDEA</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Kanban Board -->
+                <div class="kanban-board">
+                    <!-- Da fare Column -->
+                    <div class="kanban-column" id="col-todo">
+                        <div class="kanban-column-header">
+                            <div class="column-title-wrapper" style="display:flex; align-items:center; gap:8px;">
+                                <span class="column-dot todo" style="width:8px; height:8px; border-radius:50%; background:#ef4444; display:inline-block;"></span>
+                                <h3 style="font-size:0.95rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Da fare</h3>
+                            </div>
+                            <span class="badge" id="badge-todo" style="background:rgba(239, 68, 68, 0.15); color:#f87171;">0</span>
+                        </div>
+                        <div class="kanban-cards-container" id="cards-todo" style="display:flex; flex-direction:column; gap:16px; margin-top:20px; min-height:450px;">
+                            <!-- Dynamic Cards -->
+                        </div>
+                    </div>
+
+                    <!-- In progress Column -->
+                    <div class="kanban-column" id="col-progress">
+                        <div class="kanban-column-header">
+                            <div class="column-title-wrapper" style="display:flex; align-items:center; gap:8px;">
+                                <span class="column-dot progress" style="width:8px; height:8px; border-radius:50%; background:#f59e0b; display:inline-block;"></span>
+                                <h3 style="font-size:0.95rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">In progress</h3>
+                            </div>
+                            <span class="badge" id="badge-progress" style="background:rgba(245, 158, 11, 0.15); color:#fbbf24;">0</span>
+                        </div>
+                        <div class="kanban-cards-container" id="cards-progress" style="display:flex; flex-direction:column; gap:16px; margin-top:20px; min-height:450px;">
+                            <!-- Dynamic Cards -->
+                        </div>
+                    </div>
+
+                    <!-- Fatto Column -->
+                    <div class="kanban-column" id="col-done">
+                        <div class="kanban-column-header">
+                            <div class="column-title-wrapper" style="display:flex; align-items:center; gap:8px;">
+                                <span class="column-dot done" style="width:8px; height:8px; border-radius:50%; background:#10b981; display:inline-block;"></span>
+                                <h3 style="font-size:0.95rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Fatto</h3>
+                            </div>
+                            <span class="badge" id="badge-done" style="background:rgba(16, 185, 129, 0.15); color:#34d399;">0</span>
+                        </div>
+                        <div class="kanban-cards-container" id="cards-done" style="display:flex; flex-direction:column; gap:16px; margin-top:20px; min-height:450px;">
+                            <!-- Dynamic Cards -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- ==========================================================================
+               SECTION 5: CLIENTI FREDDI
+               ========================================================================== */ -->
+            <section id="section-cold" class="app-section">
+                <div class="table-filter-bar">
+                    <div class="filter-left">
+                        <div class="search-box">
+                            <i data-lucide="search"></i>
+                            <input type="text" class="search-input" id="search-cold-clients" placeholder="Cerca cliente freddo...">
+                        </div>
+                    </div>
+                    <div class="filter-right">
+                        <span class="quick-stats-badge" id="cold-clients-total-badge">0 clienti freddi</span>
+                        <button class="btn btn-primary" id="btn-quick-add-cold" type="button">
+                            <i data-lucide="plus-circle"></i>
+                            <span>Nuovo Cliente Freddo</span>
+                        </button>
+                    </div>
+                </div>
+
+                <p class="cold-section-hint">
+                    Clienti con cui non avete ancora lavorato. Quando il <strong>Fatturato 2026</strong> supera <strong>€1</strong>, il cliente passa automaticamente alla Lista Clienti.
+                </p>
+
+                <div class="cold-clients-accordion" id="cold-clients-accordion"></div>
+            </section>
+
+            <!-- ==========================================================================
+               SECTION: TASK PER CLIENTE
+               ========================================================================== */ -->
+            <section id="section-tasks" class="app-section">
+                <div class="tasks-layout" id="tasks-layout"></div>
+            </section>
+            
+            <!-- ==========================================================================
+               SECTION 3: RANDOM RECALL
+               ========================================================================== */ -->
+            <section id="section-recall" class="app-section">
+                <div class="recall-header-bar">
+                    <div class="recall-header-info">
+                        <h2 id="recall-section-title">I tuoi clienti da ricontattare oggi</h2>
+                        <p id="recall-date-label">Aggiornamento giornaliero automatico</p>
+                        <div class="recall-legend">
+                            <span class="recall-legend-item"><strong>1×</strong> ⭐⭐⭐ Top 20%</span>
+                            <span class="recall-legend-item"><strong>2×</strong> ⭐⭐ Ricorrente</span>
+                            <span class="recall-legend-item"><strong>2×</strong> ⭐ Nuovo Cliente</span>
+                        </div>
+                    </div>
+                    <div class="recall-header-actions">
+                        <select id="filter-recall-status" class="form-select recall-filter-select" title="Filtra per stato">
+                            <option value="">Tutti</option>
+                            <option value="To do">To do</option>
+                            <option value="Done">Done</option>
+                        </select>
+                        <button class="btn btn-secondary" id="btn-refresh-recall" title="Genera 5 nuovi clienti casuali: 1 Top 20%, 2 Ricorrenti, 2 Nuovi Cliente.">
+                            <i data-lucide="refresh-cw"></i>
+                            <span>Refresh</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="recall-cards-grid" id="recall-cards-grid">
+                    <!-- Populated via JS -->
+                </div>
+            </section>
+            
+            <!-- ==========================================================================
+               SECTION 4: EXCEL IMPORT
+               ========================================================================== */ -->
+            <section id="section-import" class="app-section">
+                
+                <div class="import-section">
+                    
+                    <!-- Dropzone -->
+                    <div class="glass-card dropzone-card" id="dropzone">
+                        <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv" style="display: none;">
+                        <div class="dropzone-icon">
+                            <i data-lucide="cloud-upload"></i>
+                        </div>
+                        <h3>Trascina il tuo file Excel qui</h3>
+                        <p>O clicca per selezionare un file dal tuo computer (.xlsx, .xls o .csv)</p>
+                        <span class="btn btn-secondary">Seleziona File</span>
+                    </div>
+                    
+                    <!-- Mapping Card (hidden until file uploaded) -->
+                    <div class="glass-card excel-mapping-card" id="excel-mapping-card" style="display: none;">
+                        <div class="chart-header">
+                            <h3><i data-lucide="settings-2" style="color: var(--secondary)"></i> Configura Mappatura Colonne</h3>
+                            <button class="btn btn-secondary btn-icon" id="btn-cancel-import" title="Annulla"><i data-lucide="x"></i></button>
+                        </div>
+                        
+                        <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 10px;">
+                            Struttura attesa: <strong>Cliente</strong>, Codice progetto, <strong>Prodotto</strong>, <strong>Importo</strong>, <strong>Mese</strong>, Documento Owner.
+                            Le colonne <strong>PO Cliente</strong> e <strong>Status</strong> vengono ignorate. I fatturati vengono sommati per cliente nella Lista Clienti; ogni riga diventa un OKR in <strong>Analisi</strong> (Big Prod e Motion → Prod).
+                        </p>
+                        
+                        <div class="mapping-fields-row">
+                            <div class="form-group">
+                                <label for="map-client">Colonna Cliente</label>
+                                <select class="form-select" id="map-client">
+                                    <!-- Options generated dynamically -->
+                                </select>
+                                <span class="form-help-text">Colonna "Cliente" del file Excel</span>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="map-revenue">Colonna Importo</label>
+                                <select class="form-select" id="map-revenue">
+                                    <!-- Options generated dynamically -->
+                                </select>
+                                <span class="form-help-text">Colonna "Importo" — i valori vengono sommati per cliente</span>
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+                            <button class="btn btn-primary" id="btn-process-mapping">
+                                <i data-lucide="refresh-cw"></i>
+                                <span>Elabora Dati ed Aggrega</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Preview Card (hidden until mapped) -->
+                    <div class="glass-card excel-mapping-card" id="excel-preview-card" style="display: none;">
+                        <div class="chart-header">
+                            <h3><i data-lucide="eye" style="color: var(--success)"></i> Anteprima Dati Aggregati (Fatturato 2026)</h3>
+                            <span class="quick-stats-badge" id="preview-summary-badge">Total Unique: 0</span>
+                        </div>
+                        
+                        <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 10px;">
+                            Riepilogo dei fatturati aggregati per cliente. Confermando, verrà aggiornato solo il <strong>Fatturato 2026</strong> nella Lista Clienti. I clienti non presenti verranno creati con bordo rosso finché non completi tutti i dati.
+                        </p>
+                        
+                        <div class="import-preview-wrapper">
+                            <table class="import-preview-table">
+                                <thead>
+                                    <tr>
+                                        <th>Nome Cliente Rilevato</th>
+                                        <th style="text-align: center;">N. Record Uniti</th>
+                                        <th style="text-align: right;">Fatturato 2026 Calcolato</th>
+                                        <th style="text-align: center;">Stato nel CRM</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="import-preview-body">
+                                    <!-- Table row previews via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+                            <span style="font-size: 0.85rem; color: var(--text-secondary);">
+                                Totale Fatturato Rilevato: <strong style="color: var(--text-primary);" id="lbl-preview-total-sum">€0,00</strong>
+                            </span>
+                            <div style="display: flex; gap: 12px;">
+                                <button class="btn btn-secondary" id="btn-reset-import">Annulla</button>
+                                <button class="btn btn-success" id="btn-commit-import">
+                                    <i data-lucide="check-circle-2"></i>
+                                    <span>Conferma ed importa nel database</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+                
+            </section>
+            
+            <!-- ==========================================================================
+               SECTION 4: SETTINGS & BACKUP
+               ========================================================================== */ -->
+            <section id="section-settings" class="app-section">
+                <div style="max-width: 650px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px;">
+                    
+                    <div class="glass-card">
+                        <div class="chart-header">
+                            <h3><i data-lucide="cloud" style="color: var(--secondary)"></i> Supabase (Database Cloud)</h3>
+                            <span class="quick-stats-badge" id="supabase-status-badge">Supabase: —</span>
+                        </div>
+                        <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 16px; line-height: 1.5;">
+                            Con Supabase configurato, clienti, idee e Random Recall vengono salvati su Postgres invece che solo nel browser.
+                            Copia <code>config.example.js</code> in <code>config.js</code> e inserisci URL + anon key del progetto.
+                        </p>
+                        <p style="color: var(--text-muted); font-size: 0.82rem; line-height: 1.5; margin-bottom: 0;">
+                            Guida passo-passo: file <strong>SUPABASE_SETUP.md</strong> nella root del progetto.
+                        </p>
+                    </div>
+                    
+                    <div class="glass-card">
+                        <div class="chart-header">
+                            <h3><i data-lucide="sparkles" style="color: var(--primary)"></i> Apollo.io (Arricchimento dati)</h3>
+                            <span class="quick-stats-badge" id="apollo-status-badge">Apollo: —</span>
+                        </div>
+                        <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 16px; line-height: 1.5;">
+                            Arricchisci clienti con email, sito web, settore e note da Apollo.
+                            La API key resta su Supabase (mai nel browser).
+                        </p>
+                        <p style="color: var(--text-muted); font-size: 0.82rem; line-height: 1.5; margin-bottom: 0;">
+                            Setup: <strong>APOLLO_SETUP.md</strong> — aggiungi <code>APOLLO_API_KEY</code> nei Secrets della Edge Function <code>apollo-enrich</code>.
+                        </p>
+                    </div>
+                    
+                    <div class="glass-card">
+                        <div class="chart-header">
+                            <h3><i data-lucide="database" style="color: var(--primary)"></i> Backup &amp; Reset</h3>
+                        </div>
+                        <p style="color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 20px; line-height: 1.5;">
+                            Esporta o importa un backup JSON. Con Supabase attivo, i dati vengono sincronizzati sul cloud ad ogni modifica.
+                        </p>
+                        
+                        <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+                            <button class="btn btn-secondary" id="settings-btn-export-json">
+                                <i data-lucide="file-json"></i>
+                                <span>Esporta JSON</span>
+                            </button>
+                            <button class="btn btn-secondary" id="settings-btn-import-json">
+                                <i data-lucide="upload"></i>
+                                <span>Importa JSON</span>
+                            </button>
+                            <input type="file" id="json-file-input" accept=".json" style="display: none;">
+                            
+                            <button class="btn btn-danger" id="settings-btn-reset-demo" style="margin-left: auto;">
+                                <i data-lucide="trash-2"></i>
+                                <span>Svuota Tutto</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="glass-card">
+                        <div class="chart-header">
+                            <h3><i data-lucide="info" style="color: var(--secondary)"></i> Regole Automatiche del CRM</h3>
+                        </div>
+                        <p style="color: var(--text-secondary); font-size: 0.85rem; line-height: 1.6; margin-bottom: 0;">
+                            L'applicazione implementa le seguenti regole commerciali in tempo reale:<br><br>
+                            • <strong>Tipologia di Cliente:</strong> Determina la classificazione operativa (Cliente Diretto, Agenzia, Agenzia PR, CDP, Agenzia Eventi).<br>
+                            • <strong>Owner:</strong> Gestito da <strong>Jeck</strong> o <strong>Virgi</strong>.<br>
+                            • <strong>Data Azione Automatica:</strong> Ogni qualvolta viene modificata la colonna "Azione" di un cliente, la "Data Azione" viene automaticamente impostata sul giorno corrente.<br>
+                            • <strong>Regola Ricorrente (Fatturato 2025):</strong> Se il <em>Fatturato 2025</em> supera i <strong>€15.000</strong>, lo stato del rapporto cambia automaticamente in <strong style="color: #34d399">Ricorrente</strong>.<br>
+                            • <strong>Regola Top 20% (Fatturato 2026):</strong> Il sistema calcola costantemente la graduatoria dei fatturati 2026. I clienti che rientrano nel <strong>top 20%</strong> della classifica fatturati (con valore > 0) assumono automaticamente lo stato <strong style="color: #fbbf24">Top 20%</strong> (priorità superiore a Ricorrente).<br>
+                            • <strong>Forzature Manuali:</strong> È possibile selezionare manualmente stati come <em>Perso</em> o <em>Eliminato</em> dal menu di modifica; il sistema rispetterà la tua forzatura commerciale.
+                        </p>
+                    </div>
+                </div>
+            </section>
+            
+        </div>
+    </main>
+
+    <!-- ==========================================================================
+       SLIDE DRAWER (INSERIMENTO / DETTAGLIO CLIENTE)
+       ========================================================================== */ -->
+    <div class="drawer-overlay" id="drawer-overlay"></div>
+    <div class="drawer" id="client-drawer">
+        <div class="drawer-header">
+            <h3 id="drawer-title"><i data-lucide="user-plus"></i> Aggiungi Cliente</h3>
+            <div class="drawer-close" id="drawer-close">
+                <i data-lucide="x"></i>
+            </div>
+        </div>
+        
+        <form id="client-form">
+            <input type="hidden" id="form-client-id">
+            
+            <div class="drawer-body">
+                
+                <div class="form-group">
+                    <label for="form-name">Nome Cliente *</label>
+                    <input type="text" class="form-input" id="form-name" placeholder="Es. Rossi S.p.A." required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="form-type">Tipologia di Cliente</label>
+                    <select class="form-select" id="form-type">
+                        <option value="Cliente Diretto">Cliente Diretto</option>
+                        <option value="Agenzia">Agenzia</option>
+                        <option value="Agenzia PR">Agenzia PR</option>
+                        <option value="CDP">CDP</option>
+                        <option value="Agenzia Eventi">Agenzia Eventi</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="form-owner">Owner Commerciale</label>
+                    <select class="form-select" id="form-owner">
+                        <option value="Jeck">Jeck</option>
+                        <option value="Virgi">Virgi</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" id="form-group-relationship">
+                    <label for="form-relationship">Stato Rapporto</label>
+                    <select class="form-select" id="form-relationship">
+                        <option value="Nuovo Cliente">⭐ Nuovo Cliente</option>
+                        <option value="Ricorrente">⭐⭐ Ricorrente</option>
+                        <option value="Top 20%">⭐⭐⭐ Top 20%</option>
+                        <option value="Perso">🟠 Perso</option>
+                        <option value="Eliminato">🔴 Eliminato</option>
+                    </select>
+                    <span class="form-help-text">Può essere scelto a mano o sovrascritto dalle regole di fatturato.</span>
+                </div>
+                
+                <div class="form-group" id="form-group-rev-2025">
+                    <label for="form-rev-2025">Fatturato 2025 (€)</label>
+                    <div class="form-input-currency">
+                        <input type="number" class="form-input" id="form-rev-2025" placeholder="0.00" min="0" step="0.01">
+                    </div>
+                    <span class="form-help-text">Un importo maggiore di €15.000 forzerà il rapporto a "Ricorrente".</span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="form-rev-2026">Fatturato 2026 (€)</label>
+                    <div class="form-input-currency">
+                        <input type="number" class="form-input" id="form-rev-2026" placeholder="0.00" min="0" step="0.01">
+                    </div>
+                    <span class="form-help-text">Fatturato derivante dall'importazione Excel dei PO.</span>
+                </div>
+                
+                <div class="form-group">
+                    <div class="form-group-header">
+                        <label>Contatti</label>
+                        <button type="button" class="btn btn-secondary btn-sm" id="btn-add-drawer-contact">
+                            <i data-lucide="user-plus"></i>
+                            <span>Aggiungi contatto</span>
+                        </button>
+                    </div>
+                    <div id="form-contacts-list" class="form-contacts-list"></div>
+                    <span class="form-help-text">Email e ruolo per ogni contatto. Se il dominio esiste già in Lista Clienti, il contatto viene associato al cliente esistente.</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="form-relationship-note">Nota rapporto con l'azienda</label>
+                    <textarea class="form-textarea" id="form-relationship-note" rows="3" placeholder="Note generali sul rapporto con l'azienda, storico, preferenze..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="form-action">Azione Eseguita</label>
+                    <input type="text" class="form-input" id="form-action" placeholder="Es. Inviata quotazione via email">
+                    <span class="form-help-text">La data dell'azione verrà aggiornata automaticamente ad oggi alla modifica.</span>
+                </div>
+                
+            
+            </div>
+            
+            <div class="drawer-footer">
+                <button type="button" class="btn btn-secondary btn-apollo-drawer" id="btn-apollo-enrich" style="display:none;">
+                    <i data-lucide="sparkles"></i>
+                    <span>Apollo</span>
+                </button>
+                <button type="button" class="btn btn-secondary" id="btn-form-cancel">Annulla</button>
+                <button type="submit" class="btn btn-primary" id="btn-form-submit">Salva Cliente</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- ==========================================================================
+       SLIDE DRAWER (INSERIMENTO / DETTAGLIO IDEA RANDOM)
+       ========================================================================== */ -->
+    <div class="drawer" id="idea-drawer">
+        <div class="drawer-header">
+            <h3 id="idea-drawer-title"><i data-lucide="lightbulb"></i> Nuova Idea</h3>
+            <div class="drawer-close" id="idea-drawer-close">
+                <i data-lucide="x"></i>
+            </div>
+        </div>
+        
+        <form id="idea-form">
+            <input type="hidden" id="form-idea-id">
+            
+            <div class="drawer-body">
+                
+                <div class="form-group">
+                    <label for="form-idea-name">Nome Idea *</label>
+                    <input type="text" class="form-input" id="form-idea-name" placeholder="Es. Proposta Campagna Reels" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="form-idea-category">Categoria di Prodotto</label>
+                    <select class="form-select" id="form-idea-category">
+                        <option value="Content">Content</option>
+                        <option value="Mini prod">Mini prod</option>
+                        <option value="Evento">Evento</option>
+                        <option value="Prod">Prod</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" style="position:relative;">
+                    <label for="form-idea-client">Cliente Collegato *</label>
+                    <select class="form-select" id="form-idea-client" required>
+                        <!-- Populated dynamically with clients list + '+ Crea Nuovo Cliente' option -->
+                    </select>
+                </div>
+
+                <!-- Sub-form for Quick Client Creation (hidden by default) -->
+                <div id="sub-form-quick-client" class="glass-card" style="display: none; padding: 18px; border-color: rgba(8, 145, 178, 0.35); background: #f0fdfa; margin-top: -6px; margin-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h4 style="font-size: 0.8rem; font-weight: 700; color: var(--secondary); text-transform: uppercase; letter-spacing:0.5px;">Registrazione Rapida Cliente</h4>
+                        <button type="button" class="btn btn-secondary btn-icon" id="btn-cancel-quick-client" style="width:24px; height:24px; font-size:0.7rem;" title="Annulla"><i data-lucide="x"></i></button>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <div class="form-group">
+                            <label style="font-size:0.7rem;">Nome Cliente *</label>
+                            <input type="text" class="form-input" id="quick-client-name" style="padding: 8px 12px; font-size: 0.85rem;" placeholder="Es. Pirelli S.p.A.">
+                        </div>
+                        <div class="form-group">
+                            <label style="font-size:0.7rem;">Tipologia</label>
+                            <select class="form-select" id="quick-client-type" style="padding: 8px 12px; font-size: 0.85rem;">
+                                <option value="Cliente Diretto">Cliente Diretto</option>
+                                <option value="Agenzia">Agenzia</option>
+                                <option value="Agenzia PR">Agenzia PR</option>
+                                <option value="CDP">CDP</option>
+                                <option value="Agenzia Eventi">Agenzia Eventi</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label style="font-size:0.7rem;">Owner Commerciale</label>
+                            <select class="form-select" id="quick-client-owner" style="padding: 8px 12px; font-size: 0.85rem;">
+                                <option value="Jeck">Jeck</option>
+                                <option value="Virgi">Virgi</option>
+                            </select>
+                        </div>
+                        <button type="button" class="btn btn-success" id="btn-save-quick-client" style="width: 100%; height: 38px; gap:8px; font-size: 0.82rem; margin-top:4px;">
+                            <i data-lucide="check"></i> <span>Conferma e Salva Cliente</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="form-idea-status">Stato Idea</label>
+                    <select class="form-select" id="form-idea-status">
+                        <option value="Da fare">Da fare</option>
+                        <option value="In progress">In progress</option>
+                        <option value="Fatto">Fatto</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="form-idea-description">Descrizione Idea *</label>
+                    <textarea class="form-textarea" id="form-idea-description" placeholder="Descrivi qui i dettagli dell'idea da proporre al cliente..." required></textarea>
+                </div>
+                
+            </div>
+            
+            <div class="drawer-footer">
+                <button type="button" class="btn btn-secondary" id="btn-idea-cancel">Annulla</button>
+                <button type="submit" class="btn btn-primary" id="btn-idea-submit">Salva Idea</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- ==========================================================================
+       SLIDE DRAWER (TASK CLIENTE)
+       ========================================================================== */ -->
+    <div class="drawer" id="task-drawer">
+        <div class="drawer-header">
+            <h3 id="task-drawer-title"><i data-lucide="check-square"></i> Nuova Task</h3>
+            <div class="drawer-close" id="task-drawer-close">
+                <i data-lucide="x"></i>
+            </div>
+        </div>
+        <form id="task-form">
+            <input type="hidden" id="form-task-id">
+            <input type="hidden" id="form-task-client-id">
+            <div class="drawer-body">
+                <div class="form-group">
+                    <label for="form-task-title">Titolo *</label>
+                    <input type="text" class="form-input" id="form-task-title" placeholder="Es. Follow-up dopo call commerciale" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="form-task-type">Tipo</label>
+                        <select class="form-select" id="form-task-type"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="form-task-assignee">Assegnatario</label>
+                        <select class="form-select" id="form-task-assignee"></select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="form-task-due-date">Scadenza</label>
+                    <input type="date" class="form-input" id="form-task-due-date">
+                </div>
+                <div class="form-group">
+                    <label for="form-task-notes">Note</label>
+                    <textarea class="form-textarea" id="form-task-notes" rows="3" placeholder="Dettagli, contesto della call, prossimi passi..."></textarea>
+                </div>
+            </div>
+            <div class="drawer-footer">
+                <button type="button" class="btn btn-secondary" id="btn-task-cancel">Annulla</button>
+                <button type="submit" class="btn btn-primary" id="btn-task-submit">Salva Task</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- ==========================================================================
+       TOAST NOTIFICATIONS CONTAINER
+       ========================================================================== */ -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Supabase + CRM logic -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script src="supabase.config.js"></script>
+    <script src="config.js" onerror="void 0"></script>
+    <script src="supabase-db.js"></script>
+    <script src="analysis.js"></script>
+    <script src="tasks.js"></script>
+    <script src="app.js?v=20260531i"></script>
+</body>
+</html>

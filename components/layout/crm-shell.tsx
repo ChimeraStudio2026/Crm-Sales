@@ -1,0 +1,40 @@
+'use client';
+
+import { ToastContainer } from '@/components/ui/toast-container';
+import { Sidebar } from '@/components/layout/sidebar';
+import { CrmProvider, useCrm } from '@/providers/crm-provider';
+
+interface CrmShellProps {
+  children: React.ReactNode;
+}
+
+export function CrmShell({ children }: CrmShellProps) {
+  return (
+    <CrmProvider>
+      <CrmShellInner>{children}</CrmShellInner>
+    </CrmProvider>
+  );
+}
+
+function CrmShellInner({ children }: CrmShellProps) {
+  const { isLoading } = useCrm();
+  if (isLoading) {
+    return (
+      <>
+        <Sidebar />
+        <main className="main-content">
+          <div className="content-body" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
+            <p style={{ color: 'var(--text-secondary)' }}>Caricamento CRM...</p>
+          </div>
+        </main>
+      </>
+    );
+  }
+  return (
+    <>
+      <Sidebar />
+      <main className="main-content">{children}</main>
+      <ToastContainer />
+    </>
+  );
+}

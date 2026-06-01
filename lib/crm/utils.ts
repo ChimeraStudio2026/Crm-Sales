@@ -1,0 +1,215 @@
+import type { Client, ClientContact } from '@/lib/types/crm';
+import { COLD_CLIENT_REV_THRESHOLD } from '@/lib/constants/crm';
+
+export function createUniqueId(prefix: string): string {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+export function getTodayString(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function formatCurrency(value: number): string {
+  const num = Number(value) || 0;
+  return new Intl.NumberFormat('it-IT', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(num);
+}
+
+export function escapeHtml(text: string | null | undefined): string {
+  return String(text ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+export function formatItalianDate(dateStr: string): string {
+  const date = new Date(`${dateStr}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return dateStr;
+  return date.toLocaleDateString('it-IT', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+export function shuffleArray<T>(items: T[]): T[] {
+  const array = [...items];
+  for (let i = array.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+export function extractDomainFromEmail(email: string): string {
+  if (!email || !email.includes('@')) return '';
+  const domain = email.split('@')[1].trim().toLowerCase();
+  if (
+    !domain ||
+    domain.includes('gmail.') ||
+    domain.includes('yahoo.') ||
+    domain.includes('hotmail.')
+  ) {
+    return '';
+  }
+  return domain;
+}
+
+export function isClientInColdSection(client: Client): boolean {
+  return client.isColdClient === true && client.relationship !== 'Eliminato';
+}
+
+export function isClientInActiveSection(client: Client): boolean {
+  return !client.isColdClient && client.relationship !== 'Eliminato';
+}
+
+export function hasExcelRevenueDifference(
+  currentValue: number,
+  importedValue: number,
+  epsilon = 0.005,
+): boolean {
+  const current = Number(currentValue) || 0;
+  const imported = Number(importedValue) || 0;
+  return Math.abs(current - imported) > epsilon;
+}
+
+export function isClientProfileComplete(client: Client): boolean {
+  const hasContacts = client.contacts.some((c) => (c.email || '').trim());
+  const hasAction = !!(client.action && client.action.trim());
+  return hasContacts && hasAction && !!client.type && !!client.owner;
+}
+
+export function shouldHighlightIncompleteClient(client: Client): boolean {
+  return client.needsProfileCompletion || !isClientProfileComplete(client);
+}
+
+export function updateClientProfileCompletion(client: Client): void {
+  client.needsProfileCompletion = !isClientProfileComplete(client);
+}
+
+export function normalizeClientContacts(client: Client): ClientContact[] {
+  if (!Array.isArray(client.contacts)) {
+    client.contacts = [];
+  }
+  if (client.contacts.length === 0 && client.email?.trim()) {
+    client.contacts.push({
+      id: createUniqueId('contact'),
+      email: client.email,
+      role: '',
+    });
+  }
+  client.contacts = client.contacts.map((contact) => ({
+    id: contact.id || createUniqueId('contact'),
+    email: contact.email || '',
+    role: contact.role || '',
+  }));
+  return client.contacts;
+}
+
+export function syncClientLegacyFields(client: Client): void {
+  normalizeClientContacts(client);
+  const primaryContact =
+    client.contacts.find((contact) => (contact.email || '').trim()) ||
+    client.contacts[0];
+  client.email = primaryContact?.email || '';
+}
+
+export function getClientContactsSearchText(client: Client): string {
+  normalizeClientContacts(client);
+  const contactText = client.contacts
+    .map((contact) => [contact.email || '', contact.role || ''].join(' '))
+    .join(' ')
+    .toLowerCase();
+  return `${contactText} ${(client.description || '').toLowerCase()}`.trim();
+}
+
+export function getClientEmailDomains(client: Client): Set<string> {
+  normalizeClientContacts(client);
+  const domains = new Set<string>();
+  client.contacts.forEach((contact) => {
+    const domain = extractDomainFromEmail(contact.email);
+    if (domain) domains.add(domain);
+  });
+  return domains;
+}
+
+export function getClientPrimaryEmail(client: Client): string {
+  normalizeClientContacts(client);
+  const withEmail = client.contacts.find((contact) => (contact.email || '').trim());
+  return withEmail?.email || client.email || '';
+}
+
+export function recalculateRelationships(clients: Client[]): Client[] {
+  const activeClientsWithRevenue2026 = clients.filter(
+    (c) => c.relationship !== 'Eliminato' && c.rev2026 > 0,
+  );
+  activeClientsWithRevenue2026.sort((a, b) => b.rev2026 - a.rev2026);
+  const top20Count = Math.ceil(activeClientsWithRevenue2026.length * 0.2);
+  const top20Ids = new Set(
+    activeClientsWithRevenue2026.slice(0, top20Count).map((c) => c.id),
+  );
+  return clients.map((c) => {
+    if (c.manualRelationship && (c.relationship === 'Perso' || c.relationship === 'Eliminato')) {
+      return c;
+    }
+    if (top20Ids.has(c.id)) {
+      return { ...c, relationship: 'Top 20%' };
+    }
+    if (c.rev2025 > 15000) {
+      return { ...c, relationship: 'Ricorrente' };
+    }
+    if (!c.manualRelationship) {
+      return { ...c, relationship: 'Nuovo Cliente' };
+    }
+    return c;
+  });
+}
+
+export function applyColdClientPromotion(
+  client: Client,
+): { promoted: boolean; client: Client } {
+  if (!client.isColdClient) return { promoted: false, client };
+  if (client.rev2026 > COLD_CLIENT_REV_THRESHOLD) {
+    return {
+      promoted: true,
+      client: { ...client, isColdClient: false },
+    };
+  }
+  return { promoted: false, client };
+}
+
+export function applyColdClientPromotionToAll(clients: Client[]): Client[] {
+  return clients.map((client) => applyColdClientPromotion(client).client);
+}
+
+export function normalizeClients(clients: Client[]): Client[] {
+  return clients.map((client) => {
+    const normalized = { ...client };
+    normalizeClientContacts(normalized);
+    if (!Array.isArray(normalized.actionLog)) {
+      normalized.actionLog = [];
+    }
+    if (
+      normalized.actionLog.length === 0 &&
+      normalized.action &&
+      normalized.action.trim()
+    ) {
+      normalized.actionLog.push({
+        id: createUniqueId('action'),
+        text: normalized.action.trim(),
+        date: normalized.actionDate || getTodayString(),
+      });
+    }
+    return normalized;
+  });
+}

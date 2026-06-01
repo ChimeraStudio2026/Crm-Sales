@@ -1,0 +1,226 @@
+'use client';
+
+import { BarChart3, ChevronRight, Layers } from 'lucide-react';
+import {
+  ANALYSIS_SCOPES,
+  CLIENT_TYPE_ROWS,
+  RELATIONSHIP_ROWS,
+  buildGroupedStats,
+  buildProductStats,
+  buildScopeMetrics,
+  filterOkrByScope,
+  formatPct,
+  formatPctPlain,
+} from '@/lib/analysis/index';
+import { formatCurrency } from '@/lib/crm/utils';
+import { TopHeader } from '@/components/layout/top-header';
+import { useCrm } from '@/providers/crm-provider';
+
+function ScopeContent({
+  scopeId,
+  quarter,
+}: {
+  scopeId: string;
+  quarter?: number;
+}) {
+  const { okrRecords, analysisForecasts, clients, setAnalysisForecast } = useCrm();
+  const records = filterOkrByScope(okrRecords, scopeId, quarter);
+  const forecastScope = analysisForecasts[scopeId] || { totalForecast: 0, productPct: {} };
+  const metrics = buildScopeMetrics(records, forecastScope);
+  const productStats = buildProductStats(records, forecastScope);
+  const relationshipStats = buildGroupedStats(
+    records,
+    clients,
+    (client) => client.relationship,
+    RELATIONSHIP_ROWS,
+  );
+  const clientTypeStats = buildGroupedStats(
+    records,
+    clients,
+    (client) => client.type,
+    CLIENT_TYPE_ROWS,
+  );
+
+  return (
+    <>
+      <div className="analysis-kpi-grid">
+        <div className="analysis-kpi-card">
+          <span className="analysis-kpi-label">Totale OKR</span>
+          <strong className="analysis-kpi-value">{formatCurrency(metrics.total)}</strong>
+          <span className="analysis-kpi-hint">Somma OKR importati da Excel</span>
+        </div>
+        <div className="analysis-kpi-card">
+          <span className="analysis-kpi-label">Previsione</span>
+          <input
+            type="number"
+            className="analysis-forecast-input"
+            value={forecastScope.totalForecast || ''}
+            min={0}
+            step={100}
+            placeholder="0"
+            onChange={(e) => {
+              void setAnalysisForecast(scopeId, 'totalForecast', parseFloat(e.target.value) || 0);
+            }}
+          />
+          <span className="analysis-kpi-hint">Inserimento manuale</span>
+        </div>
+        <div className="analysis-kpi-card">
+          <span className="analysis-kpi-label">Delta</span>
+          <strong className={`analysis-kpi-value ${metrics.delta >= 0 ? 'analysis-kpi-positive' : 'analysis-kpi-negative'}`}>
+            {formatCurrency(metrics.delta)}
+          </strong>
+          <span className="analysis-kpi-hint">Totale − Previsione</span>
+        </div>
+      </div>
+      <div className="analysis-table-block">
+        <h4 className="analysis-table-title">Tipi di progetti</h4>
+        <div className="analysis-table-wrap">
+          <table className="analysis-table">
+            <thead>
+              <tr>
+                <th>Categoria</th>
+                <th>Fatturato</th>
+                <th>Fatturato %</th>
+                <th>Previsione %</th>
+                <th>Delta %</th>
+                <th>Ticket Medio</th>
+                <th>N. Prop</th>
+              </tr>
+            </thead>
+            <tbody>
+              {productStats.map((row) => (
+                <tr key={row.category}>
+                  <td><strong>{row.category}</strong></td>
+                  <td className="analysis-num">{formatCurrency(row.revenue)}</td>
+                  <td className="analysis-num">{formatPctPlain(row.revenuePct)}</td>
+                  <td className="analysis-num">
+                    <input
+                      type="number"
+                      className="analysis-pct-input"
+                      value={row.forecastPct || ''}
+                      min={0}
+                      max={100}
+                      step={0.01}
+                      onChange={(e) => {
+                        void setAnalysisForecast(
+                          scopeId,
+                          'productPct',
+                          parseFloat(e.target.value) || 0,
+                          row.category,
+                        );
+                      }}
+                    />
+                    %
+                  </td>
+                  <td className={`analysis-num ${row.deltaPct >= 0 ? 'analysis-kpi-positive' : 'analysis-kpi-negative'}`}>
+                    {formatPct(row.deltaPct)}
+                  </td>
+                  <td className="analysis-num">{formatCurrency(row.ticketMedio)}</td>
+                  <td className="analysis-num">{row.count}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {[
+        { title: 'Tipi di clienti — Rapporto', rows: relationshipStats },
+        { title: 'Tipi di clienti — Tipologia CRM', rows: clientTypeStats },
+      ].map(({ title, rows }) => (
+        <div key={title} className="analysis-table-block">
+          <h4 className="analysis-table-title">{title}</h4>
+          <div className="analysis-table-wrap">
+            <table className="analysis-table analysis-table-simple">
+              <thead>
+                <tr>
+                  <th>Categoria</th>
+                  <th>Fatturato</th>
+                  <th>Fatturato %</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="analysis-row-total">
+                  <td><strong>TOTALI</strong></td>
+                  <td className="analysis-num"><strong>{formatCurrency(metrics.total)}</strong></td>
+                  <td className="analysis-num"><strong>100%</strong></td>
+                </tr>
+                {rows.map((row) => (
+                  <tr key={row.label}>
+                    <td>{row.label}</td>
+                    <td className="analysis-num">{formatCurrency(row.revenue)}</td>
+                    <td className="analysis-num">{formatPctPlain(row.revenuePct)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
+
+export function AnalysisSection() {
+  const { okrRecords, analysisExpanded, toggleAnalysisScope } = useCrm();
+  const quarterScopes = ANALYSIS_SCOPES.filter((s) => s.isQuarter);
+
+  return (
+    <>
+      <TopHeader />
+      <div className="content-body">
+      <section className="app-section active">
+        <div className="analysis-dashboard">
+          <div className="analysis-intro glass-card">
+            <h3><BarChart3 size={20} /> Analisi 2026</h3>
+            <p>
+              I dati di fatturato e N. Prop derivano dagli OKR importati via Excel.
+              Big Prod e Motion sono unificati in <strong>Prod</strong>.
+            </p>
+            {okrRecords.length === 0 && (
+              <p className="analysis-empty-hint">
+                Nessun OKR caricato — importa un file Excel dalla sezione Importa Excel.
+              </p>
+            )}
+          </div>
+          <div className="analysis-block analysis-block-total is-open">
+            <div className="analysis-block-header">
+              <h3><Layers size={20} /> Totale Anno 2026</h3>
+              <span className="quick-stats-badge">{okrRecords.length} OKR totali</span>
+            </div>
+            <div className="analysis-block-body">
+              <ScopeContent scopeId="total" />
+            </div>
+          </div>
+          <div className="analysis-quarters">
+            {quarterScopes.map((scope) => {
+              const isOpen = analysisExpanded.has(scope.id);
+              const scopedRecords = filterOkrByScope(okrRecords, scope.id, scope.quarter);
+              const total = scopedRecords.reduce((s, r) => s + r.amount, 0);
+              return (
+                <div key={scope.id} className={`analysis-accordion${isOpen ? ' is-open' : ''}`}>
+                  <button
+                    type="button"
+                    className="analysis-accordion-toggle"
+                    onClick={() => toggleAnalysisScope(scope.id)}
+                  >
+                    <ChevronRight size={18} className="analysis-accordion-icon" />
+                    <span>{scope.label}</span>
+                    <span className="analysis-accordion-meta">
+                      {formatCurrency(total)} · {scopedRecords.length} OKR
+                    </span>
+                  </button>
+                  {isOpen && (
+                    <div className="analysis-accordion-body">
+                      <ScopeContent scopeId={scope.id} quarter={scope.quarter} />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+    </div>
+    </>
+  );
+}

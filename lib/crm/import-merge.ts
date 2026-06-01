@@ -40,10 +40,13 @@ export function mergeOkrRecordsWithImport(
   clients: Client[],
 ): OkrMergeResult {
   const merged = [...existingRecords];
-  const upserted: OkrRecord[] = [];
+  const upsertedById = new Map<string, OkrRecord>();
   let addedCount = 0;
   let updatedCount = 0;
   let skippedCount = 0;
+  const trackUpsert = (record: OkrRecord): void => {
+    upsertedById.set(record.id, record);
+  };
   importedRecords.forEach((importedRecord) => {
     const incoming = linkOkrClientId(importedRecord, clients);
     const mergeKey = getOkrRecordMergeKey(incoming);
@@ -52,7 +55,7 @@ export function mergeOkrRecordsWithImport(
     );
     if (existingIndex === -1) {
       merged.push(incoming);
-      upserted.push(incoming);
+      trackUpsert(incoming);
       addedCount += 1;
       return;
     }
@@ -64,7 +67,7 @@ export function mergeOkrRecordsWithImport(
           clientId: incoming.clientId,
         };
         merged[existingIndex] = relinkedRecord;
-        upserted.push(relinkedRecord);
+        trackUpsert(relinkedRecord);
       }
       skippedCount += 1;
       return;
@@ -76,12 +79,12 @@ export function mergeOkrRecordsWithImport(
       quarter: incoming.quarter || existingRecord.quarter,
     };
     merged[existingIndex] = updatedRecord;
-    upserted.push(updatedRecord);
+    trackUpsert(updatedRecord);
     updatedCount += 1;
   });
   return {
     merged: linkOkrRecordsToClients(merged, clients),
-    upserted,
+    upserted: Array.from(upsertedById.values()),
     addedCount,
     updatedCount,
     skippedCount,

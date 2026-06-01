@@ -7,6 +7,7 @@ import {
   SUPPORTED_IMPORT_YEARS,
 } from '@/lib/constants/crm';
 import { createUniqueId } from '@/lib/crm/utils';
+import { getOkrRecordMergeKey } from '@/lib/crm/import-merge';
 
 export function parseExcelImporto(value: unknown): number {
   if (value === undefined || value === null || value === '') return 0;
@@ -234,7 +235,7 @@ export function buildOkrRecordsFromExcel(
   importYear: number,
   detected: DetectedExcelColumns,
 ): OkrRecord[] {
-  const records: OkrRecord[] = [];
+  const recordMap = new Map<string, OkrRecord>();
   for (let i = 1; i < rows.length; i += 1) {
     const row = rows[i];
     if (!row || row.length === 0) continue;
@@ -254,7 +255,7 @@ export function buildOkrRecordsFromExcel(
       projectColIndex >= 0 ? row[projectColIndex] : '';
     const ownerRaw =
       ownerColIndex >= 0 ? row[ownerColIndex] : '';
-    records.push({
+    const candidate: OkrRecord = {
       id: createUniqueId('okr'),
       clientName,
       clientId: '',
@@ -265,9 +266,16 @@ export function buildOkrRecordsFromExcel(
       projectCode: String(projectRaw || ''),
       owner: String(ownerRaw || ''),
       year: rowYear,
-    });
+    };
+    const mergeKey = getOkrRecordMergeKey(candidate);
+    const existing = recordMap.get(mergeKey);
+    if (!existing) {
+      recordMap.set(mergeKey, candidate);
+      continue;
+    }
+    existing.amount += amount;
   }
-  return records;
+  return Array.from(recordMap.values());
 }
 
 export interface ExcelImportParseResult {

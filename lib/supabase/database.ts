@@ -289,7 +289,10 @@ export async function upsertOkrRecords(
   records: OkrRecord[],
 ): Promise<void> {
   if (records.length === 0) return;
-  const rows = records.map((record) => ({
+  const uniqueRecords = Array.from(
+    records.reduce((map, record) => map.set(record.id, record), new Map<string, OkrRecord>()).values(),
+  );
+  const rows = uniqueRecords.map((record) => ({
     id: record.id,
     client_name: record.clientName,
     client_id: record.clientId || null,
@@ -301,8 +304,12 @@ export async function upsertOkrRecords(
     owner: record.owner || '',
     year: Number(record.year) || ANALYSIS_YEAR,
   }));
-  const { error } = await db.from('okr_records').upsert(rows, { onConflict: 'id' });
-  if (error) throw error;
+  const chunkSize = 200;
+  for (let offset = 0; offset < rows.length; offset += chunkSize) {
+    const chunk = rows.slice(offset, offset + chunkSize);
+    const { error } = await db.from('okr_records').upsert(chunk, { onConflict: 'id' });
+    if (error) throw error;
+  }
 }
 
 export async function persistOkrRecords(

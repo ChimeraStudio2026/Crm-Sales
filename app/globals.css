@@ -3750,8 +3750,14 @@ body.drawer-open {
 }
 
 /* Login page */
+body:has(.login-page) {
+    display: block;
+    min-height: 100vh;
+}
+
 .login-page {
     min-height: 100vh;
+    width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3762,7 +3768,8 @@ body.drawer-open {
 .login-card {
     width: 100%;
     max-width: 420px;
-    padding: 32px;
+    padding: 36px 32px;
+    margin: 0 auto;
 }
 
 .login-logo {

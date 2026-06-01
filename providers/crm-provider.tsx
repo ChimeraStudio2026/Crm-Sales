@@ -45,6 +45,7 @@ import {
   syncClientLegacyFields,
   updateClientProfileCompletion,
 } from '@/lib/crm/utils';
+import { appendApolloDescription, resolveActionWithWebsite } from '@/lib/crm/apollo';
 import {
   reconcileProductOffersForTypeChange,
   resolveClientProductOffers,
@@ -807,7 +808,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
     showToast('Arricchimento Apollo in corso...', 'info');
     const result = await enrichClientWithApollo(db, {
       companyName: client.name,
-      email: client.email,
+      email: client.contacts[0]?.email || client.email,
     });
     if (!result.ok) {
       showToast(result.error || 'Errore Apollo', 'danger');
@@ -819,14 +820,18 @@ export function CrmProvider({ children }: CrmProviderProps) {
       if (result.email && typeof result.email === 'string') {
         if (contacts.length === 0) {
           contacts.push({ id: createUniqueId('contact'), email: result.email, name: '', role: '' });
-        } else {
+        } else if (!contacts[0]?.email?.trim()) {
           contacts[0] = { ...contacts[0], email: result.email };
         }
       }
       const description = result.description
-        ? `${c.description}\n${result.description}`.trim()
+        ? appendApolloDescription(c.description, result.description)
         : c.description;
-      return { ...c, contacts, description };
+      const action = resolveActionWithWebsite(
+        c.action,
+        typeof result.website === 'string' ? result.website : undefined,
+      );
+      return { ...c, contacts, description, action, email: contacts[0]?.email || c.email };
     });
     setClients(nextClients);
     await persistClientsNow(nextClients);

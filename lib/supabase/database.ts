@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
   AnalysisForecasts,
+  ApolloEnrichResult,
   Client,
   ClientContact,
   ClientTask,
@@ -10,6 +11,7 @@ import type {
 } from '@/lib/types/crm';
 import { ANALYSIS_YEAR } from '@/lib/constants/crm';
 import { resolveClientProductOffers } from '@/lib/crm/product-offers';
+import { parseFunctionInvokeError } from '@/lib/supabase/function-errors';
 
 interface ClientRow {
   id: string;
@@ -353,7 +355,10 @@ export async function getApolloStatus(
     const { data, error } = await db.functions.invoke('apollo-enrich', {
       body: { healthCheck: true },
     });
-    if (error) return { ok: false, configured: false, message: error.message };
+    if (error) {
+      const message = await parseFunctionInvokeError(error);
+      return { ok: false, configured: false, message };
+    }
     return {
       ok: !!data?.configured,
       configured: !!data?.configured,
@@ -373,7 +378,7 @@ export async function getApolloStatus(
 export async function enrichClientWithApollo(
   db: SupabaseClient,
   params: { companyName?: string; email?: string; domain?: string },
-): Promise<{ ok: boolean; error?: string; [key: string]: unknown }> {
+): Promise<ApolloEnrichResult> {
   const { data, error } = await db.functions.invoke('apollo-enrich', {
     body: {
       companyName: params.companyName || '',
@@ -381,6 +386,13 @@ export async function enrichClientWithApollo(
       domain: params.domain || '',
     },
   });
-  if (error) return { ok: false, error: error.message };
-  return (data as { ok: boolean; error?: string }) || { ok: false, error: 'Risposta Apollo vuota' };
+  if (error) {
+    const message = await parseFunctionInvokeError(error);
+    return { ok: false, error: message };
+  }
+  const result = data as ApolloEnrichResult;
+  if (result && result.ok === false && result.error) {
+    return { ok: false, error: result.error };
+  }
+  return result || { ok: false, error: 'Risposta Apollo vuota' };
 }

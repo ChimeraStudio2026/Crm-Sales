@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X } from 'lucide-react';
+import { Sparkles, X } from 'lucide-react';
 import { CLIENT_TYPES, OWNERS, RELATIONSHIPS } from '@/lib/constants/crm';
 import { createUniqueId } from '@/lib/crm/utils';
 import { useCrm } from '@/providers/crm-provider';
@@ -14,7 +14,7 @@ interface ClientDrawerProps {
 }
 
 export function ClientDrawer({ client, isCold, onClose }: ClientDrawerProps) {
-  const { saveClient } = useCrm();
+  const { saveClient, enrichClientApollo } = useCrm();
   const [name, setName] = useState('');
   const [type, setType] = useState(CLIENT_TYPES[0]);
   const [owner, setOwner] = useState<'Jeck' | 'Virgi'>('Jeck');
@@ -148,6 +148,16 @@ export function ClientDrawer({ client, isCold, onClose }: ClientDrawerProps) {
           </div>
           <div className="drawer-footer">
             <button type="button" className="btn btn-secondary" onClick={onClose}>Annulla</button>
+            {client ? (
+              <button
+                type="button"
+                className="btn btn-secondary btn-apollo-drawer"
+                onClick={() => void enrichClientApollo(client.id)}
+              >
+                <Sparkles size={16} />
+                <span>Apollo</span>
+              </button>
+            ) : null}
             <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
               {isSubmitting ? 'Salvataggio...' : 'Salva Cliente'}
             </button>

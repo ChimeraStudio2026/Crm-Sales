@@ -2,7 +2,7 @@
 
 Integrazione opzionale per compilare email, sito web, settore e note descrittive dei clienti tramite [Apollo.io](https://www.apollo.io/).
 
-La **API key resta solo su Supabase** (Edge Function). Non va mai inserita nel frontend o in `config.js`.
+La **API key resta solo su Supabase** (Edge Function). Non va in `.env.local`, Vercel o nel codice frontend.
 
 ## 1. Ottieni la API key Apollo
 
@@ -12,44 +12,47 @@ La **API key resta solo su Supabase** (Edge Function). Non va mai inserita nel f
 
 ## 2. Aggiungi il secret su Supabase
 
-1. Apri il [dashboard Supabase](https://supabase.com/dashboard) del progetto CRM.
-2. **Edge Functions** → **Secrets** (o **Project Settings → Edge Functions**).
+1. Apri il [dashboard Supabase](https://supabase.com/dashboard/project/ftkqrtzovyezlhlabmpn/functions/secrets) del progetto CRM.
+2. **Edge Functions → Secrets**.
 3. Aggiungi:
-   - Nome: `APOLLO_API_KEY`
-   - Valore: la tua chiave Apollo
+   - **Name:** `APOLLO_API_KEY`
+   - **Value:** la tua chiave Apollo
 
 ## 3. Deploy della Edge Function
 
-Dalla root del progetto, con [Supabase CLI](https://supabase.com/docs/guides/cli) collegato al progetto:
+La function `apollo-enrich` deve essere deployata sul progetto Supabase.
+
+Con Supabase CLI (dalla root del repo):
 
 ```bash
-supabase functions deploy apollo-enrich --no-verify-jwt
+supabase link --project-ref ftkqrtzovyezlhlabmpn
+supabase secrets set APOLLO_API_KEY=la-tua-chiave-apollo
+supabase functions deploy apollo-enrich
 ```
 
-Oppure usa il deploy da dashboard: carica il contenuto di `supabase/functions/apollo-enrich/index.ts`.
+Il codice sorgente è in `supabase/functions/apollo-enrich/index.ts`.
 
-> `--no-verify-jwt` è necessario perché il CRM invoca la function con la **anon key** pubblica, senza login utente.
+> Con login obbligatorio nel CRM, la function può usare JWT verification. Se vedi errori 401, verifica di essere autenticato nel CRM.
 
 ## 4. Verifica in Impostazioni
 
-1. Avvia il CRM (`python3 -m http.server 3000` in locale).
-2. Vai in **Impostazioni**.
-3. Il badge **Apollo** deve mostrare **connesso** (verde) se il secret è configurato e la function è deployata.
-
-Se vedi **configura API key** (arancione), controlla secret e deploy.
+1. Avvia il CRM: `npm run dev`
+2. Vai in **Impostazioni**
+3. Clicca **Verifica connessione**
+4. Il badge Apollo deve mostrare **Apollo configurato** se secret e deploy sono ok
 
 ## 5. Usa l’arricchimento
 
-- **Lista Clienti** o **Clienti Freddi**: pulsante ✨ (sparkles) nella colonna Azioni.
-- **Drawer modifica cliente**: pulsante **Apollo** nel footer (solo in modifica).
+- **Lista Clienti** o **Clienti Freddi**: pulsante ✨ nella colonna Azioni
+- **Drawer modifica cliente**: pulsante **Apollo** nel footer
 
 Apollo cerca per **nome azienda**, **email** o **dominio** e aggiorna:
 
-| Campo CRM        | Fonte Apollo                          |
-|------------------|---------------------------------------|
-| Email            | contatto trovato (se vuota)           |
-| Descrizione      | settore, sede, dipendenti, LinkedIn…  |
-| Prossima azione  | URL sito (se azione vuota o `-`)      |
+| Campo CRM   | Fonte Apollo                          |
+|-------------|---------------------------------------|
+| Email       | contatto trovato (se vuota)           |
+| Descrizione | settore, sede, dipendenti, LinkedIn… |
+| Azione      | URL sito (se azione vuota o `-`)      |
 
 I dati Apollo in descrizione sono delimitati da `--- Apollo ---`.
 
@@ -57,9 +60,9 @@ I dati Apollo in descrizione sono delimitati da `--- Apollo ---`.
 
 | Problema | Soluzione |
 |----------|-----------|
-| `Apollo richiede Supabase connesso` | Configura `config.js` / `supabase.config.js` e verifica connessione |
+| `Supabase non configurato` | Configura `.env.local` e verifica login |
 | `APOLLO_API_KEY non configurata` | Aggiungi il secret in Supabase |
-| `Failed to send a request to the Edge Function` | Deploy `apollo-enrich` e abilita `--no-verify-jwt` |
+| `Failed to send a request to the Edge Function` | Deploy `apollo-enrich` |
 | `Nessun dato trovato` | Prova con email aziendale o nome più preciso |
 | Rate limit Apollo | Attendi o riduci le richieste (piano Apollo) |
 

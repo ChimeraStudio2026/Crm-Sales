@@ -38,8 +38,13 @@ async function apolloFetch(path: string, options: RequestInit = {}): Promise<Rec
     });
     const data = await response.json().catch(() => ({})) as Record<string, unknown>;
     if (!response.ok) {
-        const message = String(data.error || data.message || `Apollo HTTP ${response.status}`);
-        throw new Error(message);
+        const rawMessage = String(data.error || data.message || `Apollo HTTP ${response.status}`);
+        if (rawMessage.includes("not accessible with this api_key")) {
+            throw new Error(
+                "La API key Apollo non ha permessi per l'arricchimento. Su Apollo.io serve un piano con API Organization Enrich attiva.",
+            );
+        }
+        throw new Error(rawMessage);
     }
     return data;
 }
@@ -138,7 +143,7 @@ Deno.serve(async (req: Request) => {
         let domain = body.domain?.trim().toLowerCase() || null;
         if (!domain && inputEmail) domain = extractDomainFromEmail(inputEmail);
         if (!companyName && !inputEmail && !domain) {
-            return jsonResponse({ ok: false, error: "companyName, email o domain richiesti" }, 400);
+            return jsonResponse({ ok: false, error: "companyName, email o domain richiesti" });
         }
         let organization: Record<string, unknown> | null = null;
         if (domain) {
@@ -161,7 +166,7 @@ Deno.serve(async (req: Request) => {
             contactEmail = await findContactEmail(companyName, domain);
         }
         if (!organization && !contactEmail) {
-            return jsonResponse({ ok: false, error: "Nessun dato trovato su Apollo per questo cliente" }, 404);
+            return jsonResponse({ ok: false, error: "Nessun dato trovato su Apollo per questo cliente" });
         }
         const org = organization || {};
         const websiteDomain = String(org.primary_domain || domain || "");
@@ -182,6 +187,6 @@ Deno.serve(async (req: Request) => {
         });
     } catch (error) {
         const message = error instanceof Error ? error.message : "Errore Apollo";
-        return jsonResponse({ ok: false, error: message }, 500);
+        return jsonResponse({ ok: false, error: message });
     }
 });

@@ -1,21 +1,26 @@
 'use client';
 
 import { useRef } from 'react';
-import { Cloud, Database, FileJson, Info, Sparkles, Trash2, Upload } from 'lucide-react';
+import { Cloud, Database, ExternalLink, FileJson, Info, RefreshCw, Sparkles, Trash2, Upload } from 'lucide-react';
 import { useCrm } from '@/providers/crm-provider';
 import { TopHeader } from '@/components/layout/top-header';
+
+const APOLLO_SECRETS_URL = 'https://supabase.com/dashboard/project/ftkqrtzovyezlhlabmpn/functions/secrets';
+const APOLLO_DOCS_URL = 'https://docs.apollo.io/';
 
 export function SettingsSection() {
   const {
     isSupabaseConnected,
     isSupabaseConfigured,
     apolloStatus,
+    refreshApolloStatus,
     exportJsonBackup,
     importJsonBackup,
     resetAllData,
     showToast,
   } = useCrm();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isApolloReady = apolloStatus.ok && apolloStatus.configured;
 
   const supabaseBadge = isSupabaseConnected
     ? 'Supabase: connesso'
@@ -45,10 +50,62 @@ export function SettingsSection() {
             <div className="glass-card">
               <div className="chart-header">
                 <h3><Sparkles size={20} /> Apollo.io</h3>
-                <span className="quick-stats-badge">{apolloStatus.message}</span>
+                <span
+                  className="quick-stats-badge"
+                  style={isApolloReady ? { color: 'var(--success)' } : undefined}
+                >
+                  {apolloStatus.message}
+                </span>
               </div>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
-                Setup: <strong>APOLLO_SETUP.md</strong> — aggiungi <code>APOLLO_API_KEY</code> nei Secrets della Edge Function.
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.55 }}>
+                Apollo arricchisce i clienti con email, sito web, settore e note aziendali.
+                La chiave API va inserita <strong>solo su Supabase</strong>, non in Vercel o nel codice.
+              </p>
+              <ol className="settings-steps-list">
+                <li>
+                  Ottieni la API key da{' '}
+                  <a href="https://app.apollo.io/" target="_blank" rel="noreferrer">Apollo.io</a>
+                  {' '}(Settings → Integrations → API).
+                </li>
+                <li>
+                  Aggiungi il secret <code>APOLLO_API_KEY</code> in Supabase Edge Functions.
+                </li>
+                <li>
+                  Usa il pulsante ✨ nella lista clienti o nel drawer di modifica.
+                </li>
+              </ol>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 16 }}>
+                <a
+                  href={APOLLO_SECRETS_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-secondary"
+                >
+                  <ExternalLink size={16} />
+                  <span>Apri Secrets Supabase</span>
+                </a>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => void refreshApolloStatus()}
+                >
+                  <RefreshCw size={16} />
+                  <span>Verifica connessione</span>
+                </button>
+                <a
+                  href={APOLLO_DOCS_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-secondary"
+                >
+                  <ExternalLink size={16} />
+                  <span>Docs Apollo</span>
+                </a>
+              </div>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginTop: 12 }}>
+                Guida completa: <strong>APOLLO_SETUP.md</strong>
+                <br />
+                Serve un piano Apollo con API <strong>Organization Enrich</strong> attiva (le chiavi base spesso non includono l&apos;arricchimento).
               </p>
             </div>
             <div className="glass-card">

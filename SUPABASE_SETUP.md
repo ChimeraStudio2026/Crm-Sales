@@ -66,8 +66,8 @@ Se usavi la versione statica legacy (`legacy/`), i dati erano in `localStorage`.
 Il CRM richiede login Supabase. Le policy RLS bloccano l'accesso anonimo.
 
 1. **Authentication → Providers → Email** — abilitato
-2. Per sviluppo rapido: disabilita **Confirm email** nelle impostazioni Email
-3. Crea account da `/login` (tab Registrati) per Jeck e Virgi
+2. **Authentication → Settings** — disabilita **Enable sign ups**
+3. Crea gli account da **Authentication → Users → Add user** (es. Jeck e Virgi)
 4. Utenti autenticati condividono accesso completo ai dati CRM
 
 ## 8. Comportamento

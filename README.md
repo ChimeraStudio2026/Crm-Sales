@@ -27,8 +27,8 @@ Set these in `.env.local` for local dev and in **Vercel → Project → Settings
 The CRM requires Supabase Auth. Unauthenticated requests are blocked by RLS.
 
 1. Open **Supabase Dashboard → Authentication → Providers** and ensure **Email** is enabled.
-2. For development, you can disable **Confirm email** under Email provider settings so sign-up works instantly.
-3. Create accounts via `/login` (Sign up tab) for Jeck and Virgi.
+2. In **Authentication → Settings**, disable **Enable sign ups** so only pre-created accounts can access the CRM.
+3. Create user accounts from the Supabase Dashboard (**Authentication → Users → Add user**).
 4. All authenticated team members share full access to CRM data (internal tool model).
 
 Middleware redirects unauthenticated users to `/login`. Sessions are stored in HTTP-only cookies via `@supabase/ssr`.

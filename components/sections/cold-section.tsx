@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Edit, PlusCircle, Search, Sparkles, Trash2 } from 'lucide-react';
 import { COLD_CLIENT_CATEGORIES, OWNERS } from '@/lib/constants/crm';
 import { formatCurrency, isClientInColdSection } from '@/lib/crm/utils';
@@ -8,6 +8,69 @@ import { useCrm } from '@/providers/crm-provider';
 import { ClientDrawer } from '@/components/drawers/client-drawer';
 import { TopHeader } from '@/components/layout/top-header';
 import type { Client } from '@/lib/types/crm';
+
+interface InlineRev2026CellProps {
+  client: Client;
+  onSave: (clientId: string, value: number) => Promise<void>;
+}
+
+function InlineRev2026Cell({ client, onSave }: InlineRev2026CellProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [value, setValue] = useState(String(client.rev2026 || 0));
+
+  useEffect(() => {
+    setValue(String(client.rev2026 || 0));
+  }, [client.rev2026]);
+
+  const saveValue = async () => {
+    const parsed = Number.parseFloat(value);
+    const nextValue = Number.isFinite(parsed) ? parsed : 0;
+    setValue(String(nextValue));
+    if (nextValue !== client.rev2026) {
+      await onSave(client.id, nextValue);
+    }
+    setIsEditing(false);
+  };
+
+  if (isEditing) {
+    return (
+      <td style={{ textAlign: 'right' }}>
+        <input
+          type="number"
+          className="inline-edit-input cold-rev-input"
+          value={value}
+          min={0}
+          step={0.01}
+          autoFocus
+          onChange={(event) => setValue(event.target.value)}
+          onBlur={() => void saveValue()}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') void saveValue();
+            if (event.key === 'Escape') {
+              setValue(String(client.rev2026 || 0));
+              setIsEditing(false);
+            }
+          }}
+          onClick={(event) => event.stopPropagation()}
+        />
+      </td>
+    );
+  }
+
+  return (
+    <td
+      style={{ textAlign: 'right' }}
+      className="cell-editable cold-rev-cell"
+      title="Clicca per modificare il fatturato 2026"
+      onClick={(event) => {
+        event.stopPropagation();
+        setIsEditing(true);
+      }}
+    >
+      {formatCurrency(client.rev2026)}
+    </td>
+  );
+}
 
 export function ColdClientsSection() {
   const { clients, deleteClient, updateClientField, enrichClientApollo } = useCrm();
@@ -34,6 +97,10 @@ export function ColdClientsSection() {
     });
   };
 
+  const handleRev2026Save = async (clientId: string, value: number) => {
+    await updateClientField(clientId, 'rev2026', value);
+  };
+
   return (
     <>
       <TopHeader onQuickAdd={() => { setEditClient(null); setDrawerOpen(true); }} />
@@ -55,7 +122,7 @@ export function ColdClientsSection() {
             </div>
           </div>
           <p className="cold-section-hint">
-            Clienti con cui non avete ancora lavorato. Quando il <strong>Fatturato 2026</strong> supera <strong>€1</strong>, il cliente passa automaticamente alla Lista Clienti.
+            Clienti con cui non avete ancora lavorato. Clicca sul <strong>Fatturato 2026</strong> per modificarlo: se supera <strong>€1</strong>, il cliente passa automaticamente alla Lista Clienti.
           </p>
           <div className="cold-clients-accordion">
             {COLD_CLIENT_CATEGORIES.map((category) => {
@@ -94,7 +161,7 @@ export function ColdClientsSection() {
                                     {OWNERS.map((o) => <option key={o} value={o}>{o}</option>)}
                                   </select>
                                 </td>
-                                <td style={{ textAlign: 'right' }}>{formatCurrency(client.rev2026)}</td>
+                                <InlineRev2026Cell client={client} onSave={handleRev2026Save} />
                                 <td>
                                   <div className="table-row-actions">
                                     <button type="button" className="btn-table-action apollo" onClick={() => void enrichClientApollo(client.id)}>

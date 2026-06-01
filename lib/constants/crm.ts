@@ -80,7 +80,7 @@ export const CRM_TABLE_COLUMN_DEFS = {
   actions: { label: 'Azioni', sortKey: null, align: 'center' as const, defaultWidth: 100, minWidth: 90, noExpand: true, noSort: true },
 };
 
-export const MAIN_TABLE_HIDDEN_COLUMNS = new Set(['contacts']);
+export const MAIN_TABLE_HIDDEN_COLUMNS = new Set(['contacts', 'action']);
 
 export const DEFAULT_TABLE_COLUMN_ORDER = Object.keys(CRM_TABLE_COLUMN_DEFS).filter(
   (columnId) => !MAIN_TABLE_HIDDEN_COLUMNS.has(columnId),

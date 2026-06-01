@@ -68,6 +68,34 @@ function pickRandomRecallClientsForQuota(
   return shuffleArray(pool).slice(0, quota.count);
 }
 
+export function refreshRecallSelectionPreservingDone(
+  clients: Client[],
+  currentItems: RecallItem[],
+): RecallItem[] {
+  const doneItems = currentItems
+    .filter((item) => item.status === RECALL_STATUS_DONE)
+    .map(normalizeRecallItem);
+  const lockedIds = new Set(doneItems.map((item) => item.clientId));
+  const result: RecallItem[] = [...doneItems];
+  RECALL_QUOTAS.forEach((quota) => {
+    const doneForRelationship = doneItems.filter(
+      (item) => item.relationship === quota.relationship,
+    ).length;
+    const slotsToFill = Math.max(0, quota.count - doneForRelationship);
+    if (slotsToFill === 0) return;
+    const pool = getEligibleRecallClientsByRelationship(
+      clients,
+      quota.relationship,
+      lockedIds,
+    );
+    shuffleArray(pool).slice(0, slotsToFill).forEach((client) => {
+      lockedIds.add(client.id);
+      result.push(createRecallItem(client));
+    });
+  });
+  return shuffleArray(result);
+}
+
 export function generateRandomRecallSelection(
   clients: Client[],
   excludeIds: Set<string> = new Set(),

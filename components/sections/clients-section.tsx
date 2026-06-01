@@ -176,12 +176,6 @@ export function ClientsSection() {
         return <td key={columnId} style={{ textAlign: 'right' }}>{formatCurrency(client.rev2026)}</td>;
       case 'rev2025':
         return <td key={columnId} style={{ textAlign: 'right' }}>{formatCurrency(client.rev2025)}</td>;
-      case 'action':
-        return (
-          <td key={columnId} className="col-azione" title={client.action || undefined}>
-            {client.action?.trim() ? client.action : '—'}
-          </td>
-        );
       case 'actionDate': {
         const isStale = isActionDateStale(client.actionDate);
         return (
@@ -222,8 +216,8 @@ export function ClientsSection() {
   return (
     <>
       <TopHeader onQuickAdd={openNew} />
-      <div className="content-body">
-        <section className="app-section active">
+      <div className="content-body is-clients-section">
+        <section id="section-clients" className="app-section active">
           <div className="table-filter-bar">
             <div className="filter-left">
               <div className="search-box">

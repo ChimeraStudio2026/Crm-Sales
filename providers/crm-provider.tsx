@@ -50,6 +50,7 @@ import {
   generateRandomRecallSelection,
   isRecallSelectionValid,
   normalizeStoredRecallItems,
+  refreshRecallSelectionPreservingDone,
   RECALL_SELECTION_VERSION,
 } from '@/lib/crm/recall';
 import { createBrowserSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
@@ -113,6 +114,7 @@ interface CrmContextValue {
   toggleAnalysisScope: (scope: string) => void;
   refreshRecall: () => Promise<void>;
   updateRecallStatus: (clientId: string, status: RecallItem['status']) => Promise<void>;
+  completeRecallWithAction: (clientId: string, action: string) => Promise<void>;
   processExcelImport: (parsedClients: ParsedExcelClient[], okrRecords: OkrRecord[]) => Promise<void>;
   parseExcelBuffer: (buffer: ArrayBuffer) => {
     headers: unknown[];
@@ -554,7 +556,8 @@ export function CrmProvider({ children }: CrmProviderProps) {
   }, []);
 
   const refreshRecall = useCallback(async () => {
-    const generated = generateRandomRecallSelection(clients);
+    const doneCount = dailyRecallItems.filter((item) => item.status === 'Done').length;
+    const generated = refreshRecallSelectionPreservingDone(clients, dailyRecallItems);
     setDailyRecallItems(generated);
     const today = getTodayString();
     if (db && isSupabaseConnected) {
@@ -566,25 +569,58 @@ export function CrmProvider({ children }: CrmProviderProps) {
         items: generated,
       }));
     }
-    showToast(`Nuova selezione: ${generated.length} clienti.`, 'success');
-  }, [clients, db, isSupabaseConnected, showToast]);
+    const refreshedCount = generated.length - doneCount;
+    showToast(
+      refreshedCount > 0
+        ? `Aggiornati ${refreshedCount} clienti To do. I Done restano fissi.`
+        : 'Nessun cliente To do da aggiornare.',
+      'success',
+    );
+  }, [clients, dailyRecallItems, db, isSupabaseConnected, showToast]);
+
+  const persistDailyRecallItems = useCallback(async (items: RecallItem[]) => {
+    const today = getTodayString();
+    if (db && isSupabaseConnected) {
+      await saveDailyRecall(db, today, items);
+    } else {
+      localStorage.setItem('crm_sales_daily_recall', JSON.stringify({
+        date: today,
+        version: RECALL_SELECTION_VERSION,
+        items,
+      }));
+    }
+  }, [db, isSupabaseConnected]);
 
   const updateRecallStatus = useCallback(async (clientId: string, status: RecallItem['status']) => {
     const next = dailyRecallItems.map((item) =>
       item.clientId === clientId ? { ...item, status } : item,
     );
     setDailyRecallItems(next);
-    const today = getTodayString();
-    if (db && isSupabaseConnected) {
-      await saveDailyRecall(db, today, next);
-    } else {
-      localStorage.setItem('crm_sales_daily_recall', JSON.stringify({
-        date: today,
-        version: RECALL_SELECTION_VERSION,
-        items: next,
-      }));
-    }
-  }, [dailyRecallItems, db, isSupabaseConnected]);
+    await persistDailyRecallItems(next);
+  }, [dailyRecallItems, persistDailyRecallItems]);
+
+  const completeRecallWithAction = useCallback(async (clientId: string, action: string) => {
+    const trimmedAction = action.trim();
+    if (!trimmedAction) return;
+    let nextClients = clients.map((c) => {
+      if (c.id !== clientId) return c;
+      const previousAction = (c.action || '').trim();
+      const updated: Client = {
+        ...c,
+        action: trimmedAction,
+        actionDate: previousAction !== trimmedAction ? getTodayString() : (c.actionDate || getTodayString()),
+      };
+      updateClientProfileCompletion(updated);
+      return updated;
+    });
+    setClients(nextClients);
+    await persistClientsNow(nextClients);
+    const nextRecall = dailyRecallItems.map((item) =>
+      item.clientId === clientId ? { ...item, status: 'Done' as const } : item,
+    );
+    setDailyRecallItems(nextRecall);
+    await persistDailyRecallItems(nextRecall);
+  }, [clients, dailyRecallItems, persistClientsNow, persistDailyRecallItems]);
 
   const processExcelImport = useCallback(async (
     parsedClients: ParsedExcelClient[],
@@ -766,6 +802,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
     toggleAnalysisScope,
     refreshRecall,
     updateRecallStatus,
+    completeRecallWithAction,
     processExcelImport,
     parseExcelBuffer,
     resetAllData,

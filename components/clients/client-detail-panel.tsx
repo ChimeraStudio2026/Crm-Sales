@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Plus, UserPlus, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { UserPlus, X } from 'lucide-react';
 import { createUniqueId, formatActionDateDisplay } from '@/lib/crm/utils';
 import type { Client, ClientContact } from '@/lib/types/crm';
 
@@ -27,12 +27,18 @@ export function ClientDetailPanel({
 }: ClientDetailPanelProps) {
   const [contacts, setContacts] = useState<ClientContact[]>(client.contacts);
   const [actionText, setActionText] = useState(client.action);
-  const [isSavingAction, setIsSavingAction] = useState(false);
+  const saveActionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setContacts(client.contacts.length > 0 ? client.contacts : [createEmptyContact()]);
     setActionText(client.action);
   }, [client.id, client.contacts, client.action]);
+
+  useEffect(() => {
+    return () => {
+      if (saveActionTimerRef.current) clearTimeout(saveActionTimerRef.current);
+    };
+  }, []);
 
   const persistContacts = async (nextContacts: ClientContact[]) => {
     const filtered = nextContacts.filter(
@@ -56,12 +62,27 @@ export function ClientDetailPanel({
     await persistContacts(nextContacts.length > 0 ? nextContacts : [createEmptyContact()]);
   };
 
-  const handleSaveAction = async () => {
-    setIsSavingAction(true);
-    try {
-      await onUpdateAction(actionText);
-    } finally {
-      setIsSavingAction(false);
+  const scheduleActionSave = (value: string) => {
+    if (saveActionTimerRef.current) clearTimeout(saveActionTimerRef.current);
+    saveActionTimerRef.current = setTimeout(() => {
+      if (value.trim() !== (client.action || '').trim()) {
+        void onUpdateAction(value);
+      }
+    }, 600);
+  };
+
+  const handleActionChange = (value: string) => {
+    setActionText(value);
+    scheduleActionSave(value);
+  };
+
+  const handleActionBlur = () => {
+    if (saveActionTimerRef.current) {
+      clearTimeout(saveActionTimerRef.current);
+      saveActionTimerRef.current = null;
+    }
+    if (actionText.trim() !== (client.action || '').trim()) {
+      void onUpdateAction(actionText);
     }
   };
 
@@ -74,25 +95,15 @@ export function ClientDetailPanel({
             Data azione: {formatActionDateDisplay(client.actionDate)}
           </span>
         </div>
-        <div className="client-actions-add-form client-action-single-form">
-          <input
-            type="text"
-            className="contact-field-input action-log-text"
-            value={actionText}
-            onChange={(event) => setActionText(event.target.value)}
-            placeholder="Descrivi l'azione svolta con questo cliente..."
-            aria-label="Azione cliente"
-          />
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            disabled={isSavingAction}
-            onClick={() => void handleSaveAction()}
-          >
-            <Plus size={14} />
-            <span>{isSavingAction ? 'Salvo...' : 'Salva'}</span>
-          </button>
-        </div>
+        <textarea
+          className="contact-field-input client-action-textarea"
+          value={actionText}
+          onChange={(event) => handleActionChange(event.target.value)}
+          onBlur={handleActionBlur}
+          rows={5}
+          placeholder="Descrivi l'azione svolta con questo cliente..."
+          aria-label="Azione cliente"
+        />
       </div>
       <div className="contacts-panel-section">
         <div className="contacts-panel-header">

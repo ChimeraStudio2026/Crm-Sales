@@ -1683,6 +1683,7 @@ body.drawer-open {
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    flex: 1;
     min-height: 0;
 }
 
@@ -2542,6 +2543,40 @@ body.drawer-open {
 }
 .client-action-single-form {
     grid-template-columns: minmax(0, 1fr) auto;
+}
+.client-action-textarea {
+    width: 100%;
+    min-height: 120px;
+    resize: vertical;
+    line-height: 1.45;
+}
+.recall-action-editor {
+    display: grid;
+    gap: 8px;
+    margin-top: 12px;
+}
+.recall-action-editor label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+.recall-action-textarea {
+    width: 100%;
+    min-height: 96px;
+    resize: vertical;
+}
+.recall-action-hint {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+.cold-rev-cell {
+    cursor: pointer;
+}
+.cold-rev-input {
+    max-width: 140px;
+    margin-left: auto;
+    text-align: right;
 }
 .form-contact-row-inline {
     display: grid;

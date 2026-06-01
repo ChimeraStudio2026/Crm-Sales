@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { RECALL_TOTAL_COUNT } from '@/lib/constants/crm';
 import { formatItalianDate, getTodayString } from '@/lib/crm/utils';
@@ -14,7 +15,17 @@ export function RecallSection() {
     setRecallFilterStatus,
     refreshRecall,
     updateRecallStatus,
+    completeRecallWithAction,
   } = useCrm();
+  const [awaitingActionId, setAwaitingActionId] = useState<string | null>(null);
+  const [actionDraft, setActionDraft] = useState('');
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, []);
 
   const filtered = recallFilterStatus
     ? dailyRecallItems.filter((i) => i.status === recallFilterStatus)
@@ -22,6 +33,48 @@ export function RecallSection() {
 
   const todoCount = dailyRecallItems.filter((i) => i.status !== 'Done').length;
   const doneCount = dailyRecallItems.filter((i) => i.status === 'Done').length;
+
+  const persistDoneAction = async (clientId: string, action: string) => {
+    const trimmed = action.trim();
+    if (!trimmed) return;
+    await completeRecallWithAction(clientId, trimmed);
+    if (awaitingActionId === clientId) {
+      setAwaitingActionId(null);
+      setActionDraft('');
+    }
+  };
+
+  const scheduleActionSave = (clientId: string, action: string) => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      void persistDoneAction(clientId, action);
+    }, 700);
+  };
+
+  const handleStatusChange = async (clientId: string, status: 'To do' | 'Done') => {
+    if (status === 'To do') {
+      setAwaitingActionId((current) => (current === clientId ? null : current));
+      setActionDraft('');
+      await updateRecallStatus(clientId, 'To do');
+      return;
+    }
+    const client = clients.find((item) => item.id === clientId);
+    setAwaitingActionId(clientId);
+    setActionDraft(client?.action || '');
+  };
+
+  const handleActionDraftChange = (clientId: string, value: string) => {
+    setActionDraft(value);
+    scheduleActionSave(clientId, value);
+  };
+
+  const handleActionDraftBlur = (clientId: string) => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    void persistDoneAction(clientId, actionDraft);
+  };
 
   return (
     <>
@@ -64,14 +117,16 @@ export function RecallSection() {
                 const client = clients.find((c) => c.id === item.clientId);
                 if (!client) return null;
                 const isDone = item.status === 'Done';
+                const isAwaitingAction = awaitingActionId === item.clientId;
+                const selectValue = isAwaitingAction || isDone ? 'Done' : 'To do';
                 return (
                   <div key={item.clientId} className={`recall-card glass-card ${item.slotClass}${isDone ? ' is-done' : ''}`}>
                     <div className="recall-card-header">
                       <span className={`recall-slot-badge ${item.slotClass}`}>{item.slotLabel}</span>
                       <select
                         className="form-select recall-status-select"
-                        value={item.status}
-                        onChange={(e) => void updateRecallStatus(item.clientId, e.target.value as 'To do' | 'Done')}
+                        value={selectValue}
+                        onChange={(e) => void handleStatusChange(item.clientId, e.target.value as 'To do' | 'Done')}
                       >
                         <option value="To do">To do</option>
                         <option value="Done">Done</option>
@@ -79,7 +134,24 @@ export function RecallSection() {
                     </div>
                     <h3 className="recall-client-name">{client.name}</h3>
                     <p className="recall-client-meta">{client.type} · {client.owner}</p>
-                    <p className="recall-client-action">{client.action || 'Nessuna azione registrata'}</p>
+                    {isAwaitingAction ? (
+                      <div className="recall-action-editor">
+                        <label htmlFor={`recall-action-${item.clientId}`}>Azione svolta *</label>
+                        <textarea
+                          id={`recall-action-${item.clientId}`}
+                          className="contact-field-input recall-action-textarea"
+                          value={actionDraft}
+                          onChange={(e) => handleActionDraftChange(item.clientId, e.target.value)}
+                          onBlur={() => handleActionDraftBlur(item.clientId)}
+                          rows={4}
+                          placeholder="Scrivi l'azione fatta con questo cliente..."
+                          autoFocus
+                        />
+                        <p className="recall-action-hint">Salvataggio automatico — si aggiorna anche in Lista Clienti.</p>
+                      </div>
+                    ) : (
+                      <p className="recall-client-action">{client.action || 'Nessuna azione registrata'}</p>
+                    )}
                   </div>
                 );
               })

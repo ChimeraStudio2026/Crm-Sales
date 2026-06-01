@@ -153,18 +153,25 @@ export function ImportSection() {
                         const existing = clients.find(
                           (c) => c.name.toLowerCase() === imported.name.toLowerCase(),
                         );
-                        let status = 'Nuovo — da completare';
+                        let statusLabel = 'Nuovo';
+                        let statusClass = 'import-status-new';
                         if (existing) {
-                          status = hasExcelRevenueDifference(existing[revenueField], imported.revenue)
-                            ? 'Aggiorna Fatturato'
-                            : 'Invariato';
+                          if (hasExcelRevenueDifference(existing[revenueField], imported.revenue)) {
+                            statusLabel = 'Aggiorna fatturato';
+                            statusClass = 'import-status-update';
+                          } else {
+                            statusLabel = 'Invariato';
+                            statusClass = 'import-status-unchanged';
+                          }
                         }
                         return (
                           <tr key={imported.name}>
                             <td><strong>{imported.name}</strong></td>
                             <td style={{ textAlign: 'center' }}>{imported.recordCount}</td>
                             <td style={{ textAlign: 'right' }}>{formatCurrency(imported.revenue)}</td>
-                            <td style={{ textAlign: 'center' }}>{status}</td>
+                            <td style={{ textAlign: 'center' }}>
+                              <span className={`import-status-badge ${statusClass}`}>{statusLabel}</span>
+                            </td>
                           </tr>
                         );
                       })}

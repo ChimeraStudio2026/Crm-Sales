@@ -47,6 +47,7 @@ export function ClientsSection() {
     updateClientProductOffers,
     enrichClientApollo,
   } = useCrm();
+  const [filterIncomplete, setFilterIncomplete] = useState(false);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterOwner, setFilterOwner] = useState('');
@@ -56,10 +57,16 @@ export function ClientsSection() {
   const [editClient, setEditClient] = useState<Client | null>(null);
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
 
+  const incompleteCount = useMemo(
+    () => clients.filter((c) => isClientInActiveSection(c) && shouldHighlightIncompleteClient(c)).length,
+    [clients],
+  );
+
   const filtered = useMemo(() => {
     const query = search.toLowerCase().trim();
     let list = clients.filter((c) => {
       if (!isClientInActiveSection(c)) return false;
+      if (filterIncomplete && !shouldHighlightIncompleteClient(c)) return false;
       const matchesQuery =
         !query ||
         c.name.toLowerCase().includes(query) ||
@@ -90,7 +97,7 @@ export function ClientsSection() {
       return 0;
     });
     return list;
-  }, [clients, filterOwner, filterRelationship, filterType, search, sort]);
+  }, [clients, filterIncomplete, filterOwner, filterRelationship, filterType, search, sort]);
 
   const totalActive = clients.filter(isClientInActiveSection).length;
   const columnCount = DEFAULT_TABLE_COLUMN_ORDER.length;
@@ -125,7 +132,8 @@ export function ClientsSection() {
 
   const renderCell = (client: Client, columnId: string) => {
     switch (columnId) {
-      case 'name':
+      case 'name': {
+        const isDraft = shouldHighlightIncompleteClient(client);
         return (
           <td key={columnId} className="col-nome">
             <div className="client-name-cell">
@@ -134,9 +142,16 @@ export function ClientsSection() {
                 className={`row-expand-icon ${expandedClients.has(client.id) ? 'is-expanded' : ''}`}
               />
               <strong>{client.name}</strong>
+              {isDraft && (
+                <span className="client-draft-badge" title="Aggiungi contatti e azione per completare il profilo">
+                  <span className="client-draft-dot" aria-hidden="true" />
+                  Bozza
+                </span>
+              )}
             </div>
           </td>
         );
+      }
       case 'type':
         return (
           <td key={columnId}>
@@ -244,6 +259,17 @@ export function ClientsSection() {
                   <option value="">Tutti i Rapporti</option>
                   {RELATIONSHIPS.map((r) => <option key={r} value={r}>{RELATIONSHIP_LABELS[r]}</option>)}
                 </select>
+                {incompleteCount > 0 && (
+                  <button
+                    type="button"
+                    className={`clients-filter-chip ${filterIncomplete ? 'is-active' : ''}`}
+                    onClick={() => setFilterIncomplete((prev) => !prev)}
+                    title="Mostra solo clienti importati ancora da completare"
+                  >
+                    Da completare
+                    <span className="clients-filter-chip-count">{incompleteCount}</span>
+                  </button>
+                )}
               </div>
             </div>
             <div className="filter-right">
@@ -255,6 +281,7 @@ export function ClientsSection() {
                   setFilterType('');
                   setFilterOwner('');
                   setFilterRelationship('');
+                  setFilterIncomplete(false);
                 }}
               >
                 <FilterX size={16} />
@@ -266,6 +293,22 @@ export function ClientsSection() {
               </button>
             </div>
           </div>
+          {incompleteCount > 0 && !filterIncomplete && (
+            <div className="clients-draft-banner">
+              <span>
+                <strong>{incompleteCount}</strong>{' '}
+                {incompleteCount === 1 ? 'cliente importato' : 'clienti importati'} con profilo in bozza — apri la riga per aggiungere contatti e azione.
+              </span>
+              <button
+                type="button"
+                className="clients-filter-chip is-active"
+                onClick={() => setFilterIncomplete(true)}
+              >
+                Mostra solo bozze
+                <span className="clients-filter-chip-count">{incompleteCount}</span>
+              </button>
+            </div>
+          )}
           <div className="table-container">
             <div className="crm-table-scroll-viewport">
               <table className="crm-table">
@@ -301,7 +344,7 @@ export function ClientsSection() {
                             className={[
                               'client-row-expandable',
                               isExpanded ? 'is-row-expanded' : '',
-                              shouldHighlightIncompleteClient(client) ? 'client-row-incomplete' : '',
+                              shouldHighlightIncompleteClient(client) ? 'client-row-draft' : '',
                             ].filter(Boolean).join(' ')}
                             onClick={(event) => {
                               if (isInteractiveTableTarget(event.target)) return;
@@ -332,6 +375,9 @@ export function ClientsSection() {
             <div className="table-footer">
               <div className="table-info">
                 Mostrati {filtered.length} di {totalActive} clienti
+                {incompleteCount > 0 && (
+                  <> · <span style={{ color: 'var(--primary)' }}>{incompleteCount} in bozza</span></>
+                )}
               </div>
             </div>
           </div>

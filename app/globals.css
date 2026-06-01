@@ -994,22 +994,116 @@ body.crm-col-resizing {
     background: var(--bg-hover);
 }
 
-.crm-table tbody tr.client-row-incomplete {
-    outline: 2px solid #dc2626;
-    outline-offset: -2px;
-    background: #fef2f2;
+.crm-table tbody tr.client-row-draft td:first-child {
+    box-shadow: inset 3px 0 0 rgba(38, 109, 240, 0.45);
 }
 
-.crm-table tbody tr.client-row-incomplete:hover {
-    background: #fee2e2;
+.crm-table tbody tr.client-row-draft {
+    background: rgba(229, 238, 255, 0.22);
 }
 
-.crm-table tbody tr.client-row-incomplete td.col-nome strong::after {
-    content: ' — da completare';
-    font-size: 0.72rem;
+.crm-table tbody tr.client-row-draft:hover {
+    background: rgba(229, 238, 255, 0.38);
+}
+
+.crm-table tbody tr.client-row-draft.is-row-expanded td {
+    background: rgba(229, 238, 255, 0.42);
+    border-bottom-color: transparent;
+}
+
+.client-name-cell strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.client-draft-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.6875rem;
     font-weight: 600;
-    color: #dc2626;
-    margin-left: 6px;
+    letter-spacing: 0.01em;
+    color: var(--primary);
+    background: var(--primary-soft);
+    border: 1px solid rgba(38, 109, 240, 0.14);
+    flex-shrink: 0;
+}
+
+.client-draft-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--primary);
+    opacity: 0.75;
+}
+
+.clients-draft-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(38, 109, 240, 0.14);
+    background: linear-gradient(90deg, rgba(229, 238, 255, 0.55) 0%, rgba(244, 245, 246, 0.9) 100%);
+    color: var(--text-secondary);
+    font-size: 0.8125rem;
+}
+
+.clients-draft-banner strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.clients-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition-fast);
+    white-space: nowrap;
+}
+
+.clients-filter-chip:hover {
+    border-color: var(--border-color-hover);
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.clients-filter-chip.is-active {
+    border-color: rgba(38, 109, 240, 0.35);
+    background: var(--primary-soft);
+    color: var(--primary);
+}
+
+.clients-filter-chip-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: rgba(38, 109, 240, 0.12);
+    color: var(--primary);
+    font-size: 0.6875rem;
+    font-weight: 700;
+}
+
+.clients-filter-chip.is-active .clients-filter-chip-count {
+    background: rgba(38, 109, 240, 0.18);
 }
 
 .crm-table td {
@@ -1673,6 +1767,36 @@ body.drawer-open {
 .import-preview-table td {
     padding: 10px 14px;
     border-bottom: 1px solid var(--border-color);
+}
+
+.import-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+
+.import-status-new {
+    color: var(--primary);
+    background: var(--primary-soft);
+    border: 1px solid rgba(38, 109, 240, 0.14);
+}
+
+.import-status-update {
+    color: #b45309;
+    background: #fff7ed;
+    border: 1px solid rgba(245, 185, 0, 0.22);
+}
+
+.import-status-unchanged {
+    color: var(--text-muted);
+    background: var(--bg-hover);
+    border: 1px solid var(--border-color);
 }
 
 /* ==========================================================================
@@ -2550,6 +2674,9 @@ body.drawer-open {
 .client-row-expandable.is-row-expanded td {
     background: var(--primary-glow);
     border-bottom-color: transparent;
+}
+.client-row-expandable.client-row-draft.is-row-expanded td {
+    background: rgba(229, 238, 255, 0.42);
 }
 .client-name-cell {
     display: flex;

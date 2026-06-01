@@ -88,8 +88,8 @@ export function JonnyChat() {
             ) : null}
             {error ? (
               <div className="jonny-chat-error" role="alert">
-                {error.message.includes('503') || error.message.includes('API')
-                  ? 'Jonny non è configurato. Aggiungi ANTHROPIC_API_KEY (Claude) in .env.local e riavvia il server.'
+                {error.message.includes('503') || error.message.includes('non configurato')
+                  ? 'Jonny non è configurato: manca ANTHROPIC_API_KEY sul server. In locale aggiungila in .env.local e riavvia npm run dev; su Vercel verifica che il nome sia esattamente ANTHROPIC_API_KEY (non ANTHRIOPIC).'
                   : error.message}
               </div>
             ) : null}

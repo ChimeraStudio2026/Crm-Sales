@@ -34,7 +34,7 @@ import {
   parseExcelImportBuffer,
   type ExcelImportParseResult,
 } from '@/lib/crm/excel';
-import { mergeOkrRecordsWithImport } from '@/lib/crm/import-merge';
+import { mergeOkrRecordsWithImport, linkOkrRecordsToClients } from '@/lib/crm/import-merge';
 import {
   applyColdClientPromotion,
   applyColdClientPromotionToAll,
@@ -207,10 +207,11 @@ export function CrmProvider({ children }: CrmProviderProps) {
 
   const persistClientsNow = useCallback(async (nextClients?: Client[]) => {
     const data = nextClients ?? clients;
-    if (db) {
-      await persistClients(db, data);
-      setIsSupabaseConnected(true);
+    if (!db) {
+      throw new Error('Supabase non configurato');
     }
+    await persistClients(db, data);
+    setIsSupabaseConnected(true);
   }, [clients, db]);
 
   const persistIdeasNow = useCallback(async (nextIdeas?: Idea[]) => {
@@ -312,7 +313,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
         setClients(normalized);
         setIdeas(loadedIdeas);
         setClientTasks(loadedTasks);
-        setOkrRecords(loadedOkr);
+        setOkrRecords(linkOkrRecordsToClients(loadedOkr, normalized));
         if (Object.keys(loadedForecasts).length > 0) {
           setForecastsByYear(loadedForecasts);
         }
@@ -344,7 +345,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
           setClients(normalized);
           setIdeas(loadedIdeas);
           setClientTasks(loadedTasks);
-          setOkrRecords(loadedOkr);
+          setOkrRecords(linkOkrRecordsToClients(loadedOkr, normalized));
           if (Object.keys(loadedForecasts).length > 0) {
             setForecastsByYear(loadedForecasts);
           }
@@ -718,7 +719,11 @@ export function CrmProvider({ children }: CrmProviderProps) {
     newOkrRecords: OkrRecord[],
     importYear: number,
   ) => {
-    const revField = getRevenueFieldForImportYear(importYear);
+    try {
+      if (!db) {
+        throw new Error('Supabase non configurato. Imposta le variabili NEXT_PUBLIC_SUPABASE_* su Vercel o in .env.local.');
+      }
+      const revField = getRevenueFieldForImportYear(importYear);
     let nextClients = [...clients];
     let clientUpdated = 0;
     let clientAdded = 0;
@@ -766,17 +771,31 @@ export function CrmProvider({ children }: CrmProviderProps) {
     nextClients = recalculateRelationships(nextClients);
     nextClients = reconcileImportedClientsToMainList(nextClients);
     const okrMerge = mergeOkrRecordsWithImport(okrRecords, newOkrRecords, nextClients);
-    setClients(nextClients);
-    setOkrRecords(okrMerge.merged);
     await persistClientsNow(nextClients);
-    if (db && okrMerge.upserted.length > 0) {
+    if (okrMerge.upserted.length > 0) {
       await upsertOkrRecords(db, okrMerge.upserted);
-      setIsSupabaseConnected(true);
     }
+    const [loadedClients, loadedOkr] = await Promise.all([
+      fetchClients(db),
+      fetchAllOkrRecords(db),
+    ]);
+    let normalized = normalizeClients(loadedClients);
+    normalized = reconcileImportedClientsToMainList(normalized);
+    normalized = applyColdClientPromotionToAll(normalized);
+    normalized = recalculateRelationships(normalized);
+    const linkedOkr = linkOkrRecordsToClients(loadedOkr, normalized);
+    setClients(normalized);
+    setOkrRecords(linkedOkr);
+    setIsSupabaseConnected(true);
     showToast(
-      `Import ${importYear}: ${clientAdded} nuovi, ${clientUpdated} aggiornati, ${clientSkipped} invariati. OKR +${okrMerge.addedCount}, aggiornati ${okrMerge.updatedCount}.`,
+      `Import ${importYear} salvato su Supabase: ${clientAdded} nuovi, ${clientUpdated} aggiornati, ${clientSkipped} invariati. OKR +${okrMerge.addedCount}, aggiornati ${okrMerge.updatedCount}.`,
       'success',
     );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Errore sconosciuto';
+      showToast(`Import fallito: ${message}`, 'danger');
+      throw error;
+    }
   }, [clients, db, okrRecords, persistClientsNow, showToast]);
 
   const parseExcelBuffer = useCallback((buffer: ArrayBuffer, filename?: string) => {

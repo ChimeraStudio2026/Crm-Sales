@@ -26,7 +26,12 @@ function linkOkrClientId(record: OkrRecord, clients: Client[]): OkrRecord {
     (client) => client.name.trim().toLowerCase() === record.clientName.trim().toLowerCase(),
   );
   if (!matchedClient) return record;
+  if (record.clientId === matchedClient.id) return record;
   return { ...record, clientId: matchedClient.id };
+}
+
+export function linkOkrRecordsToClients(records: OkrRecord[], clients: Client[]): OkrRecord[] {
+  return records.map((record) => linkOkrClientId(record, clients));
 }
 
 export function mergeOkrRecordsWithImport(
@@ -53,6 +58,14 @@ export function mergeOkrRecordsWithImport(
     }
     const existingRecord = merged[existingIndex];
     if (!hasExcelRevenueDifference(existingRecord.amount, incoming.amount, EXCEL_REV_EPSILON)) {
+      if (incoming.clientId && existingRecord.clientId !== incoming.clientId) {
+        const relinkedRecord: OkrRecord = {
+          ...existingRecord,
+          clientId: incoming.clientId,
+        };
+        merged[existingIndex] = relinkedRecord;
+        upserted.push(relinkedRecord);
+      }
       skippedCount += 1;
       return;
     }
@@ -66,5 +79,11 @@ export function mergeOkrRecordsWithImport(
     upserted.push(updatedRecord);
     updatedCount += 1;
   });
-  return { merged, upserted, addedCount, updatedCount, skippedCount };
+  return {
+    merged: linkOkrRecordsToClients(merged, clients),
+    upserted,
+    addedCount,
+    updatedCount,
+    skippedCount,
+  };
 }

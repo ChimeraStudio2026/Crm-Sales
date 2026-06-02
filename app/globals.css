@@ -2515,6 +2515,12 @@ body.drawer-open {
     line-height: 1.5;
 }
 
+.content-body.is-cold-section {
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
 .cold-clients-accordion {
     display: flex;
     flex-direction: column;
@@ -2610,7 +2616,9 @@ body.drawer-open {
     margin-top: 12px;
     border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
-    overflow: auto;
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
 }
 
 .cold-clients-table {

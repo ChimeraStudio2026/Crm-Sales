@@ -277,7 +277,7 @@ export function ColdClientsSection() {
   return (
     <>
       <TopHeader onQuickAdd={openNew} />
-      <div className="content-body is-clients-section">
+      <div className="content-body is-cold-section">
         <section className="app-section active">
           <div className="table-filter-bar">
             <div className="filter-left">

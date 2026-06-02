@@ -45,6 +45,7 @@
 
     --sidebar-width: 240px;
     --header-height: 56px;
+    --logo-desktop-size: 28px;
     --radius-sm: 8px;
     --radius-md: 12px;
     --radius-lg: 14px;
@@ -1713,6 +1714,56 @@ body.drawer-open {
 
 .settings-steps-list a:hover {
     text-decoration: underline;
+}
+
+.settings-copy {
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+    line-height: 1.55;
+    margin-bottom: 16px;
+}
+
+.settings-logo-preview {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-sidebar);
+}
+
+.settings-logo-preview-icon {
+    width: var(--logo-desktop-size, 28px);
+    height: var(--logo-desktop-size, 28px);
+}
+
+.settings-range-field label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.settings-range-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.settings-range-input {
+    flex: 1;
+    accent-color: var(--primary);
+}
+
+.settings-range-value {
+    min-width: 44px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: right;
 }
 
 .import-preview-wrapper {

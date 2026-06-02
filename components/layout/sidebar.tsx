@@ -19,6 +19,7 @@ import { useEffect, useState } from 'react';
 import { CrmLogo } from '@/components/ui/crm-logo';
 import { NAV_ITEMS } from '@/lib/constants/crm';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
+import { useUiPreferences } from '@/providers/ui-preferences-provider';
 
 const ICON_MAP: Record<string, LucideIcon> = {
   BarChart3,
@@ -34,8 +35,19 @@ const ICON_MAP: Record<string, LucideIcon> = {
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { logoDesktopSize } = useUiPreferences();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string>('');
+  const [isDesktopViewport, setIsDesktopViewport] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 901px)');
+    const updateViewport = (): void => setIsDesktopViewport(mediaQuery.matches);
+    updateViewport();
+    mediaQuery.addEventListener('change', updateViewport);
+    return () => mediaQuery.removeEventListener('change', updateViewport);
+  }, []);
+  const sidebarLogoSize = isDesktopViewport ? logoDesktopSize : 28;
 
   useEffect(() => {
     const supabase = createBrowserSupabaseClient();
@@ -67,8 +79,11 @@ export function Sidebar() {
       <aside className={`sidebar${mobileOpen ? ' mobile-open' : ''}`} id="sidebar">
         <div className="sidebar-logo">
           <div className="logo-container">
-            <div className="logo-icon">
-              <CrmLogo size={28} />
+            <div
+              className="logo-icon logo-icon-desktop-scalable"
+              style={{ width: sidebarLogoSize, height: sidebarLogoSize }}
+            >
+              <CrmLogo size={sidebarLogoSize} />
             </div>
             <span className="logo-text">CRM Sales</span>
           </div>

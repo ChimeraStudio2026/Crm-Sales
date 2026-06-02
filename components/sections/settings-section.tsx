@@ -3,6 +3,7 @@
 import { useRef } from 'react';
 import { Cloud, Database, ExternalLink, FileJson, Info, RefreshCw, Sparkles, Trash2, Upload } from 'lucide-react';
 import { useCrm } from '@/providers/crm-provider';
+import { DesktopLogoSetting } from '@/components/settings/desktop-logo-setting';
 import { TopHeader } from '@/components/layout/top-header';
 
 const APOLLO_SECRETS_URL = 'https://supabase.com/dashboard/project/ftkqrtzovyezlhlabmpn/functions/secrets';
@@ -34,6 +35,7 @@ export function SettingsSection() {
       <div className="content-body">
         <section className="app-section active">
           <div style={{ maxWidth: 650, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+            <DesktopLogoSetting />
             <div className="glass-card">
               <div className="chart-header">
                 <h3><Cloud size={20} /> Supabase (Database Cloud)</h3>

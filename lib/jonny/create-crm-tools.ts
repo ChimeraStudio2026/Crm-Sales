@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { tool } from 'ai';
 import { z } from 'zod';
+import { OWNER_ZOD_ENUM, OWNERS } from '@/lib/constants/crm';
 import {
   createClientTaskAction,
   getClientDetailsAction,
@@ -25,7 +26,7 @@ export function createCrmTools(db: SupabaseClient) {
         relationship: z
           .enum(['Nuovo Cliente', 'Ricorrente', 'Top 20%', 'Perso', 'Eliminato'])
           .optional(),
-        owner: z.enum(['Jeck', 'Virgi']).optional(),
+        owner: z.enum(OWNER_ZOD_ENUM).optional(),
         limit: z.number().int().min(1).max(30).optional(),
       }),
       execute: async (input) => searchClientsAction(db, input),
@@ -67,7 +68,7 @@ export function createCrmTools(db: SupabaseClient) {
         title: z.string(),
         taskType: z.enum(['call', 'follow-up', 'proposta', 'email', 'meeting', 'altro']).optional(),
         dueDate: z.string().optional().describe('Data scadenza YYYY-MM-DD'),
-        assignee: z.enum(['Jeck', 'Virgi']).optional(),
+        assignee: z.enum(OWNER_ZOD_ENUM).optional(),
         notes: z.string().optional(),
       }),
       execute: async (input) => createClientTaskAction(db, input),

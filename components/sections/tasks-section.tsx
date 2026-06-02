@@ -26,7 +26,7 @@ export function TasksSection() {
   const [editTask, setEditTask] = useState<ClientTask | null>(null);
   const [title, setTitle] = useState('');
   const [taskType, setTaskType] = useState('follow-up');
-  const [assignee, setAssignee] = useState<'Jeck' | 'Virgi'>('Jeck');
+  const [assignee, setAssignee] = useState<(typeof ASSIGNEES)[number]>('Jeck');
   const [dueDate, setDueDate] = useState('');
   const [notes, setNotes] = useState('');
 
@@ -218,7 +218,7 @@ export function TasksSection() {
                   </div>
                   <div className="form-group">
                     <label>Assegnatario</label>
-                    <select className="form-select" value={assignee} onChange={(e) => setAssignee(e.target.value as 'Jeck' | 'Virgi')}>
+                    <select className="form-select" value={assignee} onChange={(e) => setAssignee(e.target.value as (typeof ASSIGNEES)[number])}>
                       {ASSIGNEES.map((a) => <option key={a} value={a}>{a}</option>)}
                     </select>
                   </div>

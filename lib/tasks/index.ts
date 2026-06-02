@@ -1,3 +1,4 @@
+import { OWNERS } from '@/lib/constants/crm';
 import type { ClientTask } from '@/lib/types/crm';
 
 export const TASK_TYPES = [
@@ -9,7 +10,7 @@ export const TASK_TYPES = [
   { id: 'altro', label: 'Altro', icon: 'check-square' },
 ] as const;
 
-export const ASSIGNEES = ['Jeck', 'Virgi'] as const;
+export const ASSIGNEES = OWNERS;
 
 export const TASK_FILTERS = [
   { id: 'all', label: 'Tutte' },

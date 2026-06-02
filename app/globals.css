@@ -1176,6 +1176,11 @@ body.crm-col-resizing {
     color: #c084fc;
     border: 1px solid rgba(168, 85, 247, 0.3);
 }
+.badge-martina {
+    background: rgba(20, 184, 166, 0.15);
+    color: #2dd4bf;
+    border: 1px solid rgba(20, 184, 166, 0.3);
+}
 
 /* Rapporto Badges */
 .badge-perso {
@@ -1370,6 +1375,7 @@ body.crm-col-resizing {
 /* Owner */
 .cell-owner-jeck { --chip-color: #2563eb; --chip-fill: #dbeafe; }
 .cell-owner-virgi { --chip-color: #9333ea; --chip-fill: #f3e8ff; }
+.cell-owner-martina { --chip-color: #0d9488; --chip-fill: #ccfbf1; }
 
 /* Rapporto */
 .cell-rapporto-top20 { --chip-color: #ca8a04; --chip-fill: #fef9c3; }

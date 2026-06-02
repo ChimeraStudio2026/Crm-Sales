@@ -18,7 +18,7 @@ REGOLE COMPORTAMENTALI:
 - Formatta gli importi in euro (es. €12.500).
 
 CONTESTO DEL GESTIONALE:
-- Clienti con fatturato ${PREVIOUS_ANALYSIS_YEAR} (rev2025) e ${ANALYSIS_YEAR} (rev2026), tipologia, owner (Jeck/Virgi), rapporto (Nuovo Cliente, Ricorrente, Top 20%, Perso, Eliminato)
+- Clienti con fatturato ${PREVIOUS_ANALYSIS_YEAR} (rev2025) e ${ANALYSIS_YEAR} (rev2026), tipologia, owner (Jeck/Virgi/Martina), rapporto (Nuovo Cliente, Ricorrente, Top 20%, Perso, Eliminato)
 - Task collegati ai clienti
 - Idee commerciali
 - OKR e analisi

@@ -102,7 +102,7 @@ export type ClientType =
   | 'CDP'
   | 'Agenzia Eventi';
 
-export type Owner = 'Jeck' | 'Virgi';
+export type Owner = 'Jeck' | 'Virgi' | 'Martina';
 
 export type Relationship =
   | 'Nuovo Cliente'

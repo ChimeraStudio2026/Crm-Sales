@@ -5,7 +5,7 @@ import { Sparkles, X } from 'lucide-react';
 import { CLIENT_TYPES, OWNERS, RELATIONSHIPS } from '@/lib/constants/crm';
 import { createUniqueId } from '@/lib/crm/utils';
 import { useCrm } from '@/providers/crm-provider';
-import type { Client, ClientContact } from '@/lib/types/crm';
+import type { Client, ClientContact, Owner } from '@/lib/types/crm';
 
 interface ClientDrawerProps {
   client: Client | null;
@@ -17,7 +17,7 @@ export function ClientDrawer({ client, isCold, onClose }: ClientDrawerProps) {
   const { saveClient, enrichClientApollo } = useCrm();
   const [name, setName] = useState('');
   const [type, setType] = useState(CLIENT_TYPES[0]);
-  const [owner, setOwner] = useState<'Jeck' | 'Virgi'>('Jeck');
+  const [owner, setOwner] = useState<Owner>('Jeck');
   const [relationship, setRelationship] = useState<Client['relationship']>('Nuovo Cliente');
   const [rev2025, setRev2025] = useState(0);
   const [rev2026, setRev2026] = useState(0);

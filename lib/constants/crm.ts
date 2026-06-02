@@ -7,7 +7,13 @@ export const COLD_CLIENT_REV_THRESHOLD = 1;
 export const RECURRENT_REV_2025_THRESHOLD = 15000;
 export const EXCEL_REV_EPSILON = 0.005;
 
-export const OWNERS: Owner[] = ['Jeck', 'Virgi'];
+export const OWNERS: Owner[] = ['Jeck', 'Virgi', 'Martina'];
+
+export const OWNER_ZOD_ENUM = ['Jeck', 'Virgi', 'Martina'] as const satisfies readonly Owner[];
+
+export function isOwner(value: unknown): value is Owner {
+  return typeof value === 'string' && OWNERS.includes(value as Owner);
+}
 
 export const CLIENT_TYPES: ClientType[] = [
   'Cliente Diretto',

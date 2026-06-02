@@ -10,7 +10,7 @@ import type {
   OkrRecord,
   RecallItem,
 } from '@/lib/types/crm';
-import { ANALYSIS_YEAR, PREVIOUS_ANALYSIS_YEAR } from '@/lib/constants/crm';
+import { ANALYSIS_YEAR, PREVIOUS_ANALYSIS_YEAR, isOwner } from '@/lib/constants/crm';
 import { createDefaultForecasts, parseOkrMonthNumber } from '@/lib/analysis/index';
 import { resolveClientProductOffers } from '@/lib/crm/product-offers';
 import { parseFunctionInvokeError } from '@/lib/supabase/function-errors';
@@ -148,8 +148,7 @@ export async function fetchIdeas(db: SupabaseClient): Promise<Idea[]> {
     itemType: row.item_type === 'task' ? 'task' : 'idea',
     dueDate: row.due_date || '',
     assignees: Array.isArray(row.assignees)
-      ? row.assignees.filter((value: unknown): value is Idea['assignees'][number] =>
-        value === 'Jeck' || value === 'Virgi')
+      ? row.assignees.filter((value: unknown): value is Idea['assignees'][number] => isOwner(value))
       : [],
   }));
 }

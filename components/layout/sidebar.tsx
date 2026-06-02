@@ -16,6 +16,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { CrmLogo } from '@/components/ui/crm-logo';
 import { NAV_ITEMS } from '@/lib/constants/crm';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 
@@ -66,7 +67,9 @@ export function Sidebar() {
       <aside className={`sidebar${mobileOpen ? ' mobile-open' : ''}`} id="sidebar">
         <div className="sidebar-logo">
           <div className="logo-container">
-            <div className="logo-icon">C</div>
+            <div className="logo-icon">
+              <CrmLogo size={28} />
+            </div>
             <span className="logo-text">CRM Sales</span>
           </div>
         </div>

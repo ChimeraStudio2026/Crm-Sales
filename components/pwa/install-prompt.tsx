@@ -2,6 +2,7 @@
 
 import { Download, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { CrmLogo } from '@/components/ui/crm-logo';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -59,6 +60,7 @@ export function InstallPrompt() {
   if (showIosHint) {
     return (
       <div className="pwa-install-banner pwa-install-banner-ios" role="dialog" aria-label="Aggiungi CRM Sales alla Home">
+        <CrmLogo size={40} className="pwa-install-logo" />
         <div className="pwa-install-copy">
           <strong>Aggiungi a Home su iPhone</strong>
           <span>Tocca Condividi → Aggiungi a Home per aprire CRM Sales come app.</span>
@@ -74,6 +76,7 @@ export function InstallPrompt() {
 
   return (
     <div className="pwa-install-banner" role="dialog" aria-label="Installa CRM Sales">
+      <CrmLogo size={40} className="pwa-install-logo" />
       <div className="pwa-install-copy">
         <strong>Installa CRM Sales</strong>
         <span>Aggiungi l&apos;app alla home per un accesso rapido.</span>

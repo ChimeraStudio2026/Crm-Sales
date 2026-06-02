@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { CrmLogo } from '@/components/ui/crm-logo';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 
 export default function LoginPageClient() {
@@ -39,7 +40,9 @@ export default function LoginPageClient() {
     <div className="login-page">
       <div className="login-card glass-card">
         <div className="login-logo">
-          <div className="logo-icon">C</div>
+          <div className="logo-icon">
+            <CrmLogo size={48} />
+          </div>
           <h1>CRM Sales</h1>
           <p>Accedi per gestire clienti, OKR e task.</p>
         </div>

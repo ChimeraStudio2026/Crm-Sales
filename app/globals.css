@@ -4466,3 +4466,96 @@ body:has(.drawer.open) .jonny-chat-root {
     pointer-events: none;
 }
 
+/* ==========================================================================
+   PWA
+   ========================================================================== */
+.offline-page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 24px;
+    text-align: center;
+    background: var(--bg-main);
+    color: var(--text-primary);
+}
+
+.offline-page h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.offline-page p {
+    max-width: 420px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.pwa-install-banner {
+    position: fixed;
+    left: 50%;
+    bottom: 88px;
+    transform: translateX(-50%);
+    z-index: 330;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    width: min(520px, calc(100vw - 32px));
+    padding: 14px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+    box-shadow: var(--shadow-lg);
+}
+
+.pwa-install-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.pwa-install-copy strong {
+    font-size: 0.9375rem;
+}
+
+.pwa-install-copy span {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+}
+
+.pwa-install-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.pwa-install-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-hover);
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+@media (max-width: 900px) {
+    .pwa-install-banner {
+        bottom: 96px;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .pwa-install-actions {
+        justify-content: space-between;
+    }
+}
+

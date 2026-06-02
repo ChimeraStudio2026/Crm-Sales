@@ -11,6 +11,10 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export const maxDuration = 60;
 
+const JONNY_MAX_STEPS = 4;
+const JONNY_MAX_OUTPUT_TOKENS = 400;
+const JONNY_TEMPERATURE = 0.2;
+
 interface ChatRequestBody {
   messages: UIMessage[];
 }
@@ -34,7 +38,9 @@ export async function POST(request: Request): Promise<Response> {
     system: JONNY_SYSTEM_PROMPT,
     messages: await convertToModelMessages(body.messages),
     tools,
-    stopWhen: stepCountIs(8),
+    stopWhen: stepCountIs(JONNY_MAX_STEPS),
+    temperature: JONNY_TEMPERATURE,
+    maxOutputTokens: JONNY_MAX_OUTPUT_TOKENS,
   });
   return result.toUIMessageStreamResponse();
 }

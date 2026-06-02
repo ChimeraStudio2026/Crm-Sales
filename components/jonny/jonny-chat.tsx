@@ -26,6 +26,8 @@ export function JonnyChat() {
     },
   });
   const isBusy = status === 'streaming' || status === 'submitted';
+  const lastAssistantText = [...messages].reverse().find((message) => message.role === 'assistant');
+  const hasStreamingAssistantText = Boolean(lastAssistantText && getTextFromMessage(lastAssistantText));
   const scrollToBottom = useCallback((): void => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
@@ -88,9 +90,9 @@ export function JonnyChat() {
                 <JonnyMessageBubble key={message.id} message={message} />
               ))
             )}
-            {isBusy ? (
+            {isBusy && !hasStreamingAssistantText ? (
               <div className="jonny-chat-message jonny-chat-message-assistant jonny-chat-typing">
-                Jonny sta scrivendo...
+                Jonny sta cercando nei dati...
               </div>
             ) : null}
             {error ? (

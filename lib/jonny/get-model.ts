@@ -2,7 +2,7 @@ import { anthropic } from '@ai-sdk/anthropic';
 import { openai } from '@ai-sdk/openai';
 import type { LanguageModel } from 'ai';
 
-const DEFAULT_ANTHROPIC_MODEL = 'claude-sonnet-4-5';
+const DEFAULT_ANTHROPIC_MODEL = 'claude-haiku-4-5';
 const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini';
 
 export type JonnyProvider = 'anthropic' | 'openai';

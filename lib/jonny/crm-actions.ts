@@ -1,11 +1,10 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Client, ClientTask, Idea } from '@/lib/types/crm';
 import { ANALYSIS_YEAR } from '@/lib/constants/crm';
 import { getTodayString } from '@/lib/crm/utils';
-import {
-  fetchClients,
-  fetchIdeas,
-} from '@/lib/supabase/database';
+import type { CrmDataCache } from '@/lib/jonny/crm-data-cache';
+
+const DEFAULT_SEARCH_LIMIT = 8;
+const DEFAULT_LIST_LIMIT = 10;
 
 function normalizeSearch(value: string): string {
   return value.trim().toLowerCase();
@@ -17,8 +16,12 @@ function findClientByQuery(clients: Client[], query: string): Client | undefined
     ?? clients.find((client) => normalizeSearch(client.name) === normalizedQuery);
 }
 
-export async function getCrmSummary(db: SupabaseClient): Promise<Record<string, unknown>> {
-  const clients = await fetchClients(db);
+function formatEuro(amount: number): number {
+  return Math.round(amount * 100) / 100;
+}
+
+export async function getCrmSummary(cache: CrmDataCache): Promise<Record<string, unknown>> {
+  const clients = await cache.getClients();
   const activeClients = clients.filter((client) => !client.isColdClient);
   const coldClients = clients.filter((client) => client.isColdClient);
   const totalRev2025 = activeClients.reduce((sum, client) => sum + (client.rev2025 || 0), 0);
@@ -33,6 +36,7 @@ export async function getCrmSummary(db: SupabaseClient): Promise<Record<string, 
     .map((client) => ({
       name: client.name,
       rev2026: client.rev2026,
+      owner: client.owner,
       relationship: client.relationship,
     }));
   return {
@@ -41,19 +45,19 @@ export async function getCrmSummary(db: SupabaseClient): Promise<Record<string, 
     totalClients: clients.length,
     activeClients: activeClients.length,
     coldClients: coldClients.length,
-    totalRev2025,
-    totalRev2026,
+    totalRev2025: formatEuro(totalRev2025),
+    totalRev2026: formatEuro(totalRev2026),
     byRelationship,
     topByRev2026,
   };
 }
 
 export async function searchClientsAction(
-  db: SupabaseClient,
+  cache: CrmDataCache,
   params: { query?: string; relationship?: string; owner?: string; limit?: number },
 ): Promise<Record<string, unknown>> {
-  const limit = params.limit ?? 15;
-  let clients = await fetchClients(db);
+  const limit = Math.min(params.limit ?? DEFAULT_SEARCH_LIMIT, DEFAULT_SEARCH_LIMIT);
+  let clients = await cache.getClients();
   if (params.query) {
     const normalizedQuery = normalizeSearch(params.query);
     clients = clients.filter((client) => normalizeSearch(client.name).includes(normalizedQuery));
@@ -64,28 +68,27 @@ export async function searchClientsAction(
   if (params.owner) {
     clients = clients.filter((client) => client.owner === params.owner);
   }
+  const total = clients.length;
   return {
-    count: clients.length,
+    count: total,
+    truncated: total > limit,
     clients: clients.slice(0, limit).map((client) => ({
-      id: client.id,
       name: client.name,
-      type: client.type,
       owner: client.owner,
       relationship: client.relationship,
       rev2025: client.rev2025,
       rev2026: client.rev2026,
-      action: client.action,
-      actionDate: client.actionDate,
-      isColdClient: client.isColdClient,
+      action: client.action || null,
+      actionDate: client.actionDate || null,
     })),
   };
 }
 
 export async function getClientDetailsAction(
-  db: SupabaseClient,
+  cache: CrmDataCache,
   params: { clientName: string },
 ): Promise<Record<string, unknown>> {
-  const clients = await fetchClients(db);
+  const clients = await cache.getClients();
   const client = findClientByQuery(clients, params.clientName);
   if (!client) {
     return { found: false, message: `Cliente "${params.clientName}" non trovato.` };
@@ -93,7 +96,6 @@ export async function getClientDetailsAction(
   return {
     found: true,
     client: {
-      id: client.id,
       name: client.name,
       type: client.type,
       owner: client.owner,
@@ -112,65 +114,66 @@ export async function getClientDetailsAction(
 }
 
 export async function listOpenTasksAction(
-  db: SupabaseClient,
-  params: { limit?: number },
+  cache: CrmDataCache,
+  params: { limit?: number; assignee?: string },
 ): Promise<Record<string, unknown>> {
-  const limit = params.limit ?? 20;
-  const [ideas, clients] = await Promise.all([fetchIdeas(db), fetchClients(db)]);
+  const limit = Math.min(params.limit ?? DEFAULT_LIST_LIMIT, DEFAULT_LIST_LIMIT);
+  const [ideas, clients] = await Promise.all([cache.getIdeas(), cache.getClients()]);
   const clientNames = new Map(clients.map((client) => [client.id, client.name]));
-  const openTasks = ideas
-    .filter((idea) => idea.itemType === 'task' && idea.status !== 'Fatto')
-    .slice(0, limit)
-    .map((idea) => ({
-      id: idea.id,
+  let openTasks = ideas.filter((idea) => idea.itemType === 'task' && idea.status !== 'Fatto');
+  if (params.assignee) {
+    openTasks = openTasks.filter((idea) => idea.assignees.includes(params.assignee as ClientTask['assignee']));
+  }
+  const total = openTasks.length;
+  return {
+    count: total,
+    truncated: total > limit,
+    tasks: openTasks.slice(0, limit).map((idea) => ({
       title: idea.name,
       clientName: clientNames.get(idea.clientId) || '—',
-      dueDate: idea.dueDate,
+      dueDate: idea.dueDate || null,
       assignees: idea.assignees,
       status: idea.status,
-    }));
-  return { count: openTasks.length, tasks: openTasks };
+    })),
+  };
 }
 
 export async function listIdeasAction(
-  db: SupabaseClient,
+  cache: CrmDataCache,
   params: { status?: Idea['status']; limit?: number },
 ): Promise<Record<string, unknown>> {
-  const limit = params.limit ?? 20;
-  const [ideas, clients] = await Promise.all([fetchIdeas(db), fetchClients(db)]);
+  const limit = Math.min(params.limit ?? DEFAULT_LIST_LIMIT, DEFAULT_LIST_LIMIT);
+  const [ideas, clients] = await Promise.all([cache.getIdeas(), cache.getClients()]);
   const clientNames = new Map(clients.map((client) => [client.id, client.name]));
-  let filtered = ideas;
+  let filtered = ideas.filter((idea) => idea.itemType === 'idea');
   if (params.status) {
     filtered = filtered.filter((idea) => idea.status === params.status);
   }
+  const total = filtered.length;
   return {
-    count: filtered.length,
+    count: total,
+    truncated: total > limit,
     ideas: filtered.slice(0, limit).map((idea) => ({
-      id: idea.id,
       name: idea.name,
       status: idea.status,
       category: idea.category,
-      itemType: idea.itemType,
       clientName: clientNames.get(idea.clientId) || '—',
-      description: idea.description,
-      dueDate: idea.dueDate,
-      assignees: idea.assignees,
     })),
   };
 }
 
 export async function updateClientActionText(
-  db: SupabaseClient,
+  cache: CrmDataCache,
   params: { clientName: string; action: string },
 ): Promise<Record<string, unknown>> {
-  const clients = await fetchClients(db);
+  const clients = await cache.getClients();
   const client = findClientByQuery(clients, params.clientName);
   if (!client) {
     return { ok: false, message: `Cliente "${params.clientName}" non trovato.` };
   }
   const trimmedAction = params.action.trim();
   const today = getTodayString();
-  const { error } = await db
+  const { error } = await cache.db
     .from('clients')
     .update({
       action: trimmedAction,
@@ -189,7 +192,7 @@ export async function updateClientActionText(
 }
 
 export async function createClientTaskAction(
-  db: SupabaseClient,
+  cache: CrmDataCache,
   params: {
     clientName: string;
     title: string;
@@ -199,7 +202,7 @@ export async function createClientTaskAction(
     notes?: string;
   },
 ): Promise<Record<string, unknown>> {
-  const clients = await fetchClients(db);
+  const clients = await cache.getClients();
   const client = findClientByQuery(clients, params.clientName);
   if (!client) {
     return { ok: false, message: `Cliente "${params.clientName}" non trovato.` };
@@ -220,14 +223,14 @@ export async function createClientTaskAction(
     due_date: params.dueDate || null,
     assignees: [assignee],
   };
-  const { error } = await db.from('ideas').upsert(row, { onConflict: 'id' });
+  const { error } = await cache.db.from('ideas').upsert(row, { onConflict: 'id' });
   if (error) {
     return { ok: false, message: error.message };
   }
   return {
     ok: true,
-    taskId,
     clientName: client.name,
     title: row.name,
+    assignee,
   };
 }

@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { tool } from 'ai';
 import { z } from 'zod';
-import { OWNER_ZOD_ENUM, OWNERS } from '@/lib/constants/crm';
+import { OWNER_ZOD_ENUM } from '@/lib/constants/crm';
 import {
   createClientTaskAction,
   getClientDetailsAction,
@@ -11,58 +11,61 @@ import {
   searchClientsAction,
   updateClientActionText,
 } from '@/lib/jonny/crm-actions';
+import { CrmDataCache } from '@/lib/jonny/crm-data-cache';
 
 export function createCrmTools(db: SupabaseClient) {
+  const cache = new CrmDataCache(db);
   return {
     getCrmSummary: tool({
-      description: 'Riepilogo generale del CRM: conteggi clienti, fatturati totali, top clienti per rev2026.',
+      description: 'Conteggi e totali CRM: clienti per rapporto, fatturati 2025/2026, top 5 per rev2026. Usa per domande aggregate (quanti, totale, riepilogo).',
       inputSchema: z.object({}),
-      execute: async () => getCrmSummary(db),
+      execute: async () => getCrmSummary(cache),
     }),
     searchClients: tool({
-      description: 'Cerca clienti per nome parziale, rapporto o owner.',
+      description: 'Cerca clienti per nome parziale, rapporto e/o owner. Usa per elenchi filtrati o trovare un nome.',
       inputSchema: z.object({
         query: z.string().optional().describe('Testo da cercare nel nome cliente'),
         relationship: z
           .enum(['Nuovo Cliente', 'Ricorrente', 'Top 20%', 'Perso', 'Eliminato'])
           .optional(),
         owner: z.enum(OWNER_ZOD_ENUM).optional(),
-        limit: z.number().int().min(1).max(30).optional(),
+        limit: z.number().int().min(1).max(8).optional(),
       }),
-      execute: async (input) => searchClientsAction(db, input),
+      execute: async (input) => searchClientsAction(cache, input),
     }),
     getClientDetails: tool({
-      description: 'Dettagli completi di un singolo cliente per nome (match parziale).',
+      description: 'Scheda completa di UN cliente (fatturati, azione, contatti, prodotti). Usa quando chiedono dettagli su un nome specifico.',
       inputSchema: z.object({
         clientName: z.string().describe('Nome o parte del nome del cliente'),
       }),
-      execute: async (input) => getClientDetailsAction(db, input),
+      execute: async (input) => getClientDetailsAction(cache, input),
     }),
     listOpenTasks: tool({
-      description: 'Elenco task non completati.',
+      description: 'Task aperti (non completati). Opzionale filtro per assignee Jeck/Virgi/Martina.',
       inputSchema: z.object({
-        limit: z.number().int().min(1).max(50).optional(),
+        assignee: z.enum(OWNER_ZOD_ENUM).optional(),
+        limit: z.number().int().min(1).max(10).optional(),
       }),
-      execute: async (input) => listOpenTasksAction(db, input),
+      execute: async (input) => listOpenTasksAction(cache, input),
     }),
     listIdeas: tool({
-      description: 'Elenco idee commerciali, opzionalmente filtrate per status.',
+      description: 'Idee commerciali (non task). Opzionale filtro per status kanban.',
       inputSchema: z.object({
         status: z.enum(['Da fare', 'In progress', 'Fatto']).optional(),
-        limit: z.number().int().min(1).max(50).optional(),
+        limit: z.number().int().min(1).max(10).optional(),
       }),
-      execute: async (input) => listIdeasAction(db, input),
+      execute: async (input) => listIdeasAction(cache, input),
     }),
     updateClientAction: tool({
-      description: 'Aggiorna il testo azione di un cliente e la data azione (oggi se non vuota).',
+      description: 'Aggiorna il campo azione di un cliente e imposta la data azione a oggi.',
       inputSchema: z.object({
         clientName: z.string(),
         action: z.string().describe('Nuovo testo azione per il cliente'),
       }),
-      execute: async (input) => updateClientActionText(db, input),
+      execute: async (input) => updateClientActionText(cache, input),
     }),
     createClientTask: tool({
-      description: 'Crea un nuovo task collegato a un cliente.',
+      description: 'Crea un task collegato a un cliente nel kanban Task & Idee.',
       inputSchema: z.object({
         clientName: z.string(),
         title: z.string(),
@@ -71,7 +74,7 @@ export function createCrmTools(db: SupabaseClient) {
         assignee: z.enum(OWNER_ZOD_ENUM).optional(),
         notes: z.string().optional(),
       }),
-      execute: async (input) => createClientTaskAction(db, input),
+      execute: async (input) => createClientTaskAction(cache, input),
     }),
   };
 }

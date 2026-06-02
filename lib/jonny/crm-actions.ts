@@ -3,7 +3,6 @@ import type { Client, ClientTask, Idea } from '@/lib/types/crm';
 import { ANALYSIS_YEAR } from '@/lib/constants/crm';
 import { getTodayString } from '@/lib/crm/utils';
 import {
-  fetchClientTasks,
   fetchClients,
   fetchIdeas,
 } from '@/lib/supabase/database';
@@ -117,18 +116,18 @@ export async function listOpenTasksAction(
   params: { limit?: number },
 ): Promise<Record<string, unknown>> {
   const limit = params.limit ?? 20;
-  const [tasks, clients] = await Promise.all([fetchClientTasks(db), fetchClients(db)]);
+  const [ideas, clients] = await Promise.all([fetchIdeas(db), fetchClients(db)]);
   const clientNames = new Map(clients.map((client) => [client.id, client.name]));
-  const openTasks = tasks
-    .filter((task) => !task.completed)
+  const openTasks = ideas
+    .filter((idea) => idea.itemType === 'task' && idea.status !== 'Fatto')
     .slice(0, limit)
-    .map((task) => ({
-      id: task.id,
-      title: task.title,
-      clientName: clientNames.get(task.clientId) || '—',
-      dueDate: task.dueDate,
-      assignee: task.assignee,
-      taskType: task.taskType,
+    .map((idea) => ({
+      id: idea.id,
+      title: idea.name,
+      clientName: clientNames.get(idea.clientId) || '—',
+      dueDate: idea.dueDate,
+      assignees: idea.assignees,
+      status: idea.status,
     }));
   return { count: openTasks.length, tasks: openTasks };
 }
@@ -151,8 +150,11 @@ export async function listIdeasAction(
       name: idea.name,
       status: idea.status,
       category: idea.category,
+      itemType: idea.itemType,
       clientName: clientNames.get(idea.clientId) || '—',
       description: idea.description,
+      dueDate: idea.dueDate,
+      assignees: idea.assignees,
     })),
   };
 }
@@ -203,19 +205,22 @@ export async function createClientTaskAction(
     return { ok: false, message: `Cliente "${params.clientName}" non trovato.` };
   }
   const taskId = `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const assignee = params.assignee || 'Jeck';
+  const description = params.notes?.trim()
+    || (params.taskType ? `Tipo: ${params.taskType}` : 'Task creata da Jonny');
   const row = {
     id: taskId,
+    name: params.title.trim(),
+    category: 'Content',
     client_id: client.id,
-    title: params.title.trim(),
-    task_type: params.taskType || 'follow-up',
+    status: 'Da fare',
+    description,
+    date_added: getTodayString(),
+    item_type: 'task',
     due_date: params.dueDate || null,
-    assignee: params.assignee || 'Jeck',
-    completed: false,
-    notes: params.notes || '',
-    created_at: new Date().toISOString(),
-    completed_at: null,
+    assignees: [assignee],
   };
-  const { error } = await db.from('client_tasks').upsert(row, { onConflict: 'id' });
+  const { error } = await db.from('ideas').upsert(row, { onConflict: 'id' });
   if (error) {
     return { ok: false, message: error.message };
   }
@@ -223,6 +228,6 @@ export async function createClientTaskAction(
     ok: true,
     taskId,
     clientName: client.name,
-    title: row.title,
+    title: row.name,
   };
 }

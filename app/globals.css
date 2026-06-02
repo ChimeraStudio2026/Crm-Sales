@@ -1409,7 +1409,7 @@ body.crm-col-resizing {
     height: 100vh;
     background: rgba(36, 38, 41, 0.35);
     backdrop-filter: blur(4px);
-    z-index: 200;
+    z-index: 310;
     opacity: 0;
     pointer-events: none;
     transition: var(--transition-normal);
@@ -1431,7 +1431,7 @@ body.crm-col-resizing {
     background: var(--bg-sidebar);
     border-left: 1px solid var(--border-color);
     box-shadow: var(--shadow-lg);
-    z-index: 210;
+    z-index: 320;
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -4209,16 +4209,32 @@ body:has(.login-page) {
    ========================================================================== */
 .jonny-chat-root {
     position: fixed;
-    right: 24px;
-    bottom: 24px;
-    z-index: 250;
+    inset: 0;
+    z-index: 240;
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 12px;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    pointer-events: none;
+}
+
+.jonny-chat-root.is-open {
+    pointer-events: auto;
+}
+
+.jonny-chat-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(36, 38, 41, 0.35);
+    backdrop-filter: blur(4px);
+    pointer-events: auto;
 }
 
 .jonny-chat-fab {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%);
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -4232,6 +4248,8 @@ body:has(.login-page) {
     cursor: pointer;
     box-shadow: var(--shadow-lg);
     transition: var(--transition-fast);
+    pointer-events: auto;
+    z-index: 241;
 }
 
 .jonny-chat-fab:hover {
@@ -4269,6 +4287,8 @@ body:has(.login-page) {
 }
 
 .jonny-chat-panel {
+    position: relative;
+    z-index: 1;
     width: min(420px, calc(100vw - 48px));
     height: min(560px, calc(100vh - 120px));
     display: flex;
@@ -4278,6 +4298,7 @@ body:has(.login-page) {
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
     overflow: hidden;
+    pointer-events: auto;
 }
 
 .jonny-chat-header-info {
@@ -4427,19 +4448,21 @@ body:has(.login-page) {
 
 @media (max-width: 900px) {
     .jonny-chat-root {
-        left: 16px;
-        right: 16px;
-        bottom: 16px;
-        align-items: stretch;
+        padding: 16px;
     }
 
     .jonny-chat-panel {
         width: 100%;
-        height: min(70vh, 520px);
+        height: min(75vh, 560px);
     }
 
     .jonny-chat-fab {
-        align-self: flex-end;
+        bottom: 16px;
     }
+}
+
+body:has(.drawer.open) .jonny-chat-root {
+    visibility: hidden;
+    pointer-events: none;
 }
 

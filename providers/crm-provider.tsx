@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -192,6 +193,8 @@ export function CrmProvider({ children }: CrmProviderProps) {
 
   const supabaseConfigured = isSupabaseConfigured();
   const db = useMemo(() => createBrowserSupabaseClient(), []);
+  const ideasMutationRef = useRef(0);
+  const jonnyReloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = useCallback((message: string, type: ToastType = 'info') => {
     const id = createUniqueId('toast');
@@ -217,8 +220,13 @@ export function CrmProvider({ children }: CrmProviderProps) {
   const persistIdeasNow = useCallback(async (nextIdeas?: Idea[]) => {
     const data = nextIdeas ?? ideas;
     if (db) {
-      await persistIdeas(db, data);
-      setIsSupabaseConnected(true);
+      ideasMutationRef.current += 1;
+      try {
+        await persistIdeas(db, data);
+        setIsSupabaseConnected(true);
+      } finally {
+        ideasMutationRef.current -= 1;
+      }
     }
   }, [db, ideas]);
 
@@ -298,6 +306,14 @@ export function CrmProvider({ children }: CrmProviderProps) {
   useEffect(() => {
     async function reloadFromJonny(): Promise<void> {
       if (!db) return;
+      if (ideasMutationRef.current > 0) {
+        if (jonnyReloadTimerRef.current) clearTimeout(jonnyReloadTimerRef.current);
+        jonnyReloadTimerRef.current = setTimeout(() => {
+          jonnyReloadTimerRef.current = null;
+          void reloadFromJonny();
+        }, 800);
+        return;
+      }
       try {
         const [loadedClients, loadedIdeas, loadedTasks, loadedOkr, loadedForecasts] = await Promise.all([
           fetchClients(db),
@@ -321,8 +337,18 @@ export function CrmProvider({ children }: CrmProviderProps) {
         console.error('Jonny reload failed:', reloadError);
       }
     }
-    window.addEventListener('jonny:crm-updated', reloadFromJonny);
-    return () => window.removeEventListener('jonny:crm-updated', reloadFromJonny);
+    const handleJonnyUpdated = (): void => {
+      if (jonnyReloadTimerRef.current) clearTimeout(jonnyReloadTimerRef.current);
+      jonnyReloadTimerRef.current = setTimeout(() => {
+        jonnyReloadTimerRef.current = null;
+        void reloadFromJonny();
+      }, 600);
+    };
+    window.addEventListener('jonny:crm-updated', handleJonnyUpdated);
+    return () => {
+      window.removeEventListener('jonny:crm-updated', handleJonnyUpdated);
+      if (jonnyReloadTimerRef.current) clearTimeout(jonnyReloadTimerRef.current);
+    };
   }, [db]);
 
   useEffect(() => {

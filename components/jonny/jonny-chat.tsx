@@ -46,9 +46,16 @@ export function JonnyChat() {
     setIsOpen((prev) => !prev);
   };
   return (
-    <div className="jonny-chat-root" aria-live="polite">
+    <div className={`jonny-chat-root${isOpen ? ' is-open' : ''}`} aria-live="polite">
       {isOpen ? (
-        <section className="jonny-chat-panel" aria-label="Chat con Jonny">
+        <>
+          <button
+            type="button"
+            className="jonny-chat-backdrop"
+            onClick={handleToggle}
+            aria-label="Chiudi chat Jonny"
+          />
+          <section className="jonny-chat-panel" aria-label="Chat con Jonny">
           <header className="jonny-chat-header">
             <div className="jonny-chat-header-info">
               <span className="jonny-chat-avatar" aria-hidden="true">J</span>
@@ -120,7 +127,9 @@ export function JonnyChat() {
             </button>
           </form>
         </section>
+        </>
       ) : null}
+      {!isOpen ? (
       <button
         type="button"
         className={`jonny-chat-fab${isOpen ? ' jonny-chat-fab-open' : ''}`}
@@ -131,6 +140,7 @@ export function JonnyChat() {
         {isOpen ? <X size={22} /> : <MessageCircle size={22} />}
         <span className="jonny-chat-fab-label">Jonny</span>
       </button>
+      ) : null}
     </div>
   );
 }

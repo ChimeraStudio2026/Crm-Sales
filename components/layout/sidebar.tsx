@@ -98,7 +98,7 @@ export function Sidebar() {
       </aside>
       {mobileOpen && (
         <div
-          style={{ position: 'fixed', inset: 0, zIndex: 40 }}
+          className="sidebar-mobile-backdrop"
           onClick={() => setMobileOpen(false)}
           aria-hidden
         />

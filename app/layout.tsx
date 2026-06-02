@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { InstallPrompt } from '@/components/pwa/install-prompt';
 import { PwaRegister } from '@/components/pwa/pwa-register';
+import { PwaInstallProvider } from '@/providers/pwa-install-provider';
 import './globals.css';
 
 export const viewport: Viewport = {
@@ -55,9 +56,11 @@ export default function RootLayout({
   return (
     <html lang="it">
       <body>
-        {children}
-        <PwaRegister />
-        <InstallPrompt />
+        <PwaInstallProvider>
+          {children}
+          <PwaRegister />
+          <InstallPrompt />
+        </PwaInstallProvider>
       </body>
     </html>
   );

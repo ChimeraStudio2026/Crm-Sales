@@ -3,28 +3,13 @@
 import { Download, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { CrmLogo } from '@/components/ui/crm-logo';
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
-}
+import { isIosDevice, isStandaloneApp } from '@/lib/pwa/install';
+import { usePwaInstall } from '@/providers/pwa-install-provider';
 
 const DISMISS_KEY = 'crm_sales_pwa_install_dismissed';
 
-function isIosDevice(): boolean {
-  if (typeof navigator === 'undefined') return false;
-  return /iPad|iPhone|iPod/.test(navigator.userAgent);
-}
-
-function isStandaloneApp(): boolean {
-  if (typeof window === 'undefined') return false;
-  return window.matchMedia('(display-mode: standalone)').matches || (
-    'standalone' in navigator && (navigator as Navigator & { standalone?: boolean }).standalone === true
-  );
-}
-
 export function InstallPrompt() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const { canInstall, installApp } = usePwaInstall();
   const [isVisible, setIsVisible] = useState(false);
   const [showIosHint, setShowIosHint] = useState(false);
 
@@ -34,21 +19,12 @@ export function InstallPrompt() {
       setShowIosHint(true);
       return;
     }
-    const handleBeforeInstall = (event: Event): void => {
-      event.preventDefault();
-      setDeferredPrompt(event as BeforeInstallPromptEvent);
-      setIsVisible(true);
-    };
-    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
-    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
-  }, []);
+    if (canInstall) setIsVisible(true);
+  }, [canInstall]);
 
   const handleInstall = async (): Promise<void> => {
-    if (!deferredPrompt) return;
-    await deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
-    setDeferredPrompt(null);
-    setIsVisible(false);
+    const outcome = await installApp();
+    if (outcome !== 'unavailable') setIsVisible(false);
   };
 
   const handleDismiss = (): void => {
@@ -72,7 +48,7 @@ export function InstallPrompt() {
     );
   }
 
-  if (!isVisible) return null;
+  if (!isVisible || !canInstall) return null;
 
   return (
     <div className="pwa-install-banner" role="dialog" aria-label="Installa CRM Sales">

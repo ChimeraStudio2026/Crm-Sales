@@ -2844,6 +2844,37 @@ body.drawer-open {
     padding-bottom: 14px;
     border-bottom: 1px dashed var(--border-color);
 }
+
+.client-products-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px dashed var(--border-color);
+}
+
+.client-products-row .product-offers-block {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.product-sold-tag {
+    cursor: default;
+}
+
+.product-sold-amount {
+    margin-left: 4px;
+    font-size: 0.72rem;
+    opacity: 0.85;
+}
+
+@media (max-width: 900px) {
+    .client-products-row {
+        grid-template-columns: 1fr;
+    }
+}
 .product-offers-label {
     display: block;
     font-size: 0.75rem;
@@ -3353,11 +3384,27 @@ body.drawer-open {
     background: var(--bg-hover);
     opacity: 0.55;
     transition: var(--transition-fast);
+    border: none;
+    padding: 0;
+    font: inherit;
+    color: inherit;
 }
 
 .okr-comparison-month-cell.is-included {
     opacity: 1;
     background: rgba(229, 238, 255, 0.65);
+}
+
+.okr-comparison-month-cell.is-active-month {
+    box-shadow: inset 0 0 0 2px var(--primary);
+}
+
+.okr-comparison-month-cell.is-clickable {
+    cursor: pointer;
+}
+
+.okr-comparison-month-cell.is-clickable:hover {
+    box-shadow: inset 0 0 0 2px rgba(38, 109, 240, 0.35);
 }
 
 .okr-comparison-month-bar {
@@ -3522,9 +3569,173 @@ body.drawer-open {
     color: var(--text-secondary);
 }
 
-.okr-comparison-month-cell.is-active-month {
-    box-shadow: inset 0 0 0 2px var(--primary);
+.okr-client-month-value-btn {
+    border: none;
+    background: transparent;
+    padding: 0;
+    font: inherit;
+    color: var(--text-secondary);
 }
+
+.okr-client-month-value-btn.is-clickable {
+    cursor: pointer;
+    color: var(--primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.okr-client-month-value-btn:disabled {
+    cursor: default;
+    opacity: 0.7;
+}
+
+.okr-detail-drawer-subtitle {
+    margin-top: 4px;
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.okr-detail-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 12px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-card);
+}
+
+.okr-detail-summary strong {
+    font-size: 1rem;
+}
+
+.okr-detail-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+}
+
+.okr-detail-item {
+    padding: 12px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-card);
+}
+
+.okr-detail-item-main {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 6px;
+}
+
+.okr-detail-item-main strong {
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+.okr-detail-item-amount {
+    font-size: 0.875rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.okr-detail-item-type {
+    display: inline-flex;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--primary-soft);
+    color: var(--primary);
+    font-size: 0.6875rem;
+    font-weight: 700;
+}
+
+.okr-detail-empty {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.idea-item-type-tag {
+    display: inline-flex;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.idea-item-type-tag.is-idea {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.idea-item-type-tag.is-task {
+    background: #ffedd5;
+    color: #c2410c;
+}
+
+.idea-card-task-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 8px 0 10px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.idea-type-switch {
+    display: inline-flex;
+    gap: 8px;
+}
+
+.idea-type-switch-btn {
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.idea-type-switch-btn.is-active.is-idea {
+    background: #dbeafe;
+    border-color: #93c5fd;
+    color: #1d4ed8;
+}
+
+.idea-type-switch-btn.is-active.is-task {
+    background: #ffedd5;
+    border-color: #fdba74;
+    color: #c2410c;
+}
+
+.idea-assignee-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.idea-assignee-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-card);
+    font-size: 0.8125rem;
+    cursor: pointer;
+}
+
 
 .okr-comparison-month-value {
     position: absolute;

@@ -1,5 +1,5 @@
-import { TasksSection } from '@/components/sections/tasks-section';
+import { redirect } from 'next/navigation';
 
 export default function TasksPage() {
-  return <TasksSection />;
+  redirect('/ideas');
 }

@@ -16,8 +16,15 @@ import {
   getOkrClientNames,
   getTimelineMonthLabel,
 } from '@/lib/analysis/okr-timeline';
+import { filterOkrByClientYearMonth } from '@/lib/crm/client-sold-products';
+import { OkrDetailDrawer } from '@/components/analysis/okr-detail-drawer';
 import { formatCurrency } from '@/lib/crm/utils';
 import { useCrm } from '@/providers/crm-provider';
+
+interface OkrDetailSelection {
+  year: number;
+  monthNumber: number;
+}
 
 export function OkrClientComparisonPanel() {
   const { okrRecords } = useCrm();
@@ -26,6 +33,7 @@ export function OkrClientComparisonPanel() {
   const [selectedClient, setSelectedClient] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [dayOfYear, setDayOfYear] = useState<number>(getDefaultTimelineDayOfYear);
+  const [detailSelection, setDetailSelection] = useState<OkrDetailSelection | null>(null);
 
   const clientNames = useMemo(() => getOkrClientNames(okrRecords), [okrRecords]);
 
@@ -58,10 +66,26 @@ export function OkrClientComparisonPanel() {
   const activeMonthLabel = getTimelineMonthLabel(activeMonth);
   const showSuggestions = isSearchFocused && !selectedClient && filteredClients.length > 0;
 
+  const detailRecords = useMemo(() => {
+    if (!detailSelection || !selectedClient) return [];
+    return filterOkrByClientYearMonth(
+      okrRecords,
+      selectedClient,
+      detailSelection.year,
+      detailSelection.monthNumber,
+    );
+  }, [detailSelection, okrRecords, selectedClient]);
+
   const handleSelectClient = (clientName: string): void => {
     setSelectedClient(clientName);
     setSearch(clientName);
     setIsSearchFocused(false);
+    setDetailSelection(null);
+  };
+
+  const openOkrDetail = (year: number, monthNumber: number, amount: number): void => {
+    if (amount <= 0) return;
+    setDetailSelection({ year, monthNumber });
   };
 
   const handleSearchChange = (value: string): void => {
@@ -146,6 +170,7 @@ export function OkrClientComparisonPanel() {
                   onClick={() => {
                     setSelectedClient('');
                     setSearch('');
+                    setDetailSelection(null);
                   }}
                 >
                   Cambia cliente
@@ -177,13 +202,22 @@ export function OkrClientComparisonPanel() {
               <div className="okr-client-month-highlight">
                 <span className="okr-client-month-label">Mese selezionato: {activeMonthLabel}</span>
                 <div className="okr-client-month-values">
-                  {monthlySeries.map((series) => (
-                    <span key={series.year}>
-                      {series.year}: {formatCurrency(getMonthlyAmountAtMonth(series, activeMonth))}
-                      {' · '}
-                      {getMonthlyCountAtMonth(series, activeMonth)} OKR
-                    </span>
-                  ))}
+                  {monthlySeries.map((series) => {
+                    const amount = getMonthlyAmountAtMonth(series, activeMonth);
+                    return (
+                      <button
+                        key={series.year}
+                        type="button"
+                        className={`okr-client-month-value-btn${amount > 0 ? ' is-clickable' : ''}`}
+                        disabled={amount <= 0}
+                        onClick={() => openOkrDetail(series.year, activeMonth, amount)}
+                      >
+                        {series.year}: {formatCurrency(amount)}
+                        {' · '}
+                        {getMonthlyCountAtMonth(series, activeMonth)} OKR
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
               <div className="okr-comparison-stats">
@@ -231,14 +265,18 @@ export function OkrClientComparisonPanel() {
                             const isActiveMonth = monthNumber === activeMonth;
                             const barHeight = Math.max(8, Math.round((amount / chartMax) * 100));
                             return (
-                              <div
+                              <button
                                 key={`${series.year}-${monthNumber}`}
+                                type="button"
                                 className={[
                                   'okr-comparison-month-cell',
                                   isIncluded ? 'is-included' : '',
                                   isActiveMonth ? 'is-active-month' : '',
+                                  amount > 0 ? 'is-clickable' : '',
                                 ].filter(Boolean).join(' ')}
                                 title={`${OKR_TIMELINE_MONTH_LABELS[monthIndex]}: ${formatCurrency(amount)} · ${series.monthlyCounts[monthIndex]} OKR`}
+                                disabled={amount <= 0}
+                                onClick={() => openOkrDetail(series.year, monthNumber, amount)}
                               >
                                 <div
                                   className="okr-comparison-month-bar"
@@ -249,7 +287,7 @@ export function OkrClientComparisonPanel() {
                                     {formatCurrency(amount)}
                                   </span>
                                 )}
-                              </div>
+                              </button>
                             );
                           })}
                           <div
@@ -264,6 +302,15 @@ export function OkrClientComparisonPanel() {
                 </div>
               </div>
             </>
+          )}
+          {detailSelection && selectedClient && (
+            <OkrDetailDrawer
+              clientName={selectedClient}
+              year={detailSelection.year}
+              monthNumber={detailSelection.monthNumber}
+              records={detailRecords}
+              onClose={() => setDetailSelection(null)}
+            />
           )}
         </div>
       )}

@@ -39,6 +39,9 @@ export interface Idea {
   status: IdeaStatus;
   description: string;
   dateAdded: string;
+  itemType: IdeaItemType;
+  dueDate: string;
+  assignees: Owner[];
 }
 
 export interface ClientTask {
@@ -111,6 +114,8 @@ export type Relationship =
 export type IdeaCategory = 'Content' | 'Mini prod' | 'Evento' | 'Prod';
 
 export type IdeaStatus = 'Da fare' | 'In progress' | 'Fatto';
+
+export type IdeaItemType = 'idea' | 'task';
 
 export type TaskType =
   | 'call'

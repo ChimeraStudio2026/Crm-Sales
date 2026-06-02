@@ -547,11 +547,14 @@ export function CrmProvider({ children }: CrmProviderProps) {
         status: input.status || 'Da fare',
         description: input.description,
         dateAdded: getTodayString(),
+        itemType: input.itemType || 'idea',
+        dueDate: input.dueDate || '',
+        assignees: input.assignees?.length ? input.assignees : ['Jeck'],
       }];
     }
     setIdeas(nextIdeas);
     await persistIdeasNow(nextIdeas);
-    showToast(input.id ? 'Idea aggiornata.' : 'Idea creata.', 'success');
+    showToast(input.id ? 'Elemento aggiornato.' : 'Elemento creato.', 'success');
   }, [ideas, persistIdeasNow, showToast]);
 
   const deleteIdea = useCallback(async (ideaId: string) => {

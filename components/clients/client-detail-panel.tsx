@@ -6,6 +6,8 @@ import type { ProductOfferId } from '@/lib/constants/product-offers';
 import { getDefaultProductOfferIds, resolveClientProductOffers } from '@/lib/crm/product-offers';
 import { createUniqueId, formatActionDateDisplay } from '@/lib/crm/utils';
 import { ProductOffersTags } from '@/components/clients/product-offers-tags';
+import { SoldProductsTags } from '@/components/clients/sold-products-tags';
+import { useCrm } from '@/providers/crm-provider';
 import type { Client, ClientContact } from '@/lib/types/crm';
 
 interface ClientDetailPanelProps {
@@ -30,6 +32,7 @@ export function ClientDetailPanel({
   onUpdateAction,
   onUpdateProductOffers,
 }: ClientDetailPanelProps) {
+  const { okrRecords } = useCrm();
   const [contacts, setContacts] = useState<ClientContact[]>(client.contacts);
   const [actionText, setActionText] = useState(client.action);
   const saveActionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -103,11 +106,14 @@ export function ClientDetailPanel({
 
   return (
     <div className="client-detail-panel" onClick={(event) => event.stopPropagation()}>
-      <ProductOffersTags
-        client={client}
-        enabledOfferIds={enabledOfferIds}
-        onToggleOffer={handleToggleOffer}
-      />
+      <div className="client-products-row">
+        <ProductOffersTags
+          client={client}
+          enabledOfferIds={enabledOfferIds}
+          onToggleOffer={handleToggleOffer}
+        />
+        <SoldProductsTags client={client} okrRecords={okrRecords} />
+      </div>
       <div className="client-actions-panel">
         <div className="client-actions-header">
           <strong>Sezione azione</strong>

@@ -95,9 +95,8 @@ export const EXCEL_IMPORT_DESC_PREFIX = 'Cliente creato da import Excel';
 export const NAV_ITEMS = [
   { href: '/analysis', label: 'Analisi', icon: 'BarChart3' },
   { href: '/clients', label: 'Lista Clienti', icon: 'Users' },
-  { href: '/tasks', label: 'Task', icon: 'CheckSquare' },
+  { href: '/ideas', label: 'Task & Idee', icon: 'Lightbulb' },
   { href: '/recall', label: 'Random Recall', icon: 'PhoneCall' },
-  { href: '/ideas', label: 'Idee Random', icon: 'Lightbulb' },
   { href: '/cold', label: 'Clienti Freddi', icon: 'Snowflake' },
   { href: '/import', label: 'Importa Excel', icon: 'FileSpreadsheet' },
   { href: '/settings', label: 'Impostazioni', icon: 'Settings' },
@@ -106,9 +105,9 @@ export const NAV_ITEMS = [
 export const PAGE_META: Record<string, { title: string; subtitle: string }> = {
   '/analysis': { title: 'Analisi', subtitle: 'OKR, previsioni e breakdown per quarter.' },
   '/clients': { title: 'Gestione Clienti', subtitle: 'Lista generica e schede clienti.' },
-  '/tasks': { title: 'Task', subtitle: 'Task collegate ai clienti: progress, scadenze e assegnazioni.' },
+  '/ideas': { title: 'Task & Idee', subtitle: 'Kanban unificato per idee commerciali e task con deadline e owner.' },
+  '/tasks': { title: 'Task & Idee', subtitle: 'Kanban unificato per idee commerciali e task con deadline e owner.' },
   '/recall': { title: 'Random Recall', subtitle: '5 clienti al giorno da ricontattare, scelti a caso per rapporto.' },
-  '/ideas': { title: 'Idee Random', subtitle: 'Spazio creativo e proposte commerciali ai clienti.' },
   '/cold': { title: 'Clienti Freddi', subtitle: 'Prospect con cui non hai mai lavorato. I clienti importati da OKR restano in Lista Clienti.' },
   '/import': { title: 'Importazione Dati', subtitle: 'Carica fatturati 2025 o 2026 da foglio di calcolo.' },
   '/settings': { title: 'Impostazioni', subtitle: 'Manutenzione database e regole.' },

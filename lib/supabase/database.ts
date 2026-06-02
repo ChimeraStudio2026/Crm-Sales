@@ -145,6 +145,12 @@ export async function fetchIdeas(db: SupabaseClient): Promise<Idea[]> {
     status: row.status,
     description: row.description || '',
     dateAdded: row.date_added || '',
+    itemType: row.item_type === 'task' ? 'task' : 'idea',
+    dueDate: row.due_date || '',
+    assignees: Array.isArray(row.assignees)
+      ? row.assignees.filter((value: unknown): value is Idea['assignees'][number] =>
+        value === 'Jeck' || value === 'Virgi')
+      : [],
   }));
 }
 
@@ -169,6 +175,9 @@ export async function persistIdeas(db: SupabaseClient, allIdeas: Idea[]): Promis
     status: idea.status || 'Da fare',
     description: idea.description || '',
     date_added: idea.dateAdded || null,
+    item_type: idea.itemType || 'idea',
+    due_date: idea.dueDate || null,
+    assignees: idea.assignees || [],
   }));
   if (rows.length === 0) {
     const { error } = await db.from('ideas').delete().neq('id', '');

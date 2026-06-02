@@ -1,6 +1,6 @@
 import type { Client, ClientTask, Idea } from '@/lib/types/crm';
 import { ANALYSIS_YEAR } from '@/lib/constants/crm';
-import { getTodayString } from '@/lib/crm/utils';
+import { getTodayString, resolveActionDateOnTextChange } from '@/lib/crm/utils';
 import type { CrmDataCache } from '@/lib/jonny/crm-data-cache';
 
 const DEFAULT_SEARCH_LIMIT = 8;
@@ -172,12 +172,13 @@ export async function updateClientActionText(
     return { ok: false, message: `Cliente "${params.clientName}" non trovato.` };
   }
   const trimmedAction = params.action.trim();
-  const today = getTodayString();
+  const previousAction = (client.action || '').trim();
+  const actionDate = resolveActionDateOnTextChange(previousAction, trimmedAction, client.actionDate);
   const { error } = await cache.db
     .from('clients')
     .update({
       action: trimmedAction,
-      action_date: trimmedAction ? today : null,
+      action_date: actionDate || null,
     })
     .eq('id', client.id);
   if (error) {
@@ -187,7 +188,7 @@ export async function updateClientActionText(
     ok: true,
     clientName: client.name,
     action: trimmedAction,
-    actionDate: trimmedAction ? today : '',
+    actionDate,
   };
 }
 

@@ -1,5 +1,5 @@
 import type { Client, ClientContact } from '@/lib/types/crm';
-import { ACTION_DATE_STALE_DAYS, COLD_CLIENT_REV_THRESHOLD, EXCEL_IMPORT_ACTION_PREFIX } from '@/lib/constants/crm';
+import { ACTION_DATE_STALE_DAYS, COLD_CLIENT_REV_THRESHOLD, DEFAULT_ACTION_DATE, EXCEL_IMPORT_ACTION_PREFIX } from '@/lib/constants/crm';
 import { normalizeClientProductOffers } from '@/lib/crm/product-offers';
 
 export function createUniqueId(prefix: string): string {
@@ -12,6 +12,18 @@ export function getTodayString(): string {
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+export function resolveActionDateOnTextChange(
+  previousAction: string,
+  nextAction: string,
+  currentActionDate: string,
+): string {
+  const previous = previousAction.trim();
+  const next = nextAction.trim();
+  if (!next) return '';
+  if (next !== previous) return getTodayString();
+  return currentActionDate || DEFAULT_ACTION_DATE;
 }
 
 export function formatCurrency(value: number): string {
@@ -242,7 +254,7 @@ export function normalizeClients(clients: Client[]): Client[] {
       normalized.actionLog.push({
         id: createUniqueId('action'),
         text: normalized.action.trim(),
-        date: normalized.actionDate || getTodayString(),
+        date: normalized.actionDate || DEFAULT_ACTION_DATE,
       });
     }
     return normalized;

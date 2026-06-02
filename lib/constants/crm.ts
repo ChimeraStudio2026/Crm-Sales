@@ -95,6 +95,7 @@ export const DEFAULT_TABLE_COLUMN_ORDER = Object.keys(CRM_TABLE_COLUMN_DEFS).fil
 );
 
 export const ACTION_DATE_STALE_DAYS = 10;
+export const DEFAULT_ACTION_DATE = '2026-01-01';
 export const EXCEL_IMPORT_ACTION_PREFIX = 'Import Excel';
 export const EXCEL_IMPORT_DESC_PREFIX = 'Cliente creato da import Excel';
 

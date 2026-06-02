@@ -27,6 +27,7 @@ import {
   COLD_CLIENT_REV_THRESHOLD,
   EXCEL_IMPORT_ACTION_PREFIX,
   EXCEL_IMPORT_DESC_PREFIX,
+  DEFAULT_ACTION_DATE,
   PREVIOUS_ANALYSIS_YEAR,
 } from '@/lib/constants/crm';
 import { createDefaultForecasts } from '@/lib/analysis/index';
@@ -47,6 +48,7 @@ import {
   normalizeClients,
   recalculateRelationships,
   reconcileImportedClientsToMainList,
+  resolveActionDateOnTextChange,
   syncClientLegacyFields,
   updateClientProfileCompletion,
 } from '@/lib/crm/utils';
@@ -418,23 +420,20 @@ export function CrmProvider({ children }: CrmProviderProps) {
     if (id) {
       nextClients = nextClients.map((c) => {
         if (c.id !== id) return c;
-        const trimmedAction = input.action !== undefined ? input.action.trim() : undefined;
-        const actionChanged = trimmedAction !== undefined && trimmedAction !== (c.action || '').trim();
+        const { action: inputAction, actionDate: _ignoredActionDate, ...restInput } = input;
+        const trimmedAction = inputAction !== undefined ? inputAction.trim() : undefined;
         const updated: Client = {
           ...c,
-          ...input,
+          ...restInput,
           id: c.id,
-        contacts: input.contacts ?? c.contacts,
-        productOffers: input.productOffers ?? c.productOffers,
-        manualRelationship: input.manualRelationship ?? c.manualRelationship,
+          contacts: input.contacts ?? c.contacts,
+          productOffers: input.productOffers ?? c.productOffers,
+          manualRelationship: input.manualRelationship ?? c.manualRelationship,
+          actionDate: c.actionDate,
         };
         if (trimmedAction !== undefined) {
           updated.action = trimmedAction;
-          if (trimmedAction) {
-            if (actionChanged) updated.actionDate = getTodayString();
-          } else {
-            updated.actionDate = '';
-          }
+          updated.actionDate = resolveActionDateOnTextChange(c.action || '', trimmedAction, c.actionDate);
         }
         updateClientProfileCompletion(updated);
         if (isCold || isClientInColdSection(updated)) {
@@ -443,6 +442,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
         return applyColdClientPromotion(updated).client;
       });
     } else {
+      const trimmedAction = (input.action || '').trim();
       const newClient: Client = {
         id: createUniqueId('client'),
         name: input.name,
@@ -452,8 +452,10 @@ export function CrmProvider({ children }: CrmProviderProps) {
         manualRelationship: false,
         rev2025: input.rev2025 || 0,
         rev2026: input.rev2026 || 0,
-        action: input.action || '',
-        actionDate: input.actionDate || getTodayString(),
+        action: trimmedAction,
+        actionDate: trimmedAction
+          ? resolveActionDateOnTextChange('', trimmedAction, DEFAULT_ACTION_DATE)
+          : '',
         email: input.email || '',
         description: input.description || '',
         contacts: input.contacts || [],
@@ -529,14 +531,10 @@ export function CrmProvider({ children }: CrmProviderProps) {
     const trimmedAction = action.trim();
     let nextClients = clients.map((c) => {
       if (c.id !== clientId) return c;
-      const previousAction = (c.action || '').trim();
-      const hasChanged = trimmedAction !== previousAction;
       const updated: Client = {
         ...c,
         action: trimmedAction,
-        actionDate: trimmedAction
-          ? (hasChanged ? getTodayString() : (c.actionDate || getTodayString()))
-          : '',
+        actionDate: resolveActionDateOnTextChange(c.action || '', trimmedAction, c.actionDate),
       };
       updateClientProfileCompletion(updated);
       return updated;
@@ -725,11 +723,10 @@ export function CrmProvider({ children }: CrmProviderProps) {
     if (!trimmedAction) return;
     let nextClients = clients.map((c) => {
       if (c.id !== clientId) return c;
-      const previousAction = (c.action || '').trim();
       const updated: Client = {
         ...c,
         action: trimmedAction,
-        actionDate: previousAction !== trimmedAction ? getTodayString() : (c.actionDate || getTodayString()),
+        actionDate: resolveActionDateOnTextChange(c.action || '', trimmedAction, c.actionDate),
       };
       updateClientProfileCompletion(updated);
       return updated;
@@ -787,7 +784,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
         rev2025: revField === 'rev2025' ? imported.revenue : 0,
         rev2026: revField === 'rev2026' ? imported.revenue : 0,
         action: `${EXCEL_IMPORT_ACTION_PREFIX} (${imported.recordCount} record uniti)`,
-        actionDate: getTodayString(),
+        actionDate: DEFAULT_ACTION_DATE,
         email: '',
         description: `${EXCEL_IMPORT_DESC_PREFIX}. Completa contatti, azione e note.`,
         contacts: [],

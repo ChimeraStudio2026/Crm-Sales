@@ -93,3 +93,40 @@ export function getDefaultTimelineDayOfYear(): number {
   const dayOfYear = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
   return Math.min(Math.max(dayOfYear, 1), OKR_TIMELINE_MAX_DAY);
 }
+
+export function normalizeOkrClientName(name: string): string {
+  return name.trim().toLowerCase();
+}
+
+export function filterOkrByClientName(records: OkrRecord[], clientName: string): OkrRecord[] {
+  const normalized = normalizeOkrClientName(clientName);
+  if (!normalized) return [];
+  return records.filter((record) => normalizeOkrClientName(record.clientName) === normalized);
+}
+
+export function getOkrClientNames(
+  records: OkrRecord[],
+  years: readonly number[] = OKR_COMPARISON_YEARS,
+): string[] {
+  const names = new Set<string>();
+  records.forEach((record) => {
+    if (!years.includes(record.year) || !record.clientName.trim()) return;
+    names.add(record.clientName.trim());
+  });
+  return Array.from(names).sort((left, right) => left.localeCompare(right, 'it'));
+}
+
+export function getTimelineMonthLabel(monthNumber: number): string {
+  if (monthNumber < 1 || monthNumber > 12) return '—';
+  return OKR_TIMELINE_MONTH_LABELS[monthNumber - 1];
+}
+
+export function getMonthlyAmountAtMonth(series: OkrMonthlySeries, monthNumber: number): number {
+  if (monthNumber < 1 || monthNumber > 12) return 0;
+  return series.monthlyAmounts[monthNumber - 1] || 0;
+}
+
+export function getMonthlyCountAtMonth(series: OkrMonthlySeries, monthNumber: number): number {
+  if (monthNumber < 1 || monthNumber > 12) return 0;
+  return series.monthlyCounts[monthNumber - 1] || 0;
+}

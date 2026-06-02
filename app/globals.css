@@ -2599,6 +2599,13 @@ body.drawer-open {
     padding: 0 12px 12px;
 }
 
+.cold-section-footer {
+    margin-top: 14px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-hover);
+}
+
 .cold-table-container {
     margin-top: 12px;
     border: 1px solid var(--border-color);

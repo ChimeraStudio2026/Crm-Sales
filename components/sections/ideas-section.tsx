@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, PlusCircle, Search, Trash2 } from 'lucide-react';
 import { IDEA_CATEGORIES, OWNERS } from '@/lib/constants/crm';
+import { isClientInActiveSection, isClientInColdSection } from '@/lib/crm/utils';
 import { useCrm } from '@/providers/crm-provider';
 import { TopHeader } from '@/components/layout/top-header';
 import type { Idea, IdeaItemType, IdeaStatus, Owner } from '@/lib/types/crm';
@@ -30,6 +31,23 @@ export function IdeasSection() {
   const [dueDate, setDueDate] = useState('');
   const [assignees, setAssignees] = useState<Owner[]>(['Jeck']);
 
+  const activeClients = useMemo(
+    () => clients
+      .filter((client) => isClientInActiveSection(client))
+      .sort((a, b) => a.name.localeCompare(b.name, 'it')),
+    [clients],
+  );
+  const coldClients = useMemo(
+    () => clients
+      .filter((client) => isClientInColdSection(client))
+      .sort((a, b) => a.name.localeCompare(b.name, 'it')),
+    [clients],
+  );
+  const assignableClients = useMemo(
+    () => [...activeClients, ...coldClients],
+    [activeClients, coldClients],
+  );
+
   const filtered = useMemo(() => ideas.filter((idea) => {
     const client = clients.find((c) => c.id === idea.clientId);
     const clientName = client?.name.toLowerCase() || '';
@@ -46,7 +64,7 @@ export function IdeasSection() {
     setEditIdea(null);
     setName('');
     setCategory('Content');
-    setClientId(clients[0]?.id || '');
+    setClientId(assignableClients[0]?.id || '');
     setStatus('Da fare');
     setDescription('');
     setItemType(nextType);
@@ -149,6 +167,7 @@ export function IdeasSection() {
                     {colIdeas.map((idea) => {
                       const client = clients.find((c) => c.id === idea.clientId);
                       const isTask = idea.itemType === 'task';
+                      const isColdClient = client ? isClientInColdSection(client) : false;
                       return (
                         <div key={idea.id} className="idea-card">
                           <div className="idea-card-header">
@@ -156,7 +175,10 @@ export function IdeasSection() {
                               {isTask ? 'Task' : 'Idea'}
                             </span>
                             <span className="badge">{idea.category}</span>
-                            <span className="idea-card-client">{client?.name || '—'}</span>
+                            <span className="idea-card-client">
+                              {client?.name || '—'}
+                              {isColdClient ? ' · freddo' : ''}
+                            </span>
                           </div>
                           <h4 className="idea-card-title">{idea.name}</h4>
                           <p className="idea-card-desc">{idea.description}</p>
@@ -238,7 +260,20 @@ export function IdeasSection() {
                 <div className="form-group">
                   <label>Cliente *</label>
                   <select className="form-select" value={clientId} onChange={(e) => setClientId(e.target.value)} required>
-                    {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {activeClients.length > 0 ? (
+                      <optgroup label="Lista clienti">
+                        {activeClients.map((client) => (
+                          <option key={client.id} value={client.id}>{client.name}</option>
+                        ))}
+                      </optgroup>
+                    ) : null}
+                    {coldClients.length > 0 ? (
+                      <optgroup label="Clienti freddi">
+                        {coldClients.map((client) => (
+                          <option key={client.id} value={client.id}>{client.name}</option>
+                        ))}
+                      </optgroup>
+                    ) : null}
                   </select>
                 </div>
                 {itemType === 'task' && (

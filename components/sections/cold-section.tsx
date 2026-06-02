@@ -1,191 +1,318 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { Edit, PlusCircle, Search, Sparkles, Trash2 } from 'lucide-react';
-import { COLD_CLIENT_CATEGORIES, OWNERS } from '@/lib/constants/crm';
-import { formatCurrency, isClientInColdSection } from '@/lib/crm/utils';
+import { Fragment, useMemo, useState } from 'react';
+import { ChevronRight, Edit, FilterX, Search, Sparkles, Trash2 } from 'lucide-react';
+import {
+  CLIENT_TYPES,
+  COLD_TABLE_COLUMN_ORDER,
+  CRM_TABLE_COLUMN_DEFS,
+  OWNERS,
+} from '@/lib/constants/crm';
+import {
+  formatActionDateDisplay,
+  formatCurrency,
+  isActionDateStale,
+  isClientInColdSection,
+  shouldHighlightIncompleteClient,
+} from '@/lib/crm/utils';
 import { useCrm } from '@/providers/crm-provider';
 import { ClientDrawer } from '@/components/drawers/client-drawer';
+import { ClientDetailPanel } from '@/components/clients/client-detail-panel';
 import { TopHeader } from '@/components/layout/top-header';
-import type { Client } from '@/lib/types/crm';
+import type { Client, SortState } from '@/lib/types/crm';
 
-interface InlineRev2026CellProps {
-  client: Client;
-  onSave: (clientId: string, value: number) => Promise<void>;
-}
-
-function InlineRev2026Cell({ client, onSave }: InlineRev2026CellProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [value, setValue] = useState(String(client.rev2026 || 0));
-
-  useEffect(() => {
-    setValue(String(client.rev2026 || 0));
-  }, [client.rev2026]);
-
-  const saveValue = async () => {
-    const parsed = Number.parseFloat(value);
-    const nextValue = Number.isFinite(parsed) ? parsed : 0;
-    setValue(String(nextValue));
-    if (nextValue !== client.rev2026) {
-      await onSave(client.id, nextValue);
-    }
-    setIsEditing(false);
-  };
-
-  if (isEditing) {
-    return (
-      <td style={{ textAlign: 'right' }}>
-        <input
-          type="number"
-          className="inline-edit-input cold-rev-input"
-          value={value}
-          min={0}
-          step={0.01}
-          autoFocus
-          onChange={(event) => setValue(event.target.value)}
-          onBlur={() => void saveValue()}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') void saveValue();
-            if (event.key === 'Escape') {
-              setValue(String(client.rev2026 || 0));
-              setIsEditing(false);
-            }
-          }}
-          onClick={(event) => event.stopPropagation()}
-        />
-      </td>
-    );
-  }
-
-  return (
-    <td
-      style={{ textAlign: 'right' }}
-      className="cell-editable cold-rev-cell"
-      title="Clicca per modificare il fatturato 2026"
-      onClick={(event) => {
-        event.stopPropagation();
-        setIsEditing(true);
-      }}
-    >
-      {formatCurrency(client.rev2026)}
-    </td>
+function isInteractiveTableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  return !!target.closest(
+    'button, select, input, textarea, a, .client-detail-panel, .table-row-actions, .btn-table-action',
   );
 }
 
 export function ColdClientsSection() {
-  const { clients, deleteClient, updateClientField, enrichClientApollo } = useCrm();
+  const {
+    clients,
+    deleteClient,
+    updateClientField,
+    updateClientContacts,
+    updateClientAction,
+    updateClientProductOffers,
+    enrichClientApollo,
+  } = useCrm();
   const [search, setSearch] = useState('');
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['agenzia']));
+  const [filterType, setFilterType] = useState('');
+  const [filterOwner, setFilterOwner] = useState('');
+  const [sort, setSort] = useState<SortState>({ column: 'name', direction: 'asc' });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editClient, setEditClient] = useState<Client | null>(null);
+  const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
 
-  const coldClients = useMemo(() =>
-    clients.filter((c) => {
-      if (!isClientInColdSection(c)) return false;
-      if (!search.trim()) return true;
-      const q = search.toLowerCase();
-      return c.name.toLowerCase().includes(q);
-    }),
-  [clients, search]);
+  const filtered = useMemo(() => {
+    const query = search.toLowerCase().trim();
+    let list = clients.filter((client) => {
+      if (!isClientInColdSection(client)) return false;
+      const matchesQuery =
+        !query ||
+        client.name.toLowerCase().includes(query) ||
+        client.action.toLowerCase().includes(query) ||
+        client.contacts.some((contact) =>
+          `${contact.name} ${contact.email} ${contact.role}`.toLowerCase().includes(query),
+        );
+      return (
+        matchesQuery &&
+        (!filterType || client.type === filterType) &&
+        (!filterOwner || client.owner === filterOwner)
+      );
+    });
+    const col = sort.column as keyof Client;
+    list = [...list].sort((a, b) => {
+      let valA: string | number = a[col] as string | number;
+      let valB: string | number = b[col] as string | number;
+      if (col === 'rev2025' || col === 'rev2026') {
+        valA = Number(a[col]) || 0;
+        valB = Number(b[col]) || 0;
+      } else if (typeof valA === 'string') {
+        valA = valA.toLowerCase();
+        valB = String(valB).toLowerCase();
+      }
+      if (valA < valB) return sort.direction === 'asc' ? -1 : 1;
+      if (valA > valB) return sort.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return list;
+  }, [clients, filterOwner, filterType, search, sort]);
 
-  const toggleCategory = (id: string) => {
-    setExpandedCategories((prev) => {
+  const totalCold = clients.filter(isClientInColdSection).length;
+  const columnCount = COLD_TABLE_COLUMN_ORDER.length;
+
+  const handleSort = (column: string): void => {
+    const columnDef = CRM_TABLE_COLUMN_DEFS[column as keyof typeof CRM_TABLE_COLUMN_DEFS];
+    if (!columnDef || !columnDef.sortKey || ('noSort' in columnDef && columnDef.noSort)) return;
+    setSort((prev) => ({
+      column,
+      direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc',
+    }));
+  };
+
+  const toggleExpanded = (clientId: string): void => {
+    setExpandedClients((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(clientId)) next.delete(clientId);
+      else next.add(clientId);
       return next;
     });
   };
 
-  const handleRev2026Save = async (clientId: string, value: number) => {
-    await updateClientField(clientId, 'rev2026', value);
+  const openNew = (): void => {
+    setEditClient(null);
+    setDrawerOpen(true);
+  };
+
+  const openEdit = (client: Client): void => {
+    setEditClient(client);
+    setDrawerOpen(true);
+  };
+
+  const renderCell = (client: Client, columnId: string) => {
+    switch (columnId) {
+      case 'name': {
+        const isDraft = shouldHighlightIncompleteClient(client);
+        return (
+          <td key={columnId} className="col-nome">
+            <div className="client-name-cell">
+              <ChevronRight
+                size={14}
+                className={`row-expand-icon ${expandedClients.has(client.id) ? 'is-expanded' : ''}`}
+              />
+              <strong>{client.name}</strong>
+              {isDraft && (
+                <span className="client-draft-badge" title="Aggiungi contatti e azione per completare il profilo">
+                  <span className="client-draft-dot" aria-hidden="true" />
+                  Bozza
+                </span>
+              )}
+            </div>
+          </td>
+        );
+      }
+      case 'type':
+        return (
+          <td key={columnId}>
+            <select
+              className="table-cell-select"
+              value={client.type}
+              onChange={(e) => void updateClientField(client.id, 'type', e.target.value)}
+            >
+              {CLIENT_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
+            </select>
+          </td>
+        );
+      case 'owner':
+        return (
+          <td key={columnId}>
+            <select
+              className="table-cell-select"
+              value={client.owner}
+              onChange={(e) => void updateClientField(client.id, 'owner', e.target.value)}
+            >
+              {OWNERS.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
+            </select>
+          </td>
+        );
+      case 'rev2026':
+        return <td key={columnId} style={{ textAlign: 'right' }}>{formatCurrency(client.rev2026)}</td>;
+      case 'rev2025':
+        return <td key={columnId} style={{ textAlign: 'right' }}>{formatCurrency(client.rev2025)}</td>;
+      case 'actionDate': {
+        const isStale = isActionDateStale(client.actionDate);
+        return (
+          <td
+            key={columnId}
+            className="col-data-azione"
+            title={isStale ? 'Azione non aggiornata da oltre 10 giorni' : undefined}
+          >
+            {client.actionDate ? (
+              <span className={isStale ? 'table-cell-chip cell-date-stale' : undefined}>
+                {formatActionDateDisplay(client.actionDate)}
+              </span>
+            ) : '—'}
+          </td>
+        );
+      }
+      case 'actions':
+        return (
+          <td key={columnId}>
+            <div className="table-row-actions">
+              <button type="button" className="btn-table-action apollo" title="Apollo" onClick={() => void enrichClientApollo(client.id)}>
+                <Sparkles size={16} />
+              </button>
+              <button type="button" className="btn-table-action edit" title="Modifica" onClick={() => openEdit(client)}>
+                <Edit size={16} />
+              </button>
+              <button type="button" className="btn-table-action delete" title="Elimina" onClick={() => void deleteClient(client.id)}>
+                <Trash2 size={16} />
+              </button>
+            </div>
+          </td>
+        );
+      default:
+        return <td key={columnId} />;
+    }
   };
 
   return (
     <>
-      <TopHeader onQuickAdd={() => { setEditClient(null); setDrawerOpen(true); }} />
-      <div className="content-body">
+      <TopHeader onQuickAdd={openNew} />
+      <div className="content-body is-clients-section">
         <section className="app-section active">
           <div className="table-filter-bar">
             <div className="filter-left">
               <div className="search-box">
                 <Search size={18} />
-                <input className="search-input" placeholder="Cerca cliente freddo..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                <input
+                  type="text"
+                  className="search-input"
+                  placeholder="Cerca cliente freddo o contatto..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+              <div className="filter-group">
+                <select className="filter-select" value={filterType} onChange={(e) => setFilterType(e.target.value)}>
+                  <option value="">Tutte le Tipologie</option>
+                  {CLIENT_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
+                </select>
+                <select className="filter-select" value={filterOwner} onChange={(e) => setFilterOwner(e.target.value)}>
+                  <option value="">Tutti gli Owner</option>
+                  {OWNERS.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
+                </select>
               </div>
             </div>
             <div className="filter-right">
-              <span className="quick-stats-badge">{coldClients.length} clienti freddi</span>
-              <button type="button" className="btn btn-primary" onClick={() => { setEditClient(null); setDrawerOpen(true); }}>
-                <PlusCircle size={16} />
-                <span>Nuovo Cliente Freddo</span>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setSearch('');
+                  setFilterType('');
+                  setFilterOwner('');
+                }}
+              >
+                <FilterX size={16} />
+                <span>Resetta</span>
               </button>
             </div>
           </div>
           <p className="cold-section-hint">
             Prospect con cui non avete <strong>mai lavorato</strong>. I clienti importati da OKR/Excel restano in Lista Clienti.
-            Se imposti <strong>Fatturato 2026</strong> &gt; €1 qui, il cliente passa alla lista principale.
+            Se imposti <strong>Fatturato 2026</strong> &gt; €1, il cliente passa alla lista principale.
           </p>
-          <div className="cold-clients-accordion">
-            {COLD_CLIENT_CATEGORIES.map((category) => {
-              const categoryClients = coldClients
-                .filter((c) => c.type === category.type)
-                .sort((a, b) => a.name.localeCompare(b.name, 'it'));
-              const isExpanded = expandedCategories.has(category.id);
-              return (
-                <div key={category.id} className={`cold-category${isExpanded ? ' is-expanded' : ''}`}>
-                  <div className="cold-category-header">
-                    <button type="button" className="cold-category-toggle" onClick={() => toggleCategory(category.id)}>
-                      <span>{category.label}</span>
-                      <span className="badge">{categoryClients.length}</span>
-                    </button>
-                  </div>
-                  {isExpanded && (
-                    <div className="cold-category-body">
-                      <table className="crm-table">
-                        <thead>
-                          <tr>
-                            <th>Nome</th>
-                            <th>Owner</th>
-                            <th>Fatturato 2026</th>
-                            <th>Azioni</th>
+          <div className="table-container">
+            <div className="crm-table-scroll-viewport">
+              <table className="crm-table">
+                <thead>
+                  <tr>
+                    {COLD_TABLE_COLUMN_ORDER.map((colId) => {
+                      const columnDef = CRM_TABLE_COLUMN_DEFS[colId as keyof typeof CRM_TABLE_COLUMN_DEFS];
+                      return (
+                        <th
+                          key={colId}
+                          onClick={() => handleSort(colId)}
+                          style={{ cursor: ('noSort' in columnDef && columnDef.noSort) ? 'default' : 'pointer' }}
+                        >
+                          {columnDef.label}
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan={columnCount} style={{ textAlign: 'center', padding: 40 }}>
+                        Nessun cliente freddo corrisponde ai criteri di ricerca.
+                      </td>
+                    </tr>
+                  ) : (
+                    filtered.map((client) => {
+                      const isExpanded = expandedClients.has(client.id);
+                      return (
+                        <Fragment key={client.id}>
+                          <tr
+                            className={[
+                              'client-row-expandable',
+                              isExpanded ? 'is-row-expanded' : '',
+                            ].filter(Boolean).join(' ')}
+                            onClick={(event) => {
+                              if (isInteractiveTableTarget(event.target)) return;
+                              toggleExpanded(client.id);
+                            }}
+                          >
+                            {COLD_TABLE_COLUMN_ORDER.map((colId) => renderCell(client, colId))}
                           </tr>
-                        </thead>
-                        <tbody>
-                          {categoryClients.length === 0 ? (
-                            <tr><td colSpan={4} className="cold-empty-row">Nessun cliente freddo.</td></tr>
-                          ) : (
-                            categoryClients.map((client) => (
-                              <tr key={client.id}>
-                                <td><strong>{client.name}</strong></td>
-                                <td>
-                                  <select className="table-cell-select" value={client.owner} onChange={(e) => void updateClientField(client.id, 'owner', e.target.value)}>
-                                    {OWNERS.map((o) => <option key={o} value={o}>{o}</option>)}
-                                  </select>
-                                </td>
-                                <InlineRev2026Cell client={client} onSave={handleRev2026Save} />
-                                <td>
-                                  <div className="table-row-actions">
-                                    <button type="button" className="btn-table-action apollo" onClick={() => void enrichClientApollo(client.id)}>
-                                      <Sparkles size={16} />
-                                    </button>
-                                    <button type="button" className="btn-table-action edit" onClick={() => { setEditClient(client); setDrawerOpen(true); }}>
-                                      <Edit size={16} />
-                                    </button>
-                                    <button type="button" className="btn-table-action delete" onClick={() => void deleteClient(client.id)}>
-                                      <Trash2 size={16} />
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))
+                          {isExpanded && (
+                            <tr className="client-contacts-detail-row is-visible">
+                              <td colSpan={columnCount}>
+                                <ClientDetailPanel
+                                  client={client}
+                                  onUpdateContacts={(contacts) => updateClientContacts(client.id, contacts)}
+                                  onUpdateAction={(action) => updateClientAction(client.id, action)}
+                                  onUpdateProductOffers={(offerIds) => updateClientProductOffers(client.id, offerIds)}
+                                />
+                              </td>
+                            </tr>
                           )}
-                        </tbody>
-                      </table>
-                    </div>
+                        </Fragment>
+                      );
+                    })
                   )}
-                </div>
-              );
-            })}
+                </tbody>
+              </table>
+            </div>
+            <div className="table-footer">
+              <div className="table-info">
+                Mostrati {filtered.length} di {totalCold} clienti freddi
+              </div>
+            </div>
           </div>
         </section>
       </div>

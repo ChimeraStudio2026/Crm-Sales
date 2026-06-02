@@ -94,6 +94,10 @@ export const DEFAULT_TABLE_COLUMN_ORDER = Object.keys(CRM_TABLE_COLUMN_DEFS).fil
   (columnId) => !MAIN_TABLE_HIDDEN_COLUMNS.has(columnId),
 );
 
+export const COLD_TABLE_COLUMN_ORDER = DEFAULT_TABLE_COLUMN_ORDER.filter(
+  (columnId) => columnId !== 'relationship',
+);
+
 export const ACTION_DATE_STALE_DAYS = 10;
 export const DEFAULT_ACTION_DATE = '2026-01-01';
 export const EXCEL_IMPORT_ACTION_PREFIX = 'Import Excel';

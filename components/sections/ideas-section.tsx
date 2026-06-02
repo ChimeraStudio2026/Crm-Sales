@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, PlusCircle, Search, Trash2 } from 'lucide-re
 import { IDEA_CATEGORIES, OWNERS } from '@/lib/constants/crm';
 import { isClientInActiveSection, isClientInColdSection } from '@/lib/crm/utils';
 import { useCrm } from '@/providers/crm-provider';
+import { ClientSearchSelect } from '@/components/clients/client-search-select';
 import { TopHeader } from '@/components/layout/top-header';
 import type { Idea, IdeaItemType, IdeaStatus, Owner } from '@/lib/types/crm';
 import { formatActionDateDisplay, getTodayString } from '@/lib/crm/utils';
@@ -259,22 +260,13 @@ export function IdeasSection() {
                 </div>
                 <div className="form-group">
                   <label>Cliente *</label>
-                  <select className="form-select" value={clientId} onChange={(e) => setClientId(e.target.value)} required>
-                    {activeClients.length > 0 ? (
-                      <optgroup label="Lista clienti">
-                        {activeClients.map((client) => (
-                          <option key={client.id} value={client.id}>{client.name}</option>
-                        ))}
-                      </optgroup>
-                    ) : null}
-                    {coldClients.length > 0 ? (
-                      <optgroup label="Clienti freddi">
-                        {coldClients.map((client) => (
-                          <option key={client.id} value={client.id}>{client.name}</option>
-                        ))}
-                      </optgroup>
-                    ) : null}
-                  </select>
+                  <ClientSearchSelect
+                    activeClients={activeClients}
+                    coldClients={coldClients}
+                    value={clientId}
+                    onChange={setClientId}
+                    required
+                  />
                 </div>
                 {itemType === 'task' && (
                   <>

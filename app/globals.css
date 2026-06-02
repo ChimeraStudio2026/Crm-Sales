@@ -3741,6 +3741,80 @@ body.drawer-open {
     cursor: pointer;
 }
 
+.client-search-select {
+    position: relative;
+}
+
+.client-search-input-wrap {
+    position: relative;
+}
+
+.client-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    pointer-events: none;
+}
+
+.client-search-input {
+    width: 100%;
+    padding-left: 38px;
+}
+
+.client-search-dropdown {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    max-height: 240px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-card);
+    box-shadow: var(--shadow-md);
+}
+
+.client-search-group + .client-search-group {
+    border-top: 1px solid var(--border-color);
+}
+
+.client-search-group-label {
+    padding: 8px 12px 4px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+}
+
+.client-search-option {
+    display: block;
+    width: 100%;
+    padding: 10px 12px;
+    border: none;
+    background: transparent;
+    text-align: left;
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.client-search-option:hover,
+.client-search-option.is-selected {
+    background: var(--primary-soft);
+    color: var(--primary);
+}
+
+.client-search-empty {
+    padding: 12px;
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+}
+
 
 .okr-comparison-month-value {
     position: absolute;

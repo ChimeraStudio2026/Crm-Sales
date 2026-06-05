@@ -508,7 +508,7 @@ export function IdeasSection() {
               </div>
               <div className="tasks-asana-header">
                 <span>Task</span>
-                <span>Stato / Deadline</span>
+                <span>Stato e data</span>
                 <span>Owner</span>
                 <span>Cliente</span>
               </div>

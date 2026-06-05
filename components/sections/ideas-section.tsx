@@ -235,25 +235,33 @@ export function IdeasSection() {
     await uploadTaskAttachment(task.id, file);
   };
 
+  const renderTaskStatus = (task: Idea) => (
+    <select
+      className={`task-status-pill task-status-${task.status.toLowerCase().replace(/\s+/g, '-')}`}
+      value={task.status}
+      onChange={(event) => void moveIdeaStatus(task.id, event.target.value as IdeaStatus)}
+      aria-label="Stato task"
+    >
+      {COLUMNS.map((column) => (
+        <option key={column.status} value={column.status}>{column.label}</option>
+      ))}
+    </select>
+  );
+
+  const renderTaskDeadline = (task: Idea) => (
+    <input
+      type="date"
+      className="task-deadline-input"
+      value={task.dueDate || ''}
+      onChange={(event) => void updateTaskDeadline(task, event.target.value)}
+      aria-label="Deadline task"
+    />
+  );
+
   const renderTaskControls = (task: Idea) => (
     <div className="task-inline-controls">
-      <select
-        className={`task-status-pill task-status-${task.status.toLowerCase().replace(/\s+/g, '-')}`}
-        value={task.status}
-        onChange={(event) => void moveIdeaStatus(task.id, event.target.value as IdeaStatus)}
-        aria-label="Stato task"
-      >
-        {COLUMNS.map((column) => (
-          <option key={column.status} value={column.status}>{column.label}</option>
-        ))}
-      </select>
-      <input
-        type="date"
-        className="task-deadline-input"
-        value={task.dueDate || ''}
-        onChange={(event) => void updateTaskDeadline(task, event.target.value)}
-        aria-label="Deadline task"
-      />
+      {renderTaskStatus(task)}
+      {renderTaskDeadline(task)}
     </div>
   );
 
@@ -370,7 +378,8 @@ export function IdeasSection() {
           <ChevronRight size={16} className={expandedTasks.has(task.id) ? 'is-expanded' : ''} />
           <span>{task.name}</span>
         </button>
-        {renderTaskControls(task)}
+        {renderTaskStatus(task)}
+        {renderTaskDeadline(task)}
         <span>{task.assignees.join(', ') || '—'}</span>
         <span>{client?.name || '—'}</span>
         {expandedTasks.has(task.id) && (
@@ -508,7 +517,8 @@ export function IdeasSection() {
               </div>
               <div className="tasks-asana-header">
                 <span>Task</span>
-                <span>Stato e data</span>
+                <span>Stato</span>
+                <span>Data</span>
                 <span>Owner</span>
                 <span>Cliente</span>
               </div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Sparkles, X } from 'lucide-react';
-import { CLIENT_TYPES, OWNERS, RELATIONSHIPS } from '@/lib/constants/crm';
+import { CLIENT_ORIGINS, CLIENT_TYPES, OWNERS, RELATIONSHIPS } from '@/lib/constants/crm';
 import { createUniqueId } from '@/lib/crm/utils';
 import { useCrm } from '@/providers/crm-provider';
 import type { Client, ClientContact, Owner } from '@/lib/types/crm';
@@ -18,6 +18,7 @@ export function ClientDrawer({ client, isCold, onClose }: ClientDrawerProps) {
   const [name, setName] = useState('');
   const [type, setType] = useState(CLIENT_TYPES[0]);
   const [owner, setOwner] = useState<Owner>('Jeck');
+  const [clientOrigin, setClientOrigin] = useState<Client['clientOrigin']>('');
   const [relationship, setRelationship] = useState<Client['relationship']>('Nuovo Cliente');
   const [rev2025, setRev2025] = useState(0);
   const [rev2026, setRev2026] = useState(0);
@@ -31,6 +32,7 @@ export function ClientDrawer({ client, isCold, onClose }: ClientDrawerProps) {
       setName(client.name);
       setType(client.type);
       setOwner(client.owner);
+      setClientOrigin(client.clientOrigin || '');
       setRelationship(client.relationship);
       setRev2025(client.rev2025);
       setRev2026(client.rev2026);
@@ -50,6 +52,7 @@ export function ClientDrawer({ client, isCold, onClose }: ClientDrawerProps) {
           name,
           type,
           owner,
+          clientOrigin,
           relationship,
           rev2025,
           rev2026,
@@ -92,6 +95,18 @@ export function ClientDrawer({ client, isCold, onClose }: ClientDrawerProps) {
               <label htmlFor="form-owner">Owner</label>
               <select id="form-owner" className="form-select" value={owner} onChange={(e) => setOwner(e.target.value as Client['owner'])}>
                 {OWNERS.map((o) => <option key={o} value={o}>{o}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="form-client-origin">Origine Cliente</label>
+              <select
+                id="form-client-origin"
+                className="form-select"
+                value={clientOrigin}
+                onChange={(e) => setClientOrigin(e.target.value as Client['clientOrigin'])}
+              >
+                <option value="">Seleziona origine</option>
+                {CLIENT_ORIGINS.map((origin) => <option key={origin} value={origin}>{origin}</option>)}
               </select>
             </div>
             {!isCold && (

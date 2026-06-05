@@ -11,6 +11,7 @@ import type {
   RecallItem,
 } from '@/lib/types/crm';
 import { ANALYSIS_YEAR, PREVIOUS_ANALYSIS_YEAR, isOwner } from '@/lib/constants/crm';
+import { isClientOrigin } from '@/lib/crm/client-origin';
 import { createDefaultForecasts, parseOkrMonthNumber } from '@/lib/analysis/index';
 import { resolveClientProductOffers } from '@/lib/crm/product-offers';
 import { parseFunctionInvokeError } from '@/lib/supabase/function-errors';
@@ -20,6 +21,7 @@ interface ClientRow {
   name: string;
   type: string;
   owner: string;
+  client_origin: string;
   relationship: string;
   manual_relationship: boolean;
   rev_2025: number;
@@ -69,6 +71,7 @@ function clientToRow(client: Client): ClientRow {
     name: client.name,
     type: client.type || 'Cliente Diretto',
     owner: client.owner || 'Jeck',
+    client_origin: client.clientOrigin || '',
     relationship: client.relationship || 'Nuovo Cliente',
     manual_relationship: !!client.manualRelationship,
     rev_2025: Number(client.rev2025) || 0,
@@ -92,6 +95,7 @@ function rowToClient(row: ClientRow): Client {
     name: row.name,
     type: clientType,
     owner: row.owner as Client['owner'],
+    clientOrigin: isClientOrigin(row.client_origin) ? row.client_origin : '',
     relationship: row.relationship as Client['relationship'],
     manualRelationship: row.manual_relationship,
     rev2025: Number(row.rev_2025) || 0,

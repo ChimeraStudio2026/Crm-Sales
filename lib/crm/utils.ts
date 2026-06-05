@@ -241,6 +241,9 @@ export function reconcileImportedClientsToMainList(clients: Client[]): Client[] 
 export function normalizeClients(clients: Client[]): Client[] {
   return clients.map((client) => {
     const normalized = { ...client };
+    if (normalized.clientOrigin === undefined) {
+      normalized.clientOrigin = '';
+    }
     normalizeClientContacts(normalized);
     normalizeClientProductOffers(normalized);
     if (!Array.isArray(normalized.actionLog)) {

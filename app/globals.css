@@ -1314,6 +1314,7 @@ body.crm-col-resizing {
    ========================================================================== */
 .cell-type,
 .cell-owner,
+.cell-origin,
 .cell-rapporto,
 .col-data-azione {
     padding: 10px 14px !important;
@@ -1388,6 +1389,13 @@ body.crm-col-resizing {
 .cell-rapporto-nuovo { --chip-color: #0284c7; --chip-fill: #e0f2fe; }
 .cell-rapporto-eliminato { --chip-color: #dc2626; --chip-fill: #fee2e2; }
 .cell-rapporto-perso { --chip-color: #ea580c; --chip-fill: #ffedd5; }
+
+.cell-origin-empty { --chip-color: #94a3b8; --chip-fill: #f1f5f9; }
+.cell-origin-jeck { --chip-color: #2563eb; --chip-fill: #dbeafe; }
+.cell-origin-inbound { --chip-color: #16a34a; --chip-fill: #dcfce7; }
+.cell-origin-instagram { --chip-color: #db2777; --chip-fill: #fce7f3; }
+.cell-origin-community { --chip-color: #9333ea; --chip-fill: #f3e8ff; }
+.cell-origin-outbound { --chip-color: #ea580c; --chip-fill: #ffedd5; }
 
 /* Data azione scaduta */
 .table-cell-chip.cell-date-stale {

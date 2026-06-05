@@ -1,4 +1,4 @@
-import type { ClientType, IdeaCategory, Owner, Relationship } from '@/lib/types/crm';
+import type { ClientOrigin, ClientType, IdeaCategory, Owner, Relationship } from '@/lib/types/crm';
 
 export const ANALYSIS_YEAR = 2026;
 export const PREVIOUS_ANALYSIS_YEAR = ANALYSIS_YEAR - 1;
@@ -22,6 +22,22 @@ export const CLIENT_TYPES: ClientType[] = [
   'CDP',
   'Agenzia Eventi',
 ];
+
+export const CLIENT_ORIGINS: ClientOrigin[] = [
+  'Jeck',
+  'Inbound',
+  'Instagram',
+  'Community',
+  'Outbound',
+];
+
+export const CLIENT_ORIGIN_CHIP_CLASSES: Record<ClientOrigin, string> = {
+  Jeck: 'cell-origin-jeck',
+  Inbound: 'cell-origin-inbound',
+  Instagram: 'cell-origin-instagram',
+  Community: 'cell-origin-community',
+  Outbound: 'cell-origin-outbound',
+};
 
 export const RELATIONSHIPS: Relationship[] = [
   'Nuovo Cliente',
@@ -79,6 +95,7 @@ export const CRM_TABLE_COLUMN_DEFS = {
   name: { label: 'Nome Cliente', sortKey: 'name', align: 'left' as const, defaultWidth: 170, minWidth: 120, expandedWidth: 280 },
   type: { label: 'Tipologia', sortKey: 'type', align: 'left' as const, defaultWidth: 155, minWidth: 130, expandedWidth: 200 },
   owner: { label: 'Owner', sortKey: 'owner', align: 'left' as const, defaultWidth: 120, minWidth: 100, expandedWidth: 160 },
+  clientOrigin: { label: 'Origine Cliente', sortKey: 'clientOrigin', align: 'left' as const, defaultWidth: 150, minWidth: 130, expandedWidth: 190 },
   relationship: { label: 'Rapporto', sortKey: 'relationship', align: 'left' as const, defaultWidth: 160, minWidth: 130, expandedWidth: 220 },
   rev2026: { label: 'Fatturato 2026', sortKey: 'rev2026', align: 'right' as const, defaultWidth: 130, minWidth: 110, expandedWidth: 150 },
   rev2025: { label: 'Fatturato 2025', sortKey: 'rev2025', align: 'right' as const, defaultWidth: 130, minWidth: 110, expandedWidth: 150 },

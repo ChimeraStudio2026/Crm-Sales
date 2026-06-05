@@ -19,7 +19,9 @@ import {
 import { useCrm } from '@/providers/crm-provider';
 import { ClientDrawer } from '@/components/drawers/client-drawer';
 import { ClientDetailPanel } from '@/components/clients/client-detail-panel';
+import { ClientOriginSelect } from '@/components/clients/client-origin-select';
 import { TopHeader } from '@/components/layout/top-header';
+import { getClientOriginCellClass } from '@/lib/crm/client-origin';
 import type { Client, SortState } from '@/lib/types/crm';
 
 function isInteractiveTableTarget(target: EventTarget | null): boolean {
@@ -167,6 +169,15 @@ export function ColdClientsSection() {
             >
               {OWNERS.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
             </select>
+          </td>
+        );
+      case 'clientOrigin':
+        return (
+          <td key={columnId} className={`cell-origin ${getClientOriginCellClass(client.clientOrigin)}`}>
+            <ClientOriginSelect
+              value={client.clientOrigin}
+              onChange={(value) => void updateClientField(client.id, 'clientOrigin', value)}
+            />
           </td>
         );
       case 'rev2026':

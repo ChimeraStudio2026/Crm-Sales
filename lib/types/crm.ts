@@ -16,6 +16,7 @@ export interface Client {
   name: string;
   type: ClientType;
   owner: Owner;
+  clientOrigin: ClientOrigin | '';
   relationship: Relationship;
   manualRelationship: boolean;
   rev2025: number;
@@ -103,6 +104,8 @@ export type ClientType =
   | 'Agenzia Eventi';
 
 export type Owner = 'Jeck' | 'Virgi' | 'Martina';
+
+export type ClientOrigin = 'Jeck' | 'Inbound' | 'Instagram' | 'Community' | 'Outbound';
 
 export type Relationship =
   | 'Nuovo Cliente'

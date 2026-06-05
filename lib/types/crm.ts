@@ -11,6 +11,12 @@ export interface ClientActionLogEntry {
   date: string;
 }
 
+export interface TaskSubtask {
+  id: string;
+  title: string;
+  completed: boolean;
+}
+
 export interface TaskAttachment {
   id: string;
   name: string;
@@ -53,6 +59,7 @@ export interface Idea {
   dueDate: string;
   assignees: Owner[];
   attachments: TaskAttachment[];
+  subtasks: TaskSubtask[];
 }
 
 export interface ClientTask {

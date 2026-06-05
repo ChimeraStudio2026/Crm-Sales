@@ -1,20 +1,30 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { ChevronRight, Download, Paperclip, PlusCircle, Search, Trash2 } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import { ChevronRight, Download, Paperclip, Plus, PlusCircle, Search, Trash2 } from 'lucide-react';
 import { IDEA_CATEGORIES, OWNERS } from '@/lib/constants/crm';
-import { isClientInActiveSection, isClientInColdSection } from '@/lib/crm/utils';
+import { createUniqueId, getTodayString, isClientInActiveSection, isClientInColdSection } from '@/lib/crm/utils';
 import { useCrm } from '@/providers/crm-provider';
 import { ClientSearchSelect } from '@/components/clients/client-search-select';
 import { TopHeader } from '@/components/layout/top-header';
-import type { Idea, IdeaItemType, IdeaStatus, Owner } from '@/lib/types/crm';
-import { getTodayString } from '@/lib/crm/utils';
+import type { Idea, IdeaItemType, IdeaStatus, Owner, TaskSubtask } from '@/lib/types/crm';
 
+const TASK_STATUS_FILTERS: { id: 'all' | IdeaStatus; label: string }[] = [
+  { id: 'all', label: 'Tutte' },
+  { id: 'Da fare', label: 'Da fare' },
+  { id: 'In progress', label: 'In progress' },
+  { id: 'Fatto', label: 'Fatto' },
+];
 const COLUMNS: { status: IdeaStatus; id: string; label: string; color: string }[] = [
   { status: 'Da fare', id: 'todo', label: 'Da fare', color: '#ef4444' },
   { status: 'In progress', id: 'progress', label: 'In progress', color: '#f59e0b' },
   { status: 'Fatto', id: 'done', label: 'Fatto', color: '#10b981' },
 ];
+
+function filterTasksByStatus(tasks: Idea[], statusFilter: 'all' | IdeaStatus): Idea[] {
+  if (statusFilter === 'all') return tasks;
+  return tasks.filter((task) => task.status === statusFilter);
+}
 
 export function IdeasSection() {
   const {
@@ -32,9 +42,13 @@ export function IdeasSection() {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | IdeaItemType>('all');
   const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
+  const [taskStatusFilter, setTaskStatusFilter] = useState<'all' | IdeaStatus>('all');
   const [showForm, setShowForm] = useState(false);
   const [editIdea, setEditIdea] = useState<Idea | null>(null);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
+  const [descriptionDrafts, setDescriptionDrafts] = useState<Record<string, string>>({});
+  const [newSubtaskTitles, setNewSubtaskTitles] = useState<Record<string, string>>({});
+  const saveDescriptionTimerRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const [name, setName] = useState('');
   const [category, setCategory] = useState<Idea['category']>('Content');
   const [clientId, setClientId] = useState('');
@@ -71,19 +85,34 @@ export function IdeasSection() {
       idea.description.toLowerCase().includes(query) ||
       clientName.includes(query);
     const matchesType = typeFilter === 'all' || idea.itemType === typeFilter;
-    return isTaskVisible && matchesQuery && matchesType && (!categoryFilter || idea.category === categoryFilter);
+    return isTaskVisible && matchesQuery && matchesType && (
+      !categoryFilter || idea.itemType === 'task' || idea.category === categoryFilter
+    );
   }), [ideas, clients, currentOwner, search, categoryFilter, typeFilter]);
 
   const filteredTasks = useMemo(
-    () => filtered.filter((idea) => idea.itemType === 'task'),
-    [filtered],
+    () => filterTasksByStatus(
+      filtered.filter((idea) => idea.itemType === 'task'),
+      taskStatusFilter,
+    ),
+    [filtered, taskStatusFilter],
+  );
+
+  const todayString = getTodayString();
+  const todayTasks = useMemo(
+    () => filteredTasks.filter((task) => task.dueDate === todayString),
+    [filteredTasks, todayString],
+  );
+  const otherTasks = useMemo(
+    () => filteredTasks.filter((task) => task.dueDate !== todayString),
+    [filteredTasks, todayString],
   );
 
   const resetForm = (nextType: IdeaItemType = 'idea'): void => {
     setEditIdea(null);
     setName('');
     setCategory('Content');
-    setClientId(assignableClients[0]?.id || '');
+    setClientId(nextType === 'task' ? '' : (assignableClients[0]?.id || ''));
     setStatus('Da fare');
     setDescription('');
     setItemType(nextType);
@@ -125,13 +154,14 @@ export function IdeasSection() {
     await saveIdea({
       id: editIdea?.id,
       name,
-      category,
-      clientId,
+      category: itemType === 'task' ? 'Content' : category,
+      clientId: clientId || '',
       status,
       description,
       itemType,
       dueDate: itemType === 'task' ? dueDate : '',
       assignees: itemType === 'task' ? assignees : [],
+      subtasks: editIdea?.subtasks || [],
     });
     setShowForm(false);
   };
@@ -147,6 +177,56 @@ export function IdeasSection() {
 
   const updateTaskDeadline = async (task: Idea, nextDueDate: string): Promise<void> => {
     await saveIdea({ ...task, dueDate: nextDueDate });
+  };
+
+  const getDescriptionDraft = (task: Idea): string => (
+    descriptionDrafts[task.id] ?? task.description ?? ''
+  );
+
+  const scheduleDescriptionSave = (task: Idea, value: string): void => {
+    if (saveDescriptionTimerRef.current[task.id]) {
+      clearTimeout(saveDescriptionTimerRef.current[task.id]);
+    }
+    saveDescriptionTimerRef.current[task.id] = setTimeout(() => {
+      if (value.trim() !== (task.description || '').trim()) {
+        void saveIdea({ ...task, description: value });
+      }
+    }, 600);
+  };
+
+  const handleDescriptionChange = (task: Idea, value: string): void => {
+    setDescriptionDrafts((prev) => ({ ...prev, [task.id]: value }));
+    scheduleDescriptionSave(task, value);
+  };
+
+  const handleDescriptionBlur = (task: Idea): void => {
+    if (saveDescriptionTimerRef.current[task.id]) {
+      clearTimeout(saveDescriptionTimerRef.current[task.id]);
+      delete saveDescriptionTimerRef.current[task.id];
+    }
+    const value = getDescriptionDraft(task);
+    if (value.trim() !== (task.description || '').trim()) {
+      void saveIdea({ ...task, description: value });
+    }
+  };
+
+  const toggleSubtask = async (task: Idea, subtaskId: string): Promise<void> => {
+    const nextSubtasks = (task.subtasks || []).map((subtask) => (
+      subtask.id === subtaskId ? { ...subtask, completed: !subtask.completed } : subtask
+    ));
+    await saveIdea({ ...task, subtasks: nextSubtasks });
+  };
+
+  const addSubtask = async (task: Idea): Promise<void> => {
+    const title = (newSubtaskTitles[task.id] || '').trim();
+    if (!title) return;
+    const nextSubtask: TaskSubtask = {
+      id: createUniqueId('subtask'),
+      title,
+      completed: false,
+    };
+    await saveIdea({ ...task, subtasks: [...(task.subtasks || []), nextSubtask] });
+    setNewSubtaskTitles((prev) => ({ ...prev, [task.id]: '' }));
   };
 
   const handleAttachmentChange = async (task: Idea, files: FileList | null): Promise<void> => {
@@ -182,45 +262,79 @@ export function IdeasSection() {
     return (
       <div className="task-expand-body">
         <div className="task-expand-meta">
-          <span>Cliente: <strong>{client?.name || '—'}</strong></span>
+          {client && <span>Cliente: <strong>{client.name}</strong></span>}
           <span>Owner: <strong>{task.assignees.join(', ') || '—'}</strong></span>
-          <span>Categoria: <strong>{task.category}</strong></span>
         </div>
-        {task.description && <p className="task-expand-description">{task.description}</p>}
-        <div className="task-attachments">
-          <div className="task-attachments-header">
-            <strong>Documenti</strong>
-            <label className="btn btn-secondary btn-sm task-attachment-upload">
-              <Paperclip size={14} />
-              <span>Allega</span>
-              <input
-                type="file"
-                onChange={(event) => void handleAttachmentChange(task, event.target.files)}
-              />
-            </label>
+        <textarea
+          className="task-inline-description"
+          value={getDescriptionDraft(task)}
+          onChange={(event) => handleDescriptionChange(task, event.target.value)}
+          onBlur={() => handleDescriptionBlur(task)}
+          rows={3}
+          placeholder="Aggiungi una descrizione..."
+          aria-label="Descrizione task"
+        />
+        <div className="task-subtasks">
+          <strong className="task-subtasks-label">Subtask</strong>
+          <div className="task-subtasks-list">
+            {(task.subtasks || []).map((subtask) => (
+              <label key={subtask.id} className={`task-subtask-item${subtask.completed ? ' is-completed' : ''}`}>
+                <input
+                  type="checkbox"
+                  checked={subtask.completed}
+                  onChange={() => void toggleSubtask(task, subtask.id)}
+                />
+                <span className="task-subtask-check" />
+                <span className="task-subtask-title">{subtask.title}</span>
+              </label>
+            ))}
           </div>
-          {(task.attachments || []).length > 0 ? (
-            <div className="task-attachment-list">
+          <div className="task-subtask-add">
+            <input
+              type="text"
+              className="task-subtask-input"
+              value={newSubtaskTitles[task.id] || ''}
+              onChange={(event) => setNewSubtaskTitles((prev) => ({ ...prev, [task.id]: event.target.value }))}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  void addSubtask(task);
+                }
+              }}
+              placeholder="Aggiungi subtask..."
+            />
+            <button type="button" className="btn btn-secondary btn-sm task-subtask-add-btn" onClick={() => void addSubtask(task)}>
+              <Plus size={14} />
+            </button>
+          </div>
+        </div>
+        <div className="task-attachments task-attachments-compact">
+          <label className="task-attachment-upload-compact" title="Allega documento">
+            <Paperclip size={14} />
+            <span>Allega</span>
+            <input
+              type="file"
+              onChange={(event) => void handleAttachmentChange(task, event.target.files)}
+            />
+          </label>
+          {(task.attachments || []).length > 0 && (
+            <div className="task-attachment-list-compact">
               {task.attachments.map((attachment) => (
-                <div key={attachment.id} className="task-attachment-item">
+                <div key={attachment.id} className="task-attachment-chip">
                   <span>{attachment.name}</span>
-                  <div className="task-attachment-actions">
-                    <button type="button" className="btn-table-action edit" onClick={() => void downloadTaskAttachment(attachment)} title="Scarica documento">
-                      <Download size={15} />
-                    </button>
-                    <button type="button" className="btn-table-action delete" onClick={() => void removeTaskAttachment(task.id, attachment)} title="Rimuovi documento">
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
+                  <button type="button" className="btn-table-action edit" onClick={() => void downloadTaskAttachment(attachment)} title="Scarica">
+                    <Download size={13} />
+                  </button>
+                  <button type="button" className="btn-table-action delete" onClick={() => void removeTaskAttachment(task.id, attachment)} title="Rimuovi">
+                    <Trash2 size={13} />
+                  </button>
                 </div>
               ))}
             </div>
-          ) : (
-            <p className="task-attachments-empty">Nessun documento allegato.</p>
           )}
         </div>
         <div className="task-expanded-actions">
-          <button type="button" className="btn btn-secondary btn-sm" onClick={() => openEdit(task)}>Modifica</button>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => openEdit(task)}>Modifica titolo</button>
           <button type="button" className="btn btn-danger btn-sm" onClick={() => void deleteIdea(task.id)}>Elimina</button>
         </div>
       </div>
@@ -247,6 +361,40 @@ export function IdeasSection() {
       </div>
     );
   };
+
+  const renderAsanaRow = (task: Idea) => {
+    const client = clients.find((item) => item.id === task.clientId);
+    return (
+      <div key={task.id} className="tasks-asana-row">
+        <button type="button" className="tasks-asana-title" onClick={() => toggleTaskExpanded(task.id)}>
+          <ChevronRight size={16} className={expandedTasks.has(task.id) ? 'is-expanded' : ''} />
+          <span>{task.name}</span>
+        </button>
+        {renderTaskControls(task)}
+        <span>{task.assignees.join(', ') || '—'}</span>
+        <span>{client?.name || '—'}</span>
+        {expandedTasks.has(task.id) && (
+          <div className="tasks-asana-expanded">
+            {renderTaskDetails(task)}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderTaskListSection = (title: string, tasks: Idea[]) => (
+    <div className="tasks-asana-section">
+      <div className="tasks-asana-section-header">
+        <h3>{title}</h3>
+        <span className="tasks-asana-section-count">{tasks.length}</span>
+      </div>
+      {tasks.length > 0 ? (
+        tasks.map((task) => renderAsanaRow(task))
+      ) : (
+        <p className="tasks-asana-section-empty">Nessuna task in questa sezione.</p>
+      )}
+    </div>
+  );
 
   const renderIdeaCard = (idea: Idea) => {
     const client = clients.find((item) => item.id === idea.clientId);
@@ -344,31 +492,28 @@ export function IdeasSection() {
             </div>
           ) : (
             <div className="tasks-asana-list glass-card">
+              <div className="tasks-list-toolbar">
+                <div className="tasks-status-filters" role="group" aria-label="Filtra per stato">
+                  {TASK_STATUS_FILTERS.map((filter) => (
+                    <button
+                      key={filter.id}
+                      type="button"
+                      className={`tasks-filter-btn${taskStatusFilter === filter.id ? ' is-active' : ''}`}
+                      onClick={() => setTaskStatusFilter(filter.id)}
+                    >
+                      {filter.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="tasks-asana-header">
                 <span>Task</span>
                 <span>Stato / Deadline</span>
                 <span>Owner</span>
                 <span>Cliente</span>
               </div>
-              {filteredTasks.map((task) => {
-                const client = clients.find((item) => item.id === task.clientId);
-                return (
-                  <div key={task.id} className="tasks-asana-row">
-                    <button type="button" className="tasks-asana-title" onClick={() => toggleTaskExpanded(task.id)}>
-                      <ChevronRight size={16} className={expandedTasks.has(task.id) ? 'is-expanded' : ''} />
-                      <span>{task.name}</span>
-                    </button>
-                    {renderTaskControls(task)}
-                    <span>{task.assignees.join(', ') || '—'}</span>
-                    <span>{client?.name || '—'}</span>
-                    {expandedTasks.has(task.id) && (
-                      <div className="tasks-asana-expanded">
-                        {renderTaskDetails(task)}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+              {renderTaskListSection('Today', todayTasks)}
+              {renderTaskListSection('Altre task', otherTasks)}
             </div>
           )}
         </section>
@@ -403,20 +548,22 @@ export function IdeasSection() {
                   <label>{itemType === 'task' ? 'Titolo Task *' : 'Nome Idea *'}</label>
                   <input className="form-input" value={name} onChange={(e) => setName(e.target.value)} required />
                 </div>
+                {itemType === 'idea' && (
+                  <div className="form-group">
+                    <label>Categoria</label>
+                    <select className="form-select" value={category} onChange={(e) => setCategory(e.target.value as Idea['category'])}>
+                      {IDEA_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                )}
                 <div className="form-group">
-                  <label>Categoria</label>
-                  <select className="form-select" value={category} onChange={(e) => setCategory(e.target.value as Idea['category'])}>
-                    {IDEA_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Cliente *</label>
+                  <label>{itemType === 'task' ? 'Cliente (opzionale)' : 'Cliente *'}</label>
                   <ClientSearchSelect
                     activeClients={activeClients}
                     coldClients={coldClients}
                     value={clientId}
                     onChange={setClientId}
-                    required
+                    required={itemType === 'idea'}
                   />
                 </div>
                 {itemType === 'task' && (
@@ -456,8 +603,13 @@ export function IdeasSection() {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Descrizione *</label>
-                  <textarea className="form-textarea" value={description} onChange={(e) => setDescription(e.target.value)} required />
+                  <label>{itemType === 'task' ? 'Descrizione' : 'Descrizione *'}</label>
+                  <textarea
+                    className="form-textarea"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    required={itemType === 'idea'}
+                  />
                 </div>
               </div>
               <div className="drawer-footer">

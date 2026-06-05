@@ -131,7 +131,7 @@ interface CrmContextValue {
   updateClientContacts: (clientId: string, contacts: ClientContact[]) => Promise<void>;
   updateClientAction: (clientId: string, action: string) => Promise<void>;
   updateClientProductOffers: (clientId: string, offerIds: ProductOfferId[]) => Promise<void>;
-  saveIdea: (idea: Partial<Idea> & { name: string; description: string; clientId: string }) => Promise<void>;
+  saveIdea: (idea: Partial<Idea> & { name: string; description?: string; clientId?: string }) => Promise<void>;
   deleteIdea: (ideaId: string) => Promise<void>;
   moveIdeaStatus: (ideaId: string, newStatus: Idea['status']) => Promise<void>;
   uploadTaskAttachment: (ideaId: string, file: File) => Promise<void>;
@@ -579,7 +579,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
   }, [clients, persistClientsNow]);
 
   const saveIdea = useCallback(async (
-    input: Partial<Idea> & { name: string; description: string; clientId: string },
+    input: Partial<Idea> & { name: string; description?: string; clientId?: string },
   ) => {
     const normalizedAssignees: Owner[] = input.itemType === 'task'
       ? (input.assignees?.length ? input.assignees.slice(0, 2) : ['Jeck'])
@@ -588,7 +588,16 @@ export function CrmProvider({ children }: CrmProviderProps) {
     if (input.id) {
       nextIdeas = ideas.map((i) => (
         i.id === input.id
-          ? { ...i, ...input, id: i.id, assignees: normalizedAssignees, attachments: input.attachments ?? i.attachments ?? [] } as Idea
+          ? {
+            ...i,
+            ...input,
+            id: i.id,
+            clientId: input.clientId ?? i.clientId ?? '',
+            description: input.description ?? i.description ?? '',
+            assignees: normalizedAssignees,
+            attachments: input.attachments ?? i.attachments ?? [],
+            subtasks: input.subtasks ?? i.subtasks ?? [],
+          } as Idea
           : i
       ));
     } else {
@@ -596,14 +605,15 @@ export function CrmProvider({ children }: CrmProviderProps) {
         id: createUniqueId('idea'),
         name: input.name,
         category: input.category || 'Content',
-        clientId: input.clientId,
+        clientId: input.clientId || '',
         status: input.status || 'Da fare',
-        description: input.description,
+        description: input.description || '',
         dateAdded: getTodayString(),
         itemType: input.itemType || 'idea',
         dueDate: input.dueDate || '',
         assignees: normalizedAssignees,
         attachments: input.attachments || [],
+        subtasks: input.subtasks || [],
       }];
     }
     setIdeas(nextIdeas);
@@ -941,7 +951,12 @@ export function CrmProvider({ children }: CrmProviderProps) {
       reconcileImportedClientsToMainList(normalizeClients(data.clients || [])),
     );
     setClients(nextClients);
-    setIdeas(data.ideas || []);
+    const normalizedIdeas = (data.ideas || []).map((idea) => ({
+      ...idea,
+      attachments: idea.attachments || [],
+      subtasks: idea.subtasks || [],
+    }));
+    setIdeas(normalizedIdeas);
     setClientTasks(data.clientTasks || []);
     setOkrRecords(data.okrRecords || []);
     if (data.analysisForecastsByYear) {
@@ -954,7 +969,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
     }
     if (data.analysisYear) setAnalysisYear(data.analysisYear);
     await persistClientsNow(nextClients);
-    await persistIdeasNow(data.ideas || []);
+    await persistIdeasNow(normalizedIdeas);
     await persistTasksNow(data.clientTasks || []);
     await persistAnalysisNow(
       data.okrRecords || [],

@@ -10,6 +10,7 @@ import type {
   OkrRecord,
   RecallItem,
   TaskAttachment,
+  TaskSubtask,
 } from '@/lib/types/crm';
 import { ANALYSIS_YEAR, PREVIOUS_ANALYSIS_YEAR, isOwner } from '@/lib/constants/crm';
 import { isClientOrigin } from '@/lib/crm/client-origin';
@@ -59,6 +60,21 @@ function normalizeContactsArray(
     }];
   }
   return [];
+}
+
+function normalizeTaskSubtasks(value: unknown): TaskSubtask[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((subtask): subtask is Partial<TaskSubtask> => (
+      typeof subtask === 'object' &&
+      subtask !== null &&
+      typeof subtask.title === 'string'
+    ))
+    .map((subtask) => ({
+      id: subtask.id || `subtask-${Date.now()}`,
+      title: subtask.title || '',
+      completed: !!subtask.completed,
+    }));
 }
 
 function normalizeTaskAttachments(value: unknown): TaskAttachment[] {
@@ -175,6 +191,7 @@ export async function fetchIdeas(db: SupabaseClient): Promise<Idea[]> {
       ? row.assignees.filter((value: unknown): value is Idea['assignees'][number] => isOwner(value))
       : [],
     attachments: normalizeTaskAttachments(row.attachments),
+    subtasks: normalizeTaskSubtasks(row.subtasks),
   }));
 }
 
@@ -203,6 +220,7 @@ export async function persistIdeas(db: SupabaseClient, allIdeas: Idea[]): Promis
     due_date: idea.dueDate || null,
     assignees: idea.assignees || [],
     attachments: idea.attachments || [],
+    subtasks: idea.subtasks || [],
   }));
   if (rows.length === 0) {
     const { error } = await db.from('ideas').delete().neq('id', '');

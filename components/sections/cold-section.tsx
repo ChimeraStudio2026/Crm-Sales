@@ -49,6 +49,10 @@ function sortClients(list: Client[], sort: SortState): Client[] {
   });
 }
 
+function getCommittedActionValue(target: EventTarget & HTMLInputElement): string {
+  return target.value.trim();
+}
+
 export function ColdClientsSection() {
   const {
     clients,
@@ -184,6 +188,24 @@ export function ColdClientsSection() {
         return <td key={columnId} style={{ textAlign: 'right' }}>{formatCurrency(client.rev2026)}</td>;
       case 'rev2025':
         return <td key={columnId} style={{ textAlign: 'right' }}>{formatCurrency(client.rev2025)}</td>;
+      case 'action':
+        return (
+          <td key={columnId} className="cold-action-cell">
+            <input
+              className="cold-action-input"
+              defaultValue={client.action}
+              placeholder="Azione da fare..."
+              onBlur={(event) => {
+                const nextAction = getCommittedActionValue(event.currentTarget);
+                if (nextAction !== client.action) void updateClientAction(client.id, nextAction);
+              }}
+              onKeyDown={(event) => {
+                if (event.key !== 'Enter') return;
+                event.currentTarget.blur();
+              }}
+            />
+          </td>
+        );
       case 'actionDate': {
         const isStale = isActionDateStale(client.actionDate);
         return (

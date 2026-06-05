@@ -1,6 +1,16 @@
-import type { Client, OkrRecord } from '@/lib/types/crm';
-import { EXCEL_REV_EPSILON } from '@/lib/constants/crm';
-import { hasExcelRevenueDifference } from '@/lib/crm/utils';
+import type { Client, OkrRecord, ParsedExcelClient } from '@/lib/types/crm';
+import {
+  DEFAULT_ACTION_DATE,
+  EXCEL_IMPORT_ACTION_PREFIX,
+  EXCEL_IMPORT_DESC_PREFIX,
+} from '@/lib/constants/crm';
+import { getRevenueFieldForImportYear } from '@/lib/crm/excel';
+import { resolveClientProductOffers } from '@/lib/crm/product-offers';
+import {
+  createUniqueId,
+  hasExcelRevenueDifference,
+  shouldPreserveClientOnImport,
+} from '@/lib/crm/utils';
 
 export interface OkrMergeResult {
   merged: OkrRecord[];
@@ -8,6 +18,14 @@ export interface OkrMergeResult {
   addedCount: number;
   updatedCount: number;
   skippedCount: number;
+}
+
+export interface ClientImportMergeResult {
+  merged: Client[];
+  addedCount: number;
+  updatedCount: number;
+  skippedCount: number;
+  preservedCount: number;
 }
 
 export function getOkrRecordMergeKey(record: OkrRecord): string {
@@ -34,6 +52,72 @@ export function linkOkrRecordsToClients(records: OkrRecord[], clients: Client[])
   return records.map((record) => linkOkrClientId(record, clients));
 }
 
+export function mergeClientsWithExcelImport(
+  existingClients: Client[],
+  parsedClients: ParsedExcelClient[],
+  importYear: number,
+): ClientImportMergeResult {
+  const revField = getRevenueFieldForImportYear(importYear);
+  const merged = [...existingClients];
+  let addedCount = 0;
+  let updatedCount = 0;
+  let skippedCount = 0;
+  let preservedCount = 0;
+  parsedClients.forEach((imported) => {
+    const existingIndex = merged.findIndex(
+      (client) => client.name.toLowerCase() === imported.name.toLowerCase(),
+    );
+    if (existingIndex === -1) {
+      merged.push({
+        id: createUniqueId('client'),
+        name: imported.name,
+        type: 'Cliente Diretto',
+        owner: 'Jeck',
+        clientOrigin: '',
+        relationship: 'Nuovo Cliente',
+        manualRelationship: false,
+        rev2025: revField === 'rev2025' ? imported.revenue : 0,
+        rev2026: revField === 'rev2026' ? imported.revenue : 0,
+        action: `${EXCEL_IMPORT_ACTION_PREFIX} (${imported.recordCount} record uniti)`,
+        actionDate: DEFAULT_ACTION_DATE,
+        email: '',
+        description: `${EXCEL_IMPORT_DESC_PREFIX}. Completa contatti, azione e note.`,
+        contacts: [],
+        productOffers: resolveClientProductOffers('Cliente Diretto', []),
+        needsProfileCompletion: true,
+        isColdClient: false,
+      });
+      addedCount += 1;
+      return;
+    }
+    const existing = { ...merged[existingIndex] };
+    if (shouldPreserveClientOnImport(existing)) {
+      preservedCount += 1;
+      return;
+    }
+    const currentRevenue = existing[revField];
+    if (!hasExcelRevenueDifference(currentRevenue, imported.revenue)) {
+      skippedCount += 1;
+      return;
+    }
+    existing[revField] = imported.revenue;
+    existing.isColdClient = false;
+    if (existing.relationship !== 'Perso' && existing.relationship !== 'Eliminato') {
+      existing.manualRelationship = false;
+    }
+    merged[existingIndex] = existing;
+    updatedCount += 1;
+  });
+  return {
+    merged,
+    addedCount,
+    updatedCount,
+    skippedCount,
+    preservedCount,
+  };
+}
+
+/** Aggiunge solo OKR nuovi; non sovrascrive importi già presenti (anche anni passati). */
 export function mergeOkrRecordsWithImport(
   existingRecords: OkrRecord[],
   importedRecords: OkrRecord[],
@@ -60,27 +144,16 @@ export function mergeOkrRecordsWithImport(
       return;
     }
     const existingRecord = merged[existingIndex];
-    if (!hasExcelRevenueDifference(existingRecord.amount, incoming.amount, EXCEL_REV_EPSILON)) {
-      if (incoming.clientId && existingRecord.clientId !== incoming.clientId) {
-        const relinkedRecord: OkrRecord = {
-          ...existingRecord,
-          clientId: incoming.clientId,
-        };
-        merged[existingIndex] = relinkedRecord;
-        trackUpsert(relinkedRecord);
-      }
-      skippedCount += 1;
-      return;
+    if (!existingRecord.clientId && incoming.clientId) {
+      const relinkedRecord: OkrRecord = {
+        ...existingRecord,
+        clientId: incoming.clientId,
+      };
+      merged[existingIndex] = relinkedRecord;
+      trackUpsert(relinkedRecord);
+      updatedCount += 1;
     }
-    const updatedRecord: OkrRecord = {
-      ...existingRecord,
-      amount: incoming.amount,
-      clientId: incoming.clientId || existingRecord.clientId,
-      quarter: incoming.quarter || existingRecord.quarter,
-    };
-    merged[existingIndex] = updatedRecord;
-    trackUpsert(updatedRecord);
-    updatedCount += 1;
+    skippedCount += 1;
   });
   return {
     merged: linkOkrRecordsToClients(merged, clients),

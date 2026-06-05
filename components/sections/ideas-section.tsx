@@ -1,14 +1,14 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, PlusCircle, Search, Trash2 } from 'lucide-react';
+import { ChevronRight, Download, Paperclip, PlusCircle, Search, Trash2 } from 'lucide-react';
 import { IDEA_CATEGORIES, OWNERS } from '@/lib/constants/crm';
 import { isClientInActiveSection, isClientInColdSection } from '@/lib/crm/utils';
 import { useCrm } from '@/providers/crm-provider';
 import { ClientSearchSelect } from '@/components/clients/client-search-select';
 import { TopHeader } from '@/components/layout/top-header';
 import type { Idea, IdeaItemType, IdeaStatus, Owner } from '@/lib/types/crm';
-import { formatActionDateDisplay, getTodayString } from '@/lib/crm/utils';
+import { getTodayString } from '@/lib/crm/utils';
 
 const COLUMNS: { status: IdeaStatus; id: string; label: string; color: string }[] = [
   { status: 'Da fare', id: 'todo', label: 'Da fare', color: '#ef4444' },
@@ -17,12 +17,24 @@ const COLUMNS: { status: IdeaStatus; id: string; label: string; color: string }[
 ];
 
 export function IdeasSection() {
-  const { clients, ideas, saveIdea, deleteIdea, moveIdeaStatus } = useCrm();
+  const {
+    clients,
+    ideas,
+    currentOwner,
+    saveIdea,
+    deleteIdea,
+    moveIdeaStatus,
+    uploadTaskAttachment,
+    downloadTaskAttachment,
+    removeTaskAttachment,
+  } = useCrm();
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | IdeaItemType>('all');
+  const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
   const [showForm, setShowForm] = useState(false);
   const [editIdea, setEditIdea] = useState<Idea | null>(null);
+  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [name, setName] = useState('');
   const [category, setCategory] = useState<Idea['category']>('Content');
   const [clientId, setClientId] = useState('');
@@ -53,13 +65,19 @@ export function IdeasSection() {
     const client = clients.find((c) => c.id === idea.clientId);
     const clientName = client?.name.toLowerCase() || '';
     const query = search.toLowerCase().trim();
+    const isTaskVisible = idea.itemType !== 'task' || (currentOwner ? idea.assignees.includes(currentOwner) : false);
     const matchesQuery = !query ||
       idea.name.toLowerCase().includes(query) ||
       idea.description.toLowerCase().includes(query) ||
       clientName.includes(query);
     const matchesType = typeFilter === 'all' || idea.itemType === typeFilter;
-    return matchesQuery && matchesType && (!categoryFilter || idea.category === categoryFilter);
-  }), [ideas, clients, search, categoryFilter, typeFilter]);
+    return isTaskVisible && matchesQuery && matchesType && (!categoryFilter || idea.category === categoryFilter);
+  }), [ideas, clients, currentOwner, search, categoryFilter, typeFilter]);
+
+  const filteredTasks = useMemo(
+    () => filtered.filter((idea) => idea.itemType === 'task'),
+    [filtered],
+  );
 
   const resetForm = (nextType: IdeaItemType = 'idea'): void => {
     setEditIdea(null);
@@ -70,7 +88,7 @@ export function IdeasSection() {
     setDescription('');
     setItemType(nextType);
     setDueDate('');
-    setAssignees(['Jeck']);
+    setAssignees(currentOwner ? [currentOwner] : ['Jeck']);
   };
 
   const openNew = (nextType: IdeaItemType = 'idea'): void => {
@@ -97,6 +115,7 @@ export function IdeasSection() {
         const next = prev.filter((value) => value !== owner);
         return next.length > 0 ? next : [owner];
       }
+      if (prev.length >= 2) return prev;
       return [...prev, owner];
     });
   };
@@ -117,11 +136,144 @@ export function IdeasSection() {
     setShowForm(false);
   };
 
-  const shiftStatus = (idea: Idea, direction: 'left' | 'right'): void => {
-    const order: IdeaStatus[] = ['Da fare', 'In progress', 'Fatto'];
-    const idx = order.indexOf(idea.status);
-    const next = direction === 'right' ? order[idx + 1] : order[idx - 1];
-    if (next) void moveIdeaStatus(idea.id, next);
+  const toggleTaskExpanded = (taskId: string): void => {
+    setExpandedTasks((prev) => {
+      const next = new Set(prev);
+      if (next.has(taskId)) next.delete(taskId);
+      else next.add(taskId);
+      return next;
+    });
+  };
+
+  const updateTaskDeadline = async (task: Idea, nextDueDate: string): Promise<void> => {
+    await saveIdea({ ...task, dueDate: nextDueDate });
+  };
+
+  const handleAttachmentChange = async (task: Idea, files: FileList | null): Promise<void> => {
+    const file = files?.[0];
+    if (!file) return;
+    await uploadTaskAttachment(task.id, file);
+  };
+
+  const renderTaskControls = (task: Idea) => (
+    <div className="task-inline-controls">
+      <select
+        className={`task-status-pill task-status-${task.status.toLowerCase().replace(/\s+/g, '-')}`}
+        value={task.status}
+        onChange={(event) => void moveIdeaStatus(task.id, event.target.value as IdeaStatus)}
+        aria-label="Stato task"
+      >
+        {COLUMNS.map((column) => (
+          <option key={column.status} value={column.status}>{column.label}</option>
+        ))}
+      </select>
+      <input
+        type="date"
+        className="task-deadline-input"
+        value={task.dueDate || ''}
+        onChange={(event) => void updateTaskDeadline(task, event.target.value)}
+        aria-label="Deadline task"
+      />
+    </div>
+  );
+
+  const renderTaskDetails = (task: Idea) => {
+    const client = clients.find((item) => item.id === task.clientId);
+    return (
+      <div className="task-expand-body">
+        <div className="task-expand-meta">
+          <span>Cliente: <strong>{client?.name || '—'}</strong></span>
+          <span>Owner: <strong>{task.assignees.join(', ') || '—'}</strong></span>
+          <span>Categoria: <strong>{task.category}</strong></span>
+        </div>
+        {task.description && <p className="task-expand-description">{task.description}</p>}
+        <div className="task-attachments">
+          <div className="task-attachments-header">
+            <strong>Documenti</strong>
+            <label className="btn btn-secondary btn-sm task-attachment-upload">
+              <Paperclip size={14} />
+              <span>Allega</span>
+              <input
+                type="file"
+                onChange={(event) => void handleAttachmentChange(task, event.target.files)}
+              />
+            </label>
+          </div>
+          {(task.attachments || []).length > 0 ? (
+            <div className="task-attachment-list">
+              {task.attachments.map((attachment) => (
+                <div key={attachment.id} className="task-attachment-item">
+                  <span>{attachment.name}</span>
+                  <div className="task-attachment-actions">
+                    <button type="button" className="btn-table-action edit" onClick={() => void downloadTaskAttachment(attachment)} title="Scarica documento">
+                      <Download size={15} />
+                    </button>
+                    <button type="button" className="btn-table-action delete" onClick={() => void removeTaskAttachment(task.id, attachment)} title="Rimuovi documento">
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="task-attachments-empty">Nessun documento allegato.</p>
+          )}
+        </div>
+        <div className="task-expanded-actions">
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => openEdit(task)}>Modifica</button>
+          <button type="button" className="btn btn-danger btn-sm" onClick={() => void deleteIdea(task.id)}>Elimina</button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderTaskCard = (task: Idea) => {
+    const isExpanded = expandedTasks.has(task.id);
+    return (
+      <div key={task.id} className={`task-row-card${isExpanded ? ' is-expanded' : ''}`}>
+        <div className="task-row-summary">
+          <button
+            type="button"
+            className="task-expand-toggle"
+            onClick={() => toggleTaskExpanded(task.id)}
+            aria-label={isExpanded ? 'Chiudi task' : 'Apri task'}
+          >
+            <ChevronRight size={16} />
+          </button>
+          <h4 className="task-row-title">{task.name}</h4>
+          {renderTaskControls(task)}
+        </div>
+        {isExpanded && renderTaskDetails(task)}
+      </div>
+    );
+  };
+
+  const renderIdeaCard = (idea: Idea) => {
+    const client = clients.find((item) => item.id === idea.clientId);
+    const isColdClient = client ? isClientInColdSection(client) : false;
+    return (
+      <div key={idea.id} className="idea-card">
+        <div className="idea-card-header">
+          <span className="idea-item-type-tag is-idea">Idea</span>
+          <span className="badge">{idea.category}</span>
+          <span className="idea-card-client">
+            {client?.name || '—'}
+            {isColdClient ? ' · freddo' : ''}
+          </span>
+        </div>
+        <h4 className="idea-card-title">{idea.name}</h4>
+        <p className="idea-card-desc">{idea.description}</p>
+        <div className="idea-card-footer">
+          <span className="idea-card-date">{idea.dateAdded || getTodayString()}</span>
+          <div className="idea-card-actions">
+            <button type="button" className="btn-card-move edit" onClick={() => openEdit(idea)}>✎</button>
+            <button type="button" className="btn-card-move delete" onClick={() => void deleteIdea(idea.id)}>
+              <Trash2 size={14} />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -146,80 +298,79 @@ export function IdeasSection() {
               </select>
             </div>
             <div className="filter-right">
+              <div className="task-view-toggle" role="group" aria-label="Vista task">
+                <button
+                  type="button"
+                  className={`task-view-toggle-btn${viewMode === 'board' ? ' is-active' : ''}`}
+                  onClick={() => setViewMode('board')}
+                >
+                  Kanban
+                </button>
+                <button
+                  type="button"
+                  className={`task-view-toggle-btn${viewMode === 'list' ? ' is-active' : ''}`}
+                  onClick={() => setViewMode('list')}
+                >
+                  Righe
+                </button>
+              </div>
               <button type="button" className="btn btn-primary" onClick={() => openNew('idea')}>
                 <PlusCircle size={16} />
                 <span>+ IDEA // Task</span>
               </button>
             </div>
           </div>
-          <div className="kanban-board">
-            {COLUMNS.map((col) => {
-              const colIdeas = filtered.filter((i) => i.status === col.status);
-              return (
-                <div key={col.id} className="kanban-column">
-                  <div className="kanban-column-header">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: col.color, display: 'inline-block' }} />
-                      <h3>{col.label}</h3>
+          {viewMode === 'board' ? (
+            <div className="kanban-board">
+              {COLUMNS.map((col) => {
+                const colIdeas = filtered.filter((idea) => idea.status === col.status);
+                return (
+                  <div key={col.id} className="kanban-column">
+                    <div className="kanban-column-header">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: col.color, display: 'inline-block' }} />
+                        <h3>{col.label}</h3>
+                      </div>
+                      <span className="badge">{colIdeas.length}</span>
                     </div>
-                    <span className="badge">{colIdeas.length}</span>
+                    <div className="kanban-cards-container">
+                      {colIdeas.map((idea) => (
+                        idea.itemType === 'task' ? renderTaskCard(idea) : renderIdeaCard(idea)
+                      ))}
+                    </div>
                   </div>
-                  <div className="kanban-cards-container">
-                    {colIdeas.map((idea) => {
-                      const client = clients.find((c) => c.id === idea.clientId);
-                      const isTask = idea.itemType === 'task';
-                      const isColdClient = client ? isClientInColdSection(client) : false;
-                      return (
-                        <div key={idea.id} className="idea-card">
-                          <div className="idea-card-header">
-                            <span className={`idea-item-type-tag ${isTask ? 'is-task' : 'is-idea'}`}>
-                              {isTask ? 'Task' : 'Idea'}
-                            </span>
-                            <span className="badge">{idea.category}</span>
-                            <span className="idea-card-client">
-                              {client?.name || '—'}
-                              {isColdClient ? ' · freddo' : ''}
-                            </span>
-                          </div>
-                          <h4 className="idea-card-title">{idea.name}</h4>
-                          <p className="idea-card-desc">{idea.description}</p>
-                          {isTask && (
-                            <div className="idea-card-task-meta">
-                              {idea.dueDate && (
-                                <span>Deadline: {formatActionDateDisplay(idea.dueDate)}</span>
-                              )}
-                              {idea.assignees.length > 0 && (
-                                <span>Owner: {idea.assignees.join(', ')}</span>
-                              )}
-                            </div>
-                          )}
-                          <div className="idea-card-footer">
-                            <span className="idea-card-date">{idea.dateAdded || getTodayString()}</span>
-                            <div className="idea-card-actions">
-                              {col.status !== 'Da fare' && (
-                                <button type="button" className="btn-card-move left" onClick={() => shiftStatus(idea, 'left')}>
-                                  <ChevronLeft size={14} />
-                                </button>
-                              )}
-                              <button type="button" className="btn-card-move edit" onClick={() => openEdit(idea)}>✎</button>
-                              <button type="button" className="btn-card-move delete" onClick={() => void deleteIdea(idea.id)}>
-                                <Trash2 size={14} />
-                              </button>
-                              {col.status !== 'Fatto' && (
-                                <button type="button" className="btn-card-move right" onClick={() => shiftStatus(idea, 'right')}>
-                                  <ChevronRight size={14} />
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                );
+              })}
+            </div>
+          ) : (
+            <div className="tasks-asana-list glass-card">
+              <div className="tasks-asana-header">
+                <span>Task</span>
+                <span>Stato / Deadline</span>
+                <span>Owner</span>
+                <span>Cliente</span>
+              </div>
+              {filteredTasks.map((task) => {
+                const client = clients.find((item) => item.id === task.clientId);
+                return (
+                  <div key={task.id} className="tasks-asana-row">
+                    <button type="button" className="tasks-asana-title" onClick={() => toggleTaskExpanded(task.id)}>
+                      <ChevronRight size={16} className={expandedTasks.has(task.id) ? 'is-expanded' : ''} />
+                      <span>{task.name}</span>
+                    </button>
+                    {renderTaskControls(task)}
+                    <span>{task.assignees.join(', ') || '—'}</span>
+                    <span>{client?.name || '—'}</span>
+                    {expandedTasks.has(task.id) && (
+                      <div className="tasks-asana-expanded">
+                        {renderTaskDetails(task)}
+                      </div>
+                    )}
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </section>
       </div>
       {showForm && (
@@ -281,13 +432,14 @@ export function IdeasSection() {
                       />
                     </div>
                     <div className="form-group">
-                      <label>Owner</label>
+                      <label>Owner (max 2)</label>
                       <div className="idea-assignee-list">
                         {OWNERS.map((owner) => (
                           <label key={owner} className="idea-assignee-option">
                             <input
                               type="checkbox"
                               checked={assignees.includes(owner)}
+                              disabled={!assignees.includes(owner) && assignees.length >= 2}
                               onChange={() => toggleAssignee(owner)}
                             />
                             <span>{owner}</span>

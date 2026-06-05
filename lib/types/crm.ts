@@ -11,6 +11,15 @@ export interface ClientActionLogEntry {
   date: string;
 }
 
+export interface TaskAttachment {
+  id: string;
+  name: string;
+  path: string;
+  size: number;
+  type: string;
+  uploadedAt: string;
+}
+
 export interface Client {
   id: string;
   name: string;
@@ -43,6 +52,7 @@ export interface Idea {
   itemType: IdeaItemType;
   dueDate: string;
   assignees: Owner[];
+  attachments: TaskAttachment[];
 }
 
 export interface ClientTask {

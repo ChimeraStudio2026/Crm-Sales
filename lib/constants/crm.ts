@@ -15,6 +15,15 @@ export function isOwner(value: unknown): value is Owner {
   return typeof value === 'string' && OWNERS.includes(value as Owner);
 }
 
+export function resolveOwnerFromEmail(email: string | null | undefined): Owner | null {
+  const normalizedEmail = (email || '').trim().toLowerCase();
+  if (!normalizedEmail) return null;
+  if (normalizedEmail.includes('virginia.riva')) return 'Virgi';
+  if (normalizedEmail.includes('martina.gavazzi')) return 'Martina';
+  if (normalizedEmail.includes('jeck')) return 'Jeck';
+  return null;
+}
+
 export const CLIENT_TYPES: ClientType[] = [
   'Cliente Diretto',
   'Agenzia',
@@ -113,6 +122,8 @@ export const DEFAULT_TABLE_COLUMN_ORDER = Object.keys(CRM_TABLE_COLUMN_DEFS).fil
 
 export const COLD_TABLE_COLUMN_ORDER = DEFAULT_TABLE_COLUMN_ORDER.filter(
   (columnId) => columnId !== 'relationship',
+).flatMap(
+  (columnId) => (columnId === 'actionDate' ? ['action', columnId] : [columnId]),
 );
 
 export const ACTION_DATE_STALE_DAYS = 10;

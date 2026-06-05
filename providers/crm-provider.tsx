@@ -18,31 +18,30 @@ import type {
   ClientTask,
   Idea,
   OkrRecord,
+  Owner,
   ParsedExcelClient,
   RecallItem,
   Relationship,
+  TaskAttachment,
 } from '@/lib/types/crm';
 import {
   ANALYSIS_YEAR,
   COLD_CLIENT_REV_THRESHOLD,
-  EXCEL_IMPORT_ACTION_PREFIX,
-  EXCEL_IMPORT_DESC_PREFIX,
   DEFAULT_ACTION_DATE,
   PREVIOUS_ANALYSIS_YEAR,
+  resolveOwnerFromEmail,
 } from '@/lib/constants/crm';
 import { createDefaultForecasts } from '@/lib/analysis/index';
 import {
-  getRevenueFieldForImportYear,
   parseExcelImportBuffer,
   type ExcelImportParseResult,
 } from '@/lib/crm/excel';
-import { mergeOkrRecordsWithImport, linkOkrRecordsToClients } from '@/lib/crm/import-merge';
+import { mergeClientsWithExcelImport, mergeOkrRecordsWithImport, linkOkrRecordsToClients } from '@/lib/crm/import-merge';
 import {
   applyColdClientPromotion,
   applyColdClientPromotionToAll,
   createUniqueId,
   getTodayString,
-  hasExcelRevenueDifference,
   isClientInActiveSection,
   isClientInColdSection,
   normalizeClients,
@@ -96,6 +95,16 @@ export interface ToastMessage {
   type: ToastType;
 }
 
+const TASK_ATTACHMENTS_BUCKET = 'task-attachments';
+
+function sanitizeStorageSegment(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'file';
+}
+
 interface CrmContextValue {
   isLoading: boolean;
   isSupabaseConnected: boolean;
@@ -111,6 +120,7 @@ interface CrmContextValue {
   dailyRecallItems: RecallItem[];
   recallFilterStatus: string;
   totalRevenue2026: number;
+  currentOwner: Owner | null;
   showToast: (message: string, type?: ToastType) => void;
   toasts: ToastMessage[];
   dismissToast: (id: string) => void;
@@ -124,6 +134,9 @@ interface CrmContextValue {
   saveIdea: (idea: Partial<Idea> & { name: string; description: string; clientId: string }) => Promise<void>;
   deleteIdea: (ideaId: string) => Promise<void>;
   moveIdeaStatus: (ideaId: string, newStatus: Idea['status']) => Promise<void>;
+  uploadTaskAttachment: (ideaId: string, file: File) => Promise<void>;
+  downloadTaskAttachment: (attachment: TaskAttachment) => Promise<void>;
+  removeTaskAttachment: (ideaId: string, attachment: TaskAttachment) => Promise<void>;
   saveTask: (task: Partial<ClientTask> & { title: string; clientId: string }) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
   toggleTaskCompleted: (taskId: string, completed: boolean) => Promise<void>;
@@ -192,6 +205,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
   const [dailyRecallItems, setDailyRecallItems] = useState<RecallItem[]>([]);
   const [recallFilterStatus, setRecallFilterStatus] = useState('');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [currentOwner, setCurrentOwner] = useState<Owner | null>(null);
 
   const supabaseConfigured = isSupabaseConfigured();
   const db = useMemo(() => createBrowserSupabaseClient(), []);
@@ -351,6 +365,13 @@ export function CrmProvider({ children }: CrmProviderProps) {
       window.removeEventListener('jonny:crm-updated', handleJonnyUpdated);
       if (jonnyReloadTimerRef.current) clearTimeout(jonnyReloadTimerRef.current);
     };
+  }, [db]);
+
+  useEffect(() => {
+    if (!db) return;
+    db.auth.getUser().then(({ data }) => {
+      setCurrentOwner(resolveOwnerFromEmail(data.user?.email));
+    }).catch(() => setCurrentOwner(null));
   }, [db]);
 
   useEffect(() => {
@@ -560,9 +581,16 @@ export function CrmProvider({ children }: CrmProviderProps) {
   const saveIdea = useCallback(async (
     input: Partial<Idea> & { name: string; description: string; clientId: string },
   ) => {
+    const normalizedAssignees: Owner[] = input.itemType === 'task'
+      ? (input.assignees?.length ? input.assignees.slice(0, 2) : ['Jeck'])
+      : [];
     let nextIdeas: Idea[];
     if (input.id) {
-      nextIdeas = ideas.map((i) => (i.id === input.id ? { ...i, ...input, id: i.id } as Idea : i));
+      nextIdeas = ideas.map((i) => (
+        i.id === input.id
+          ? { ...i, ...input, id: i.id, assignees: normalizedAssignees, attachments: input.attachments ?? i.attachments ?? [] } as Idea
+          : i
+      ));
     } else {
       nextIdeas = [...ideas, {
         id: createUniqueId('idea'),
@@ -574,7 +602,8 @@ export function CrmProvider({ children }: CrmProviderProps) {
         dateAdded: getTodayString(),
         itemType: input.itemType || 'idea',
         dueDate: input.dueDate || '',
-        assignees: input.assignees?.length ? input.assignees : ['Jeck'],
+        assignees: normalizedAssignees,
+        attachments: input.attachments || [],
       }];
     }
     setIdeas(nextIdeas);
@@ -594,6 +623,86 @@ export function CrmProvider({ children }: CrmProviderProps) {
     setIdeas(nextIdeas);
     await persistIdeasNow(nextIdeas);
   }, [ideas, persistIdeasNow]);
+
+  const uploadTaskAttachment = useCallback(async (ideaId: string, file: File): Promise<void> => {
+    if (!db) {
+      showToast('Supabase non configurato.', 'danger');
+      return;
+    }
+    const idea = ideas.find((item) => item.id === ideaId);
+    if (!idea) return;
+    const attachmentId = createUniqueId('attachment');
+    const fileName = sanitizeStorageSegment(file.name);
+    const path = `${ideaId}/${attachmentId}-${fileName}`;
+    const { error } = await db.storage
+      .from(TASK_ATTACHMENTS_BUCKET)
+      .upload(path, file, { upsert: false, contentType: file.type || undefined });
+    if (error) {
+      showToast(`Upload fallito: ${error.message}`, 'danger');
+      return;
+    }
+    const attachment: TaskAttachment = {
+      id: attachmentId,
+      name: file.name,
+      path,
+      size: file.size,
+      type: file.type || 'application/octet-stream',
+      uploadedAt: new Date().toISOString(),
+    };
+    const nextIdeas = ideas.map((item) => (
+      item.id === ideaId
+        ? { ...item, attachments: [...(item.attachments || []), attachment] }
+        : item
+    ));
+    setIdeas(nextIdeas);
+    await persistIdeasNow(nextIdeas);
+    showToast('Documento allegato alla task.', 'success');
+  }, [db, ideas, persistIdeasNow, showToast]);
+
+  const downloadTaskAttachment = useCallback(async (attachment: TaskAttachment): Promise<void> => {
+    if (!db) {
+      showToast('Supabase non configurato.', 'danger');
+      return;
+    }
+    const { data, error } = await db.storage
+      .from(TASK_ATTACHMENTS_BUCKET)
+      .download(attachment.path);
+    if (error || !data) {
+      showToast(`Download fallito: ${error?.message || 'file non trovato'}`, 'danger');
+      return;
+    }
+    const url = URL.createObjectURL(data);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = attachment.name;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, [db, showToast]);
+
+  const removeTaskAttachment = useCallback(async (
+    ideaId: string,
+    attachment: TaskAttachment,
+  ): Promise<void> => {
+    if (!db) {
+      showToast('Supabase non configurato.', 'danger');
+      return;
+    }
+    const { error } = await db.storage
+      .from(TASK_ATTACHMENTS_BUCKET)
+      .remove([attachment.path]);
+    if (error) {
+      showToast(`Rimozione fallita: ${error.message}`, 'danger');
+      return;
+    }
+    const nextIdeas = ideas.map((item) => (
+      item.id === ideaId
+        ? { ...item, attachments: (item.attachments || []).filter((value) => value.id !== attachment.id) }
+        : item
+    ));
+    setIdeas(nextIdeas);
+    await persistIdeasNow(nextIdeas);
+    showToast('Documento rimosso.', 'info');
+  }, [db, ideas, persistIdeasNow, showToast]);
 
   const saveTask = useCallback(async (
     input: Partial<ClientTask> & { title: string; clientId: string },
@@ -750,53 +859,8 @@ export function CrmProvider({ children }: CrmProviderProps) {
       if (!db) {
         throw new Error('Supabase non configurato. Imposta le variabili NEXT_PUBLIC_SUPABASE_* su Vercel o in .env.local.');
       }
-      const revField = getRevenueFieldForImportYear(importYear);
-    let nextClients = [...clients];
-    let clientUpdated = 0;
-    let clientAdded = 0;
-    let clientSkipped = 0;
-    parsedClients.forEach((imported) => {
-      const existingIdx = nextClients.findIndex(
-        (c) => c.name.toLowerCase() === imported.name.toLowerCase(),
-      );
-      if (existingIdx > -1) {
-        const existing = nextClients[existingIdx];
-        const currentRevenue = existing[revField];
-        if (!hasExcelRevenueDifference(currentRevenue, imported.revenue)) {
-          clientSkipped += 1;
-          return;
-        }
-        existing[revField] = imported.revenue;
-        existing.isColdClient = false;
-        if (existing.relationship !== 'Perso' && existing.relationship !== 'Eliminato') {
-          existing.manualRelationship = false;
-        }
-        nextClients[existingIdx] = existing;
-        clientUpdated += 1;
-        return;
-      }
-      nextClients.push({
-        id: createUniqueId('client'),
-        name: imported.name,
-        type: 'Cliente Diretto',
-        owner: 'Jeck',
-        clientOrigin: '',
-        relationship: 'Nuovo Cliente',
-        manualRelationship: false,
-        rev2025: revField === 'rev2025' ? imported.revenue : 0,
-        rev2026: revField === 'rev2026' ? imported.revenue : 0,
-        action: `${EXCEL_IMPORT_ACTION_PREFIX} (${imported.recordCount} record uniti)`,
-        actionDate: DEFAULT_ACTION_DATE,
-        email: '',
-        description: `${EXCEL_IMPORT_DESC_PREFIX}. Completa contatti, azione e note.`,
-        contacts: [],
-        productOffers: resolveClientProductOffers('Cliente Diretto', []),
-        needsProfileCompletion: true,
-        isColdClient: false,
-      });
-      clientAdded += 1;
-    });
-    nextClients = recalculateRelationships(nextClients);
+      const clientMerge = mergeClientsWithExcelImport(clients, parsedClients, importYear);
+    let nextClients = recalculateRelationships(clientMerge.merged);
     nextClients = reconcileImportedClientsToMainList(nextClients);
     const okrMerge = mergeOkrRecordsWithImport(okrRecords, newOkrRecords, nextClients);
     await persistClientsNow(nextClients);
@@ -816,7 +880,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
     setOkrRecords(linkedOkr);
     setIsSupabaseConnected(true);
     showToast(
-      `Import ${importYear} salvato su Supabase: ${clientAdded} nuovi, ${clientUpdated} aggiornati, ${clientSkipped} invariati. OKR +${okrMerge.addedCount}, aggiornati ${okrMerge.updatedCount}.`,
+      `Import ${importYear}: ${clientMerge.addedCount} clienti in bozza, ${clientMerge.preservedCount} profili protetti, ${clientMerge.updatedCount} bozze aggiornate. OKR +${okrMerge.addedCount} nuovi, ${okrMerge.skippedCount} già presenti.`,
       'success',
     );
     } catch (error) {
@@ -955,6 +1019,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
     dailyRecallItems: filterValidRecallItems(dailyRecallItems, clients),
     recallFilterStatus,
     totalRevenue2026,
+    currentOwner,
     showToast,
     toasts,
     dismissToast,
@@ -968,6 +1033,9 @@ export function CrmProvider({ children }: CrmProviderProps) {
     saveIdea,
     deleteIdea,
     moveIdeaStatus,
+    uploadTaskAttachment,
+    downloadTaskAttachment,
+    removeTaskAttachment,
     saveTask,
     deleteTask,
     toggleTaskCompleted,

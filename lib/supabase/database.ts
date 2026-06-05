@@ -9,6 +9,7 @@ import type {
   Idea,
   OkrRecord,
   RecallItem,
+  TaskAttachment,
 } from '@/lib/types/crm';
 import { ANALYSIS_YEAR, PREVIOUS_ANALYSIS_YEAR, isOwner } from '@/lib/constants/crm';
 import { isClientOrigin } from '@/lib/crm/client-origin';
@@ -58,6 +59,25 @@ function normalizeContactsArray(
     }];
   }
   return [];
+}
+
+function normalizeTaskAttachments(value: unknown): TaskAttachment[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((attachment): attachment is Partial<TaskAttachment> => (
+      typeof attachment === 'object' &&
+      attachment !== null &&
+      typeof attachment.name === 'string' &&
+      typeof attachment.path === 'string'
+    ))
+    .map((attachment) => ({
+      id: attachment.id || `attachment-${Date.now()}`,
+      name: attachment.name || 'Documento',
+      path: attachment.path || '',
+      size: Number(attachment.size) || 0,
+      type: attachment.type || 'application/octet-stream',
+      uploadedAt: attachment.uploadedAt || new Date().toISOString(),
+    }));
 }
 
 function clientToRow(client: Client): ClientRow {
@@ -154,6 +174,7 @@ export async function fetchIdeas(db: SupabaseClient): Promise<Idea[]> {
     assignees: Array.isArray(row.assignees)
       ? row.assignees.filter((value: unknown): value is Idea['assignees'][number] => isOwner(value))
       : [],
+    attachments: normalizeTaskAttachments(row.attachments),
   }));
 }
 
@@ -181,6 +202,7 @@ export async function persistIdeas(db: SupabaseClient, allIdeas: Idea[]): Promis
     item_type: idea.itemType || 'idea',
     due_date: idea.dueDate || null,
     assignees: idea.assignees || [],
+    attachments: idea.attachments || [],
   }));
   if (rows.length === 0) {
     const { error } = await db.from('ideas').delete().neq('id', '');

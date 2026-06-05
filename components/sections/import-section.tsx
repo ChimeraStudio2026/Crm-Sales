@@ -12,7 +12,7 @@ import {
   parseExcelImportBufferWithYear,
   type ExcelImportParseResult,
 } from '@/lib/crm/excel';
-import { formatCurrency, hasExcelRevenueDifference } from '@/lib/crm/utils';
+import { formatCurrency, hasExcelRevenueDifference, shouldPreserveClientOnImport } from '@/lib/crm/utils';
 import { useCrm } from '@/providers/crm-provider';
 import { TopHeader } from '@/components/layout/top-header';
 import type { ParsedExcelClient } from '@/lib/types/crm';
@@ -135,7 +135,7 @@ export function ImportSection() {
                     ))}
                   </select>
                   <p className="import-preview-note">
-                    Aggiorna solo i valori diversi da quelli già presenti. I dati esistenti non vengono sovrascritti se invariati.
+                    I clienti già completi (contatti + azione) restano intatti. Vengono aggiunti solo OKR nuovi e clienti nuovi in bozza.
                   </p>
                 </div>
                 <div className="import-preview-wrapper">
@@ -153,11 +153,14 @@ export function ImportSection() {
                         const existing = clients.find(
                           (c) => c.name.toLowerCase() === imported.name.toLowerCase(),
                         );
-                        let statusLabel = 'Nuovo';
+                        let statusLabel = 'Nuovo (bozza)';
                         let statusClass = 'import-status-new';
                         if (existing) {
-                          if (hasExcelRevenueDifference(existing[revenueField], imported.revenue)) {
-                            statusLabel = 'Aggiorna fatturato';
+                          if (shouldPreserveClientOnImport(existing)) {
+                            statusLabel = 'Protetto';
+                            statusClass = 'import-status-protected';
+                          } else if (hasExcelRevenueDifference(existing[revenueField], imported.revenue)) {
+                            statusLabel = 'Aggiorna bozza';
                             statusClass = 'import-status-update';
                           } else {
                             statusLabel = 'Invariato';

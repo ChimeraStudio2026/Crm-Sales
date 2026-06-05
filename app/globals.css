@@ -1397,6 +1397,27 @@ body.crm-col-resizing {
 .cell-origin-community { --chip-color: #9333ea; --chip-fill: #f3e8ff; }
 .cell-origin-outbound { --chip-color: #ea580c; --chip-fill: #ffedd5; }
 
+.cold-action-cell {
+    min-width: 240px;
+}
+
+.cold-action-input {
+    width: 100%;
+    min-height: 34px;
+    padding: 7px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    font-size: 0.82rem;
+}
+
+.cold-action-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px var(--primary-glow);
+    outline: none;
+}
+
 /* Data azione scaduta */
 .table-cell-chip.cell-date-stale {
     --chip-color: #dc2626;
@@ -1864,6 +1885,12 @@ body.drawer-open {
     border: 1px solid var(--border-color);
 }
 
+.import-status-protected {
+    color: #166534;
+    background: #ecfdf5;
+    border: 1px solid rgba(15, 194, 123, 0.25);
+}
+
 /* ==========================================================================
    NOTIFICATIONS / TOAST
    ========================================================================== */
@@ -2307,6 +2334,241 @@ body.drawer-open {
     background: rgba(239, 68, 68, 0.15);
     color: var(--danger);
     border-color: rgba(239, 68, 68, 0.3);
+}
+
+.task-view-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    background: var(--bg-card);
+}
+
+.task-view-toggle-btn {
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.task-view-toggle-btn.is-active {
+    color: #fff;
+    background: var(--text-primary);
+}
+
+.task-row-card {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.task-row-summary {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+}
+
+.task-expand-toggle {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.task-row-card.is-expanded .task-expand-toggle svg,
+.tasks-asana-title svg.is-expanded {
+    transform: rotate(90deg);
+}
+
+.task-row-title {
+    min-width: 0;
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.task-inline-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.task-status-pill,
+.task-deadline-input {
+    min-height: 32px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--border-color);
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    background: var(--bg-card);
+}
+
+.task-status-da-fare {
+    color: #b91c1c;
+    background: #fee2e2;
+    border-color: rgba(239, 68, 68, 0.28);
+}
+
+.task-status-in-progress {
+    color: #92400e;
+    background: #fef3c7;
+    border-color: rgba(245, 158, 11, 0.3);
+}
+
+.task-status-fatto {
+    color: #166534;
+    background: #dcfce7;
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.task-expand-body {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 0 12px 14px 50px;
+}
+
+.task-expand-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.task-expand-meta span,
+.task-attachments-empty {
+    padding: 6px 9px;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    background: var(--bg-hover);
+}
+
+.task-expand-description {
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+.task-attachments {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.task-attachments-header,
+.task-attachment-item,
+.task-expanded-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.task-attachment-upload {
+    position: relative;
+    overflow: hidden;
+}
+
+.task-attachment-upload input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.task-attachment-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.task-attachment-item {
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-card);
+    font-size: 0.85rem;
+}
+
+.task-attachment-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.tasks-asana-list {
+    padding: 0;
+    overflow: hidden;
+}
+
+.tasks-asana-header,
+.tasks-asana-row {
+    display: grid;
+    grid-template-columns: minmax(220px, 1.5fr) minmax(220px, 1fr) minmax(140px, 0.7fr) minmax(180px, 1fr);
+    gap: 12px;
+    align-items: center;
+}
+
+.tasks-asana-header {
+    padding: 12px 16px;
+    background: var(--bg-hover);
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-muted);
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.tasks-asana-row {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    font-size: 0.86rem;
+}
+
+.tasks-asana-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    color: var(--text-primary);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.tasks-asana-title span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tasks-asana-expanded {
+    grid-column: 1 / -1;
+    padding-top: 10px;
 }
 
 /* Category badging inside cards */

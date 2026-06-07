@@ -261,12 +261,15 @@ export function CrmProvider({ children }: CrmProviderProps) {
   ) => {
     if (!db) return;
     const year = forecastYear ?? analysisYear;
-    const forecasts = nextForecasts ?? forecastsByYear[year] ?? createDefaultForecasts();
-    await upsertOkrRecords(db, nextOkr ?? okrRecords);
-    await persistAnalysisForecasts(db, forecasts, year);
-    setForecastsByYear((prev) => ({ ...prev, [year]: forecasts }));
+    if (nextOkr !== undefined) {
+      await upsertOkrRecords(db, nextOkr);
+    }
+    if (nextForecasts !== undefined) {
+      await persistAnalysisForecasts(db, nextForecasts, year);
+      setForecastsByYear((prev) => ({ ...prev, [year]: nextForecasts }));
+    }
     setIsSupabaseConnected(true);
-  }, [analysisYear, db, forecastsByYear, okrRecords]);
+  }, [analysisYear, db]);
 
   const loadDailyRecall = useCallback(async (): Promise<RecallItem[]> => {
     const today = getTodayString();
@@ -765,20 +768,36 @@ export function CrmProvider({ children }: CrmProviderProps) {
     value: number,
     product?: string,
   ) => {
-    const current = forecastsByYear[analysisYear] ?? createDefaultForecasts();
-    const next = { ...current };
-    if (!next[scope]) next[scope] = { totalForecast: 0, productPct: {} };
-    if (field === 'totalForecast') {
-      next[scope] = { ...next[scope], totalForecast: value };
-    } else if (product) {
-      next[scope] = {
-        ...next[scope],
-        productPct: { ...next[scope].productPct, [product]: value },
-      };
+    if (!db) {
+      showToast('Supabase non configurato.', 'warning');
+      return;
     }
-    setForecastsByYear((prev) => ({ ...prev, [analysisYear]: next }));
-    await persistAnalysisNow(okrRecords, next, analysisYear);
-  }, [analysisYear, forecastsByYear, okrRecords, persistAnalysisNow]);
+    let nextForecasts: AnalysisForecasts | null = null;
+    setForecastsByYear((prev) => {
+      const current = prev[analysisYear] ?? createDefaultForecasts();
+      const next = { ...current };
+      if (!next[scope]) next[scope] = { totalForecast: 0, productPct: {} };
+      if (field === 'totalForecast') {
+        next[scope] = { ...next[scope], totalForecast: value };
+      } else if (product) {
+        next[scope] = {
+          ...next[scope],
+          productPct: { ...next[scope].productPct, [product]: value },
+        };
+      }
+      nextForecasts = next;
+      return { ...prev, [analysisYear]: next };
+    });
+    if (!nextForecasts) return;
+    try {
+      await persistAnalysisNow(undefined, nextForecasts, analysisYear);
+    } catch (error) {
+      showToast(
+        `Errore salvataggio previsioni: ${error instanceof Error ? error.message : 'errore'}`,
+        'danger',
+      );
+    }
+  }, [analysisYear, db, persistAnalysisNow, showToast]);
 
   const handleSetAnalysisYear = useCallback((year: number) => {
     if (year !== PREVIOUS_ANALYSIS_YEAR && year !== ANALYSIS_YEAR) return;

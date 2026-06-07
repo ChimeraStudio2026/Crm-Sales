@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { BarChart3, ChevronRight, Layers } from 'lucide-react';
 import {
   ANALYSIS_SCOPES,
@@ -19,6 +20,55 @@ import { TopHeader } from '@/components/layout/top-header';
 import { OkrYearComparisonPanel } from '@/components/analysis/okr-year-comparison-panel';
 import { OkrClientComparisonPanel } from '@/components/analysis/okr-client-comparison-panel';
 import { useCrm } from '@/providers/crm-provider';
+
+function AnalysisNumberInput({
+  value,
+  className,
+  min,
+  max,
+  step,
+  placeholder,
+  onSave,
+}: {
+  value: number;
+  className: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  placeholder?: string;
+  onSave: (value: number) => void;
+}) {
+  const [draft, setDraft] = useState(value ? String(value) : '');
+
+  useEffect(() => {
+    setDraft(value ? String(value) : '');
+  }, [value]);
+
+  const commitValue = (): void => {
+    const parsed = parseFloat(draft);
+    const nextValue = Number.isFinite(parsed) ? parsed : 0;
+    onSave(nextValue);
+  };
+
+  return (
+    <input
+      type="number"
+      className={className}
+      value={draft}
+      min={min}
+      max={max}
+      step={step}
+      placeholder={placeholder}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={commitValue}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') {
+          event.currentTarget.blur();
+        }
+      }}
+    />
+  );
+}
 
 function ScopeContent({
   scopeId,
@@ -57,15 +107,14 @@ function ScopeContent({
         </div>
         <div className="analysis-kpi-card">
           <span className="analysis-kpi-label">Previsione</span>
-          <input
-            type="number"
+          <AnalysisNumberInput
             className="analysis-forecast-input"
-            value={forecastScope.totalForecast || ''}
+            value={forecastScope.totalForecast || 0}
             min={0}
             step={100}
             placeholder="0"
-            onChange={(e) => {
-              void setAnalysisForecast(scopeId, 'totalForecast', parseFloat(e.target.value) || 0);
+            onSave={(nextValue) => {
+              void setAnalysisForecast(scopeId, 'totalForecast', nextValue);
             }}
           />
           <span className="analysis-kpi-hint">Inserimento manuale</span>
@@ -100,20 +149,14 @@ function ScopeContent({
                   <td className="analysis-num">{formatCurrency(row.revenue)}</td>
                   <td className="analysis-num">{formatPctPlain(row.revenuePct)}</td>
                   <td className="analysis-num">
-                    <input
-                      type="number"
+                    <AnalysisNumberInput
                       className="analysis-pct-input"
-                      value={row.forecastPct || ''}
+                      value={row.forecastPct || 0}
                       min={0}
                       max={100}
                       step={0.01}
-                      onChange={(e) => {
-                        void setAnalysisForecast(
-                          scopeId,
-                          'productPct',
-                          parseFloat(e.target.value) || 0,
-                          row.category,
-                        );
+                      onSave={(nextValue) => {
+                        void setAnalysisForecast(scopeId, 'productPct', nextValue, row.category);
                       }}
                     />
                     %

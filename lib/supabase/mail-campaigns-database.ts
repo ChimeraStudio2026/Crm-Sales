@@ -134,6 +134,14 @@ export async function persistMailCampaigns(
   if (error) throw error;
 }
 
+export async function deleteMailCampaignContact(
+  db: SupabaseClient,
+  campaignContactId: string,
+): Promise<void> {
+  const { error } = await db.from('mail_campaign_contacts').delete().eq('id', campaignContactId);
+  if (error) throw error;
+}
+
 export async function deleteMailCampaign(
   db: SupabaseClient,
   campaignId: string,

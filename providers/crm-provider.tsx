@@ -191,6 +191,7 @@ interface CrmContextValue {
   saveMailCampaign: (input: Partial<MailCampaign> & { name: string }, steps?: MailCampaignStep[]) => Promise<string>;
   deleteMailCampaignById: (campaignId: string) => Promise<void>;
   addContactsToCampaign: (campaignId: string, refs: MailCampaignContactRef[]) => Promise<void>;
+  removeContactFromCampaign: (campaignContactId: string) => Promise<void>;
   updateCampaignContactStatus: (campaignContactId: string, status: MailCampaignContactStatus) => Promise<void>;
   updateCampaignContactNotes: (campaignContactId: string, outcomeNotes: string) => Promise<void>;
   updateMailSendStatus: (trackingId: string, sendStatus: MailSendStatus) => Promise<void>;
@@ -1180,6 +1181,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
     saveMailCampaign: mailCampaignActions.saveMailCampaign,
     deleteMailCampaignById: mailCampaignActions.deleteMailCampaignById,
     addContactsToCampaign: mailCampaignActions.addContactsToCampaign,
+    removeContactFromCampaign: mailCampaignActions.removeContactFromCampaign,
     updateCampaignContactStatus: mailCampaignActions.updateCampaignContactStatus,
     updateCampaignContactNotes: mailCampaignActions.updateCampaignContactNotes,
     updateMailSendStatus: mailCampaignActions.updateMailSendStatus,

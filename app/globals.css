@@ -5769,6 +5769,15 @@ body:has(.drawer.open) .jonny-chat-root {
     min-width: 120px;
 }
 
+.mail-col-actions {
+    width: 48px;
+    text-align: center;
+}
+
+.mail-remove-contact-btn {
+    padding: 4px 6px;
+}
+
 .mail-contact-sub {
     display: block;
     color: var(--text-secondary);
@@ -5862,10 +5871,8 @@ body:has(.drawer.open) .jonny-chat-root {
     margin-bottom: 14px;
 }
 
-.mail-picker-cold-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
+.mail-picker-hint {
+    margin: 0 0 12px;
     font-size: 0.84rem;
     color: var(--text-secondary);
 }

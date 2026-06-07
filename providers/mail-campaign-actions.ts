@@ -13,6 +13,7 @@ import type {
 } from '@/lib/types/mail-campaigns';
 import {
   deleteMailCampaign,
+  deleteMailCampaignContact,
   persistMailCampaignContacts,
   persistMailCampaigns,
   persistMailCampaignSteps,
@@ -205,6 +206,21 @@ export function createMailCampaignActions(
     deps.showToast(`${newContacts.length} contatti aggiunti alla campagna.`, 'success');
   };
 
+  const removeContactFromCampaign = async (campaignContactId: string): Promise<void> => {
+    const state = getState();
+    if (deps.db) await deleteMailCampaignContact(deps.db, campaignContactId);
+    await applyState({
+      ...state,
+      mailCampaignContacts: state.mailCampaignContacts.filter(
+        (contact) => contact.id !== campaignContactId,
+      ),
+      mailCampaignSendTracking: state.mailCampaignSendTracking.filter(
+        (item) => item.campaignContactId !== campaignContactId,
+      ),
+    });
+    deps.showToast('Contatto rimosso dalla campagna.', 'info');
+  };
+
   const updateCampaignContactStatus = async (
     campaignContactId: string,
     status: MailCampaignContactStatus,
@@ -273,6 +289,7 @@ export function createMailCampaignActions(
     saveMailCampaign,
     deleteMailCampaignById,
     addContactsToCampaign,
+    removeContactFromCampaign,
     updateCampaignContactStatus,
     updateCampaignContactNotes,
     updateMailSendStatus,

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
-import { flattenClientContacts, filterEligibleClientsForCampaign } from '@/lib/mail-campaigns/index';
+import { flattenClientContacts, getCampaignEligibleClients } from '@/lib/mail-campaigns/index';
 import { RELATIONSHIPS } from '@/lib/constants/crm';
 import { useCrm } from '@/providers/crm-provider';
 import type { MailCampaignContact, MailCampaignContactRef } from '@/lib/types/mail-campaigns';
@@ -22,7 +22,6 @@ export function CampaignContactPicker({
   const { clients } = useCrm();
   const [search, setSearch] = useState('');
   const [relationshipFilter, setRelationshipFilter] = useState('');
-  const [includeCold, setIncludeCold] = useState(true);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
 
   const existingKeys = useMemo(
@@ -31,8 +30,8 @@ export function CampaignContactPicker({
   );
 
   const eligibleClients = useMemo(
-    () => filterEligibleClientsForCampaign(clients, includeCold),
-    [clients, includeCold],
+    () => getCampaignEligibleClients(clients),
+    [clients],
   );
 
   const rows = useMemo(() => {
@@ -103,18 +102,13 @@ export function CampaignContactPicker({
                 <option key={item} value={item}>{item}</option>
               ))}
             </select>
-            <label className="mail-picker-cold-toggle">
-              <input
-                type="checkbox"
-                checked={includeCold}
-                onChange={(e) => setIncludeCold(e.target.checked)}
-              />
-              <span>Includi clienti freddi</span>
-            </label>
             <button type="button" className="btn btn-secondary btn-sm" onClick={selectAllVisible}>
-              Seleziona visibili ({rows.length})
+              Seleziona tutti ({rows.length})
             </button>
           </div>
+          <p className="mail-picker-hint">
+            Tutti i clienti attivi sono disponibili, inclusi quelli freddi e con qualsiasi rapporto.
+          </p>
           <div className="mail-picker-list">
             {rows.length === 0 ? (
               <p className="mail-campaigns-empty">Nessun contatto disponibile con i filtri attuali.</p>

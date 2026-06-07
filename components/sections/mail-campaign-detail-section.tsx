@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, ArrowLeft, Copy, ExternalLink, Plus, Search } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Copy, ExternalLink, Plus, Search, Trash2 } from 'lucide-react';
 import {
   buildConversionByRelationship,
   formatSentDate,
@@ -49,6 +49,7 @@ export function MailCampaignDetailSection({ campaignId }: MailCampaignDetailSect
     mailCampaignContacts,
     mailCampaignSendTracking,
     addContactsToCampaign,
+    removeContactFromCampaign,
     updateCampaignContactStatus,
     updateCampaignContactNotes,
     markMailSentToday,
@@ -163,12 +164,13 @@ export function MailCampaignDetailSection({ campaignId }: MailCampaignDetailSect
                     ))}
                     <th className="mail-col-status">Stato Finale</th>
                     <th className="mail-col-notes">Note / Esito</th>
+                    <th className="mail-col-actions" aria-label="Azioni" />
                   </tr>
                 </thead>
                 <tbody>
                   {contacts.length === 0 ? (
                     <tr>
-                      <td colSpan={steps.length + 4} className="mail-campaigns-empty">
+                      <td colSpan={steps.length + 5} className="mail-campaigns-empty">
                         Nessun contatto in campagna. Usa &quot;Aggiungi Contatti&quot; per iniziare.
                       </td>
                     </tr>
@@ -247,6 +249,20 @@ export function MailCampaignDetailSection({ campaignId }: MailCampaignDetailSect
                               onChange={(e) => scheduleNotesSave(campaignContact.id, e.target.value)}
                               onBlur={(e) => void updateCampaignContactNotes(campaignContact.id, e.target.value)}
                             />
+                          </td>
+                          <td className="mail-col-actions">
+                            <button
+                              type="button"
+                              className="btn btn-secondary btn-sm mail-remove-contact-btn"
+                              title="Rimuovi dalla campagna"
+                              onClick={() => {
+                                if (window.confirm('Rimuovere questo contatto dalla campagna?')) {
+                                  void removeContactFromCampaign(campaignContact.id);
+                                }
+                              }}
+                            >
+                              <Trash2 size={14} />
+                            </button>
                           </td>
                         </tr>
                       );

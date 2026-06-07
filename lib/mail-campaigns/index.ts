@@ -187,13 +187,12 @@ export function flattenClientContacts(clients: Client[]): {
       ? client.contacts
       : [{ id: `legacy-${client.id}`, name: '', email: client.email || '', role: '' }];
     contacts.forEach((contact) => {
-      if (!contact.name.trim() && !contact.email.trim()) return;
       rows.push({
         clientId: client.id,
         contactId: contact.id,
         clientName: client.name,
-        contactName: contact.name || '—',
-        contactEmail: contact.email || '',
+        contactName: contact.name.trim() || client.name,
+        contactEmail: contact.email.trim() || client.email || '',
         relationshipLabel,
       });
     });
@@ -201,13 +200,6 @@ export function flattenClientContacts(clients: Client[]): {
   return rows.sort((a, b) => a.clientName.localeCompare(b.clientName, 'it'));
 }
 
-export function filterEligibleClientsForCampaign(
-  clients: Client[],
-  includeCold: boolean,
-): Client[] {
-  return clients.filter((client) => {
-    if (client.relationship === 'Eliminato') return false;
-    if (includeCold) return true;
-    return !isClientInColdSection(client);
-  });
+export function getCampaignEligibleClients(clients: Client[]): Client[] {
+  return clients.filter((client) => client.relationship !== 'Eliminato');
 }

@@ -8,6 +8,7 @@ import {
   FileSpreadsheet,
   Lightbulb,
   LogOut,
+  Mail,
   Menu,
   PhoneCall,
   Settings,
@@ -24,6 +25,7 @@ import { useUiPreferences } from '@/providers/ui-preferences-provider';
 const ICON_MAP: Record<string, LucideIcon> = {
   BarChart3,
   Users,
+  Mail,
   CheckSquare,
   PhoneCall,
   Lightbulb,

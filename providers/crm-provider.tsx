@@ -32,6 +32,20 @@ import {
   resolveOwnerFromEmail,
 } from '@/lib/constants/crm';
 import { createDefaultForecasts } from '@/lib/analysis/index';
+import type {
+  MailCampaign,
+  MailCampaignContact,
+  MailCampaignContactRef,
+  MailCampaignContactStatus,
+  MailCampaignSendTracking,
+  MailCampaignStep,
+  MailSendStatus,
+} from '@/lib/types/mail-campaigns';
+import {
+  clearMailCampaignData,
+  fetchMailCampaignData,
+} from '@/lib/supabase/mail-campaigns-database';
+import { createMailCampaignActions } from '@/providers/mail-campaign-actions';
 import {
   parseExcelImportBuffer,
   type ExcelImportParseResult,
@@ -170,6 +184,18 @@ interface CrmContextValue {
     forecastYear?: number,
   ) => Promise<void>;
   loadDailyRecall: () => Promise<RecallItem[]>;
+  mailCampaigns: MailCampaign[];
+  mailCampaignSteps: MailCampaignStep[];
+  mailCampaignContacts: MailCampaignContact[];
+  mailCampaignSendTracking: MailCampaignSendTracking[];
+  saveMailCampaign: (input: Partial<MailCampaign> & { name: string }, steps?: MailCampaignStep[]) => Promise<string>;
+  deleteMailCampaignById: (campaignId: string) => Promise<void>;
+  addContactsToCampaign: (campaignId: string, refs: MailCampaignContactRef[]) => Promise<void>;
+  updateCampaignContactStatus: (campaignContactId: string, status: MailCampaignContactStatus) => Promise<void>;
+  updateCampaignContactNotes: (campaignContactId: string, outcomeNotes: string) => Promise<void>;
+  updateMailSendStatus: (trackingId: string, sendStatus: MailSendStatus) => Promise<void>;
+  markMailSentToday: (trackingId: string) => Promise<void>;
+  saveCampaignSteps: (campaignId: string, steps: MailCampaignStep[]) => Promise<void>;
 }
 
 const CrmContext = createContext<CrmContextValue | null>(null);
@@ -206,6 +232,23 @@ export function CrmProvider({ children }: CrmProviderProps) {
   const [recallFilterStatus, setRecallFilterStatus] = useState('');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [currentOwner, setCurrentOwner] = useState<Owner | null>(null);
+  const [mailCampaigns, setMailCampaigns] = useState<MailCampaign[]>([]);
+  const [mailCampaignSteps, setMailCampaignSteps] = useState<MailCampaignStep[]>([]);
+  const [mailCampaignContacts, setMailCampaignContacts] = useState<MailCampaignContact[]>([]);
+  const [mailCampaignSendTracking, setMailCampaignSendTracking] = useState<MailCampaignSendTracking[]>([]);
+
+  const mailCampaignStateRef = useRef({
+    mailCampaigns,
+    mailCampaignSteps,
+    mailCampaignContacts,
+    mailCampaignSendTracking,
+  });
+  mailCampaignStateRef.current = {
+    mailCampaigns,
+    mailCampaignSteps,
+    mailCampaignContacts,
+    mailCampaignSendTracking,
+  };
 
   const supabaseConfigured = isSupabaseConfigured();
   const db = useMemo(() => createBrowserSupabaseClient(), []);
@@ -223,6 +266,21 @@ export function CrmProvider({ children }: CrmProviderProps) {
   const dismissToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
+
+  const mailCampaignActions = useMemo(
+    () => createMailCampaignActions(
+      {
+        db,
+        setMailCampaigns,
+        setMailCampaignSteps,
+        setMailCampaignContacts,
+        setMailCampaignSendTracking,
+        showToast,
+      },
+      () => mailCampaignStateRef.current,
+    ),
+    [db, showToast],
+  );
 
   const persistClientsNow = useCallback(async (nextClients?: Client[]) => {
     const data = nextClients ?? clients;
@@ -334,12 +392,13 @@ export function CrmProvider({ children }: CrmProviderProps) {
         return;
       }
       try {
-        const [loadedClients, loadedIdeas, loadedTasks, loadedOkr, loadedForecasts] = await Promise.all([
+        const [loadedClients, loadedIdeas, loadedTasks, loadedOkr, loadedForecasts, loadedMailCampaigns] = await Promise.all([
           fetchClients(db),
           fetchIdeas(db),
           fetchClientTasks(db),
           fetchAllOkrRecords(db),
           fetchAllAnalysisForecasts(db),
+          fetchMailCampaignData(db),
         ]);
         let normalized = normalizeClients(loadedClients);
         normalized = reconcileImportedClientsToMainList(normalized);
@@ -352,6 +411,10 @@ export function CrmProvider({ children }: CrmProviderProps) {
         if (Object.keys(loadedForecasts).length > 0) {
           setForecastsByYear(loadedForecasts);
         }
+        setMailCampaigns(loadedMailCampaigns.campaigns);
+        setMailCampaignSteps(loadedMailCampaigns.steps);
+        setMailCampaignContacts(loadedMailCampaigns.contacts);
+        setMailCampaignSendTracking(loadedMailCampaigns.tracking);
       } catch (reloadError) {
         console.error('Jonny reload failed:', reloadError);
       }
@@ -383,12 +446,13 @@ export function CrmProvider({ children }: CrmProviderProps) {
         if (db) {
           const status = await testSupabaseConnection(db);
           if (!status.ok) throw new Error(status.message);
-          const [loadedClients, loadedIdeas, loadedTasks, loadedOkr, loadedForecasts] = await Promise.all([
+          const [loadedClients, loadedIdeas, loadedTasks, loadedOkr, loadedForecasts, loadedMailCampaigns] = await Promise.all([
             fetchClients(db),
             fetchIdeas(db),
             fetchClientTasks(db),
             fetchAllOkrRecords(db),
             fetchAllAnalysisForecasts(db),
+            fetchMailCampaignData(db),
           ]);
           let normalized = normalizeClients(loadedClients);
           normalized = reconcileImportedClientsToMainList(normalized);
@@ -401,6 +465,10 @@ export function CrmProvider({ children }: CrmProviderProps) {
           if (Object.keys(loadedForecasts).length > 0) {
             setForecastsByYear(loadedForecasts);
           }
+          setMailCampaigns(loadedMailCampaigns.campaigns);
+          setMailCampaignSteps(loadedMailCampaigns.steps);
+          setMailCampaignContacts(loadedMailCampaigns.contacts);
+          setMailCampaignSendTracking(loadedMailCampaigns.tracking);
           setIsSupabaseConnected(true);
           await refreshApolloStatus();
         } else {
@@ -927,11 +995,18 @@ export function CrmProvider({ children }: CrmProviderProps) {
   }, []);
 
   const resetAllData = useCallback(async () => {
-    if (db) await clearAllData(db);
+    if (db) {
+      await clearAllData(db);
+      await clearMailCampaignData(db);
+    }
     setClients([]);
     setIdeas([]);
     setClientTasks([]);
     setOkrRecords([]);
+    setMailCampaigns([]);
+    setMailCampaignSteps([]);
+    setMailCampaignContacts([]);
+    setMailCampaignSendTracking([]);
     setForecastsByYear({
       [PREVIOUS_ANALYSIS_YEAR]: createDefaultForecasts(),
       [ANALYSIS_YEAR]: createDefaultForecasts(),
@@ -1098,6 +1173,18 @@ export function CrmProvider({ children }: CrmProviderProps) {
     persistTasksNow,
     persistAnalysisNow,
     loadDailyRecall,
+    mailCampaigns,
+    mailCampaignSteps,
+    mailCampaignContacts,
+    mailCampaignSendTracking,
+    saveMailCampaign: mailCampaignActions.saveMailCampaign,
+    deleteMailCampaignById: mailCampaignActions.deleteMailCampaignById,
+    addContactsToCampaign: mailCampaignActions.addContactsToCampaign,
+    updateCampaignContactStatus: mailCampaignActions.updateCampaignContactStatus,
+    updateCampaignContactNotes: mailCampaignActions.updateCampaignContactNotes,
+    updateMailSendStatus: mailCampaignActions.updateMailSendStatus,
+    markMailSentToday: mailCampaignActions.markMailSentToday,
+    saveCampaignSteps: mailCampaignActions.saveCampaignSteps,
   };
 
   return <CrmContext.Provider value={value}>{children}</CrmContext.Provider>;

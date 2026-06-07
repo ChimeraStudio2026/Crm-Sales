@@ -134,6 +134,7 @@ export const EXCEL_IMPORT_DESC_PREFIX = 'Cliente creato da import Excel';
 export const NAV_ITEMS = [
   { href: '/analysis', label: 'Analisi', icon: 'BarChart3' },
   { href: '/clients', label: 'Lista Clienti', icon: 'Users' },
+  { href: '/campaigns', label: 'Campagne Mail', icon: 'Mail' },
   { href: '/ideas', label: 'Task & Idee', icon: 'Lightbulb' },
   { href: '/recall', label: 'Random Recall', icon: 'PhoneCall' },
   { href: '/cold', label: 'Clienti Freddi', icon: 'Snowflake' },
@@ -144,6 +145,7 @@ export const NAV_ITEMS = [
 export const PAGE_META: Record<string, { title: string; subtitle: string }> = {
   '/analysis': { title: 'Analisi', subtitle: 'OKR, previsioni e breakdown per quarter.' },
   '/clients': { title: 'Gestione Clienti', subtitle: 'Lista generica e schede clienti.' },
+  '/campaigns': { title: 'Campagne Mail', subtitle: 'Registro operativo per tracciare invii manuali e conversioni.' },
   '/ideas': { title: 'Task & Idee', subtitle: 'Kanban unificato per idee commerciali e task con deadline e owner.' },
   '/tasks': { title: 'Task & Idee', subtitle: 'Kanban unificato per idee commerciali e task con deadline e owner.' },
   '/recall': { title: 'Random Recall', subtitle: '5 clienti al giorno da ricontattare, scelti a caso per rapporto.' },

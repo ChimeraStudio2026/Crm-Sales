@@ -196,7 +196,7 @@ export function recalculateRelationships(clients: Client[]): Client[] {
     activeClientsWithRevenue2026.slice(0, top20Count).map((c) => c.id),
   );
   return clients.map((c) => {
-    if (c.manualRelationship && (c.relationship === 'Perso' || c.relationship === 'Eliminato')) {
+    if (c.manualRelationship) {
       return c;
     }
     if (top20Ids.has(c.id)) {
@@ -205,10 +205,7 @@ export function recalculateRelationships(clients: Client[]): Client[] {
     if (c.rev2025 > 15000) {
       return { ...c, relationship: 'Ricorrente' };
     }
-    if (!c.manualRelationship) {
-      return { ...c, relationship: 'Nuovo Cliente' };
-    }
-    return c;
+    return { ...c, relationship: 'Nuovo Cliente' };
   });
 }
 

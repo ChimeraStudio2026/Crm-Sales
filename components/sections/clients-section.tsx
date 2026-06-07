@@ -189,7 +189,7 @@ export function ClientsSection() {
         );
       case 'relationship':
         return (
-          <td key={columnId}>
+          <td key={columnId} onClick={(event) => event.stopPropagation()}>
             <select
               className="table-cell-select"
               value={client.relationship}

@@ -2603,6 +2603,23 @@ body.drawer-open {
     padding: 14px 16px 8px;
 }
 
+.tasks-asana-section-title-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.tasks-asana-section-subtitle {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.tasks-asana-list-empty {
+    padding: 16px;
+}
+
 .tasks-asana-section-header h3 {
     margin: 0;
     font-size: 0.95rem;

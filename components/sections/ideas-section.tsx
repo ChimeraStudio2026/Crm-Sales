@@ -26,6 +26,8 @@ function filterTasksByStatus(tasks: Idea[], statusFilter: 'all' | IdeaStatus): I
   return tasks.filter((task) => task.status === statusFilter);
 }
 
+type TaskViewMode = 'list' | 'board' | 'clients';
+
 export function IdeasSection() {
   const {
     clients,
@@ -41,7 +43,7 @@ export function IdeasSection() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | IdeaItemType>('all');
-  const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
+  const [viewMode, setViewMode] = useState<TaskViewMode>('list');
   const [taskStatusFilter, setTaskStatusFilter] = useState<'all' | IdeaStatus>('all');
   const [showForm, setShowForm] = useState(false);
   const [editIdea, setEditIdea] = useState<Idea | null>(null);
@@ -107,6 +109,23 @@ export function IdeasSection() {
     () => filteredTasks.filter((task) => task.dueDate !== todayString),
     [filteredTasks, todayString],
   );
+
+  const clientGroupedTasks = useMemo(() => {
+    const tasksWithClient = filteredTasks.filter((task) => Boolean(task.clientId));
+    const groups = new Map<string, Idea[]>();
+    tasksWithClient.forEach((task) => {
+      const current = groups.get(task.clientId) || [];
+      current.push(task);
+      groups.set(task.clientId, current);
+    });
+    return [...groups.entries()]
+      .map(([groupClientId, tasks]) => ({
+        clientId: groupClientId,
+        clientName: clients.find((client) => client.id === groupClientId)?.name || 'Cliente',
+        tasks,
+      }))
+      .sort((a, b) => a.clientName.localeCompare(b.clientName, 'it'));
+  }, [filteredTasks, clients]);
 
   const resetForm = (nextType: IdeaItemType = 'idea'): void => {
     setEditIdea(null);
@@ -391,16 +410,54 @@ export function IdeasSection() {
     );
   };
 
-  const renderTaskListSection = (title: string, tasks: Idea[]) => (
+  const renderTaskListSection = (title: string, tasks: Idea[], subtitle?: string) => (
     <div className="tasks-asana-section">
       <div className="tasks-asana-section-header">
-        <h3>{title}</h3>
+        <div className="tasks-asana-section-title-wrap">
+          <h3>{title}</h3>
+          {subtitle && <span className="tasks-asana-section-subtitle">{subtitle}</span>}
+        </div>
         <span className="tasks-asana-section-count">{tasks.length}</span>
       </div>
       {tasks.length > 0 ? (
         tasks.map((task) => renderAsanaRow(task))
       ) : (
         <p className="tasks-asana-section-empty">Nessuna task in questa sezione.</p>
+      )}
+    </div>
+  );
+
+  const renderTasksAsanaList = (sections: { id?: string; title: string; tasks: Idea[]; subtitle?: string }[]) => (
+    <div className="tasks-asana-list glass-card">
+      <div className="tasks-list-toolbar">
+        <div className="tasks-status-filters" role="group" aria-label="Filtra per stato">
+          {TASK_STATUS_FILTERS.map((filter) => (
+            <button
+              key={filter.id}
+              type="button"
+              className={`tasks-filter-btn${taskStatusFilter === filter.id ? ' is-active' : ''}`}
+              onClick={() => setTaskStatusFilter(filter.id)}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="tasks-asana-header">
+        <span>Task</span>
+        <span>Stato</span>
+        <span>Data</span>
+        <span>Owner</span>
+        <span>Cliente</span>
+      </div>
+      {sections.length > 0 ? (
+        sections.map((section) => (
+          <div key={section.id || section.title}>
+            {renderTaskListSection(section.title, section.tasks, section.subtitle)}
+          </div>
+        ))
+      ) : (
+        <p className="tasks-asana-section-empty tasks-asana-list-empty">Nessuna task con cliente associato.</p>
       )}
     </div>
   );
@@ -458,6 +515,13 @@ export function IdeasSection() {
               <div className="task-view-toggle" role="group" aria-label="Vista task">
                 <button
                   type="button"
+                  className={`task-view-toggle-btn${viewMode === 'list' ? ' is-active' : ''}`}
+                  onClick={() => setViewMode('list')}
+                >
+                  Righe
+                </button>
+                <button
+                  type="button"
                   className={`task-view-toggle-btn${viewMode === 'board' ? ' is-active' : ''}`}
                   onClick={() => setViewMode('board')}
                 >
@@ -465,10 +529,13 @@ export function IdeasSection() {
                 </button>
                 <button
                   type="button"
-                  className={`task-view-toggle-btn${viewMode === 'list' ? ' is-active' : ''}`}
-                  onClick={() => setViewMode('list')}
+                  className={`task-view-toggle-btn${viewMode === 'clients' ? ' is-active' : ''}`}
+                  onClick={() => {
+                    setViewMode('clients');
+                    if (typeFilter === 'idea') setTypeFilter('task');
+                  }}
                 >
-                  Righe
+                  Clienti
                 </button>
               </div>
               <button type="button" className="btn btn-primary" onClick={() => openNew('idea')}>
@@ -499,32 +566,19 @@ export function IdeasSection() {
                 );
               })}
             </div>
+          ) : viewMode === 'list' ? (
+            renderTasksAsanaList([
+              { title: 'Today', tasks: todayTasks },
+              { title: 'Altre task', tasks: otherTasks },
+            ])
           ) : (
-            <div className="tasks-asana-list glass-card">
-              <div className="tasks-list-toolbar">
-                <div className="tasks-status-filters" role="group" aria-label="Filtra per stato">
-                  {TASK_STATUS_FILTERS.map((filter) => (
-                    <button
-                      key={filter.id}
-                      type="button"
-                      className={`tasks-filter-btn${taskStatusFilter === filter.id ? ' is-active' : ''}`}
-                      onClick={() => setTaskStatusFilter(filter.id)}
-                    >
-                      {filter.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="tasks-asana-header">
-                <span>Task</span>
-                <span>Stato</span>
-                <span>Data</span>
-                <span>Owner</span>
-                <span>Cliente</span>
-              </div>
-              {renderTaskListSection('Today', todayTasks)}
-              {renderTaskListSection('Altre task', otherTasks)}
-            </div>
+            renderTasksAsanaList(
+              clientGroupedTasks.map(({ clientId, clientName, tasks }) => ({
+                id: clientId,
+                title: clientName,
+                tasks,
+              })),
+            )
           )}
         </section>
       </div>

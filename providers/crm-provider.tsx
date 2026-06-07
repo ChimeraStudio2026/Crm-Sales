@@ -455,6 +455,9 @@ export function CrmProvider({ children }: CrmProviderProps) {
           manualRelationship: input.manualRelationship ?? c.manualRelationship,
           actionDate: c.actionDate,
         };
+        if (input.relationship !== undefined && input.relationship !== c.relationship) {
+          updated.manualRelationship = true;
+        }
         if (trimmedAction !== undefined) {
           updated.action = trimmedAction;
           updated.actionDate = resolveActionDateOnTextChange(c.action || '', trimmedAction, c.actionDate);

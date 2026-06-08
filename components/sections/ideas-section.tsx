@@ -9,21 +9,18 @@ import { ClientSearchSelect } from '@/components/clients/client-search-select';
 import { TopHeader } from '@/components/layout/top-header';
 import type { Idea, IdeaItemType, IdeaStatus, Owner, TaskSubtask } from '@/lib/types/crm';
 
-const TASK_STATUS_FILTERS: { id: 'all' | IdeaStatus; label: string }[] = [
-  { id: 'all', label: 'Tutte' },
-  { id: 'Da fare', label: 'Da fare' },
-  { id: 'In progress', label: 'In progress' },
-  { id: 'Fatto', label: 'Fatto' },
-];
 const COLUMNS: { status: IdeaStatus; id: string; label: string; color: string }[] = [
   { status: 'Da fare', id: 'todo', label: 'Da fare', color: '#ef4444' },
   { status: 'In progress', id: 'progress', label: 'In progress', color: '#f59e0b' },
   { status: 'Fatto', id: 'done', label: 'Fatto', color: '#10b981' },
 ];
 
-function filterTasksByStatus(tasks: Idea[], statusFilter: 'all' | IdeaStatus): Idea[] {
-  if (statusFilter === 'all') return tasks;
-  return tasks.filter((task) => task.status === statusFilter);
+function excludeTasksByStatus(
+  tasks: Idea[],
+  excludedStatuses: ReadonlySet<IdeaStatus>,
+): Idea[] {
+  if (excludedStatuses.size === 0) return tasks;
+  return tasks.filter((task) => !excludedStatuses.has(task.status));
 }
 
 type TaskViewMode = 'list' | 'board' | 'clients';
@@ -44,7 +41,7 @@ export function IdeasSection() {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | IdeaItemType>('all');
   const [viewMode, setViewMode] = useState<TaskViewMode>('list');
-  const [taskStatusFilter, setTaskStatusFilter] = useState<'all' | IdeaStatus>('all');
+  const [excludedTaskStatuses, setExcludedTaskStatuses] = useState<IdeaStatus[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editIdea, setEditIdea] = useState<Idea | null>(null);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
@@ -92,13 +89,29 @@ export function IdeasSection() {
     );
   }), [ideas, clients, currentOwner, search, categoryFilter, typeFilter]);
 
-  const filteredTasks = useMemo(
-    () => filterTasksByStatus(
-      filtered.filter((idea) => idea.itemType === 'task'),
-      taskStatusFilter,
-    ),
-    [filtered, taskStatusFilter],
+  const excludedStatusSet = useMemo(
+    () => new Set(excludedTaskStatuses),
+    [excludedTaskStatuses],
   );
+
+  const filteredTasks = useMemo(
+    () => excludeTasksByStatus(
+      filtered.filter((idea) => idea.itemType === 'task'),
+      excludedStatusSet,
+    ),
+    [filtered, excludedStatusSet],
+  );
+
+  const visibleKanbanColumns = useMemo(
+    () => COLUMNS.filter((column) => !excludedStatusSet.has(column.status)),
+    [excludedStatusSet],
+  );
+
+  const toggleExcludedTaskStatus = (status: IdeaStatus): void => {
+    setExcludedTaskStatuses((prev) => (
+      prev.includes(status) ? prev.filter((item) => item !== status) : [...prev, status]
+    ));
+  };
 
   const todayString = getTodayString();
   const todayTasks = useMemo(
@@ -427,22 +440,39 @@ export function IdeasSection() {
     </div>
   );
 
+  const renderTaskStatusFilters = () => (
+    <div className="tasks-list-toolbar glass-card">
+      <div className="tasks-status-filters" role="group" aria-label="Escludi stati">
+        <span className="tasks-filter-label">Nascondi:</span>
+        {COLUMNS.map((column) => {
+          const isExcluded = excludedStatusSet.has(column.status);
+          return (
+            <button
+              key={column.status}
+              type="button"
+              aria-pressed={isExcluded}
+              className={`tasks-filter-btn${isExcluded ? ' is-excluded' : ''}`}
+              onClick={() => toggleExcludedTaskStatus(column.status)}
+            >
+              {column.label}
+            </button>
+          );
+        })}
+        {excludedTaskStatuses.length > 0 && (
+          <button
+            type="button"
+            className="tasks-filter-reset"
+            onClick={() => setExcludedTaskStatuses([])}
+          >
+            Mostra tutti
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
   const renderTasksAsanaList = (sections: { id?: string; title: string; tasks: Idea[]; subtitle?: string }[]) => (
     <div className="tasks-asana-list glass-card">
-      <div className="tasks-list-toolbar">
-        <div className="tasks-status-filters" role="group" aria-label="Filtra per stato">
-          {TASK_STATUS_FILTERS.map((filter) => (
-            <button
-              key={filter.id}
-              type="button"
-              className={`tasks-filter-btn${taskStatusFilter === filter.id ? ' is-active' : ''}`}
-              onClick={() => setTaskStatusFilter(filter.id)}
-            >
-              {filter.label}
-            </button>
-          ))}
-        </div>
-      </div>
       <div className="tasks-asana-header">
         <span>Task</span>
         <span>Stato</span>
@@ -544,9 +574,11 @@ export function IdeasSection() {
               </button>
             </div>
           </div>
+          {(viewMode === 'board' || typeFilter !== 'idea') && renderTaskStatusFilters()}
           {viewMode === 'board' ? (
+            visibleKanbanColumns.length > 0 ? (
             <div className="kanban-board">
-              {COLUMNS.map((col) => {
+              {visibleKanbanColumns.map((col) => {
                 const colIdeas = filtered.filter((idea) => idea.status === col.status);
                 return (
                   <div key={col.id} className="kanban-column">
@@ -566,6 +598,11 @@ export function IdeasSection() {
                 );
               })}
             </div>
+            ) : (
+              <p className="tasks-asana-section-empty glass-card">
+                Tutte le colonne sono nascoste. Usa &quot;Mostra tutti&quot; nei filtri sopra.
+              </p>
+            )
           ) : viewMode === 'list' ? (
             renderTasksAsanaList([
               { title: 'Today', tasks: todayTasks },

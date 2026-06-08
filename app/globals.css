@@ -2590,6 +2590,26 @@ body.drawer-open {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+    align-items: center;
+}
+
+.tasks-filter-label {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.tasks-filter-reset {
+    padding: 6px 12px;
+    border: none;
+    background: transparent;
+    color: var(--primary);
+    font-size: 0.82rem;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.tasks-filter-reset:hover {
+    color: var(--text-primary);
 }
 
 .tasks-asana-section {
@@ -4594,6 +4614,13 @@ body.drawer-open {
     border-color: rgba(38, 109, 240, 0.4);
     color: var(--primary);
     font-weight: 600;
+}
+.tasks-filter-btn.is-excluded {
+    opacity: 0.65;
+    text-decoration: line-through;
+    background: rgba(239, 68, 68, 0.08);
+    border-color: rgba(239, 68, 68, 0.35);
+    color: #b91c1c;
 }
 .tasks-list {
     display: flex;

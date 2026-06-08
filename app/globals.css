@@ -2714,7 +2714,7 @@ body.drawer-open {
     cursor: pointer;
 }
 
-.task-subtask-item input {
+.task-subtask-item .task-subtask-toggle input {
     position: absolute;
     opacity: 0;
     pointer-events: none;
@@ -2752,6 +2752,48 @@ body.drawer-open {
 .task-subtask-item.is-completed .task-subtask-title {
     text-decoration: line-through;
     color: var(--text-muted);
+}
+
+.task-subtask-item-editable {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    cursor: default;
+}
+
+.task-subtask-item-editable .task-subtask-toggle {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.task-subtask-title-input {
+    width: 100%;
+    min-height: 32px;
+    padding: 4px 8px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 0.86rem;
+}
+
+.task-subtask-title-input:hover,
+.task-subtask-title-input:focus {
+    border-color: var(--border-color);
+    background: var(--bg-card);
+    outline: none;
+}
+
+.task-subtask-item.is-completed .task-subtask-title-input {
+    text-decoration: line-through;
+    color: var(--text-muted);
+}
+
+.task-subtask-check.is-placeholder {
+    opacity: 0.35;
+}
+
+.task-subtask-delete {
+    flex-shrink: 0;
 }
 
 .task-subtask-add {

@@ -693,14 +693,15 @@ export function CrmProvider({ children }: CrmProviderProps) {
     }
     setIdeas(nextIdeas);
     await persistIdeasNow(nextIdeas);
-    showToast(input.id ? 'Elemento aggiornato.' : 'Elemento creato.', 'success');
+    showToast(input.id ? (input.itemType === 'task' ? 'Task aggiornata.' : 'Elemento aggiornato.') : 'Task creata.', 'success');
   }, [ideas, persistIdeasNow, showToast]);
 
   const deleteIdea = useCallback(async (ideaId: string) => {
+    const removed = ideas.find((item) => item.id === ideaId);
     const nextIdeas = ideas.filter((i) => i.id !== ideaId);
     setIdeas(nextIdeas);
     await persistIdeasNow(nextIdeas);
-    showToast('Idea eliminata.', 'info');
+    showToast(removed?.itemType === 'task' ? 'Task eliminata.' : 'Idea eliminata.', 'info');
   }, [ideas, persistIdeasNow, showToast]);
 
   const moveIdeaStatus = useCallback(async (ideaId: string, newStatus: Idea['status']) => {

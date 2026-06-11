@@ -41,11 +41,17 @@ import type {
   MailCampaignStep,
   MailSendStatus,
 } from '@/lib/types/mail-campaigns';
+import type { CommercialFunnelEntry, FunnelActionType } from '@/lib/types/commercial-funnel';
 import {
   clearMailCampaignData,
   fetchMailCampaignData,
 } from '@/lib/supabase/mail-campaigns-database';
+import {
+  clearCommercialFunnelData,
+  fetchCommercialFunnelEntries,
+} from '@/lib/supabase/commercial-funnel-database';
 import { createMailCampaignActions } from '@/providers/mail-campaign-actions';
+import { createCommercialFunnelActions } from '@/providers/commercial-funnel-actions';
 import {
   parseExcelImportBuffer,
   type ExcelImportParseResult,
@@ -198,6 +204,11 @@ interface CrmContextValue {
   updateMailSendStatus: (trackingId: string, sendStatus: MailSendStatus) => Promise<void>;
   markMailSentToday: (trackingId: string) => Promise<void>;
   saveCampaignSteps: (campaignId: string, steps: MailCampaignStep[]) => Promise<void>;
+  commercialFunnelEntries: CommercialFunnelEntry[];
+  addClientsToFunnel: (clientIds: string[]) => Promise<void>;
+  updateFunnelAction: (entryId: string, slotIndex: number, actionType: FunnelActionType | '') => Promise<void>;
+  updateFunnelLostReason: (entryId: string, lostReason: string) => Promise<void>;
+  removeFunnelEntry: (entryId: string) => Promise<void>;
 }
 
 const CrmContext = createContext<CrmContextValue | null>(null);
@@ -238,6 +249,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
   const [mailCampaignSteps, setMailCampaignSteps] = useState<MailCampaignStep[]>([]);
   const [mailCampaignContacts, setMailCampaignContacts] = useState<MailCampaignContact[]>([]);
   const [mailCampaignSendTracking, setMailCampaignSendTracking] = useState<MailCampaignSendTracking[]>([]);
+  const [commercialFunnelEntries, setCommercialFunnelEntries] = useState<CommercialFunnelEntry[]>([]);
 
   const mailCampaignStateRef = useRef({
     mailCampaigns,
@@ -251,6 +263,9 @@ export function CrmProvider({ children }: CrmProviderProps) {
     mailCampaignContacts,
     mailCampaignSendTracking,
   };
+
+  const commercialFunnelStateRef = useRef({ commercialFunnelEntries });
+  commercialFunnelStateRef.current = { commercialFunnelEntries };
 
   const supabaseConfigured = isSupabaseConfigured();
   const db = useMemo(() => createBrowserSupabaseClient(), []);
@@ -334,6 +349,25 @@ export function CrmProvider({ children }: CrmProviderProps) {
       .then(runMutation, runMutation);
     return clientsMutationQueueRef.current;
   }, [db, showToast]);
+
+  const promoteColdClientToMainList = useCallback(async (clientId: string): Promise<void> => {
+    await mutateClients((prev) => prev.map((client) => (
+      client.id === clientId ? { ...client, isColdClient: false } : client
+    )), { recalculate: false });
+  }, [mutateClients]);
+
+  const commercialFunnelActions = useMemo(
+    () => createCommercialFunnelActions(
+      {
+        db,
+        setCommercialFunnelEntries,
+        showToast,
+        promoteColdClientToMainList,
+      },
+      () => commercialFunnelStateRef.current.commercialFunnelEntries,
+    ),
+    [db, promoteColdClientToMainList, showToast],
+  );
 
   const persistIdeasNow = useCallback(async (nextIdeas?: Idea[]) => {
     const data = nextIdeas ?? ideas;
@@ -436,13 +470,14 @@ export function CrmProvider({ children }: CrmProviderProps) {
         return;
       }
       try {
-        const [loadedClients, loadedIdeas, loadedTasks, loadedOkr, loadedForecasts, loadedMailCampaigns] = await Promise.all([
+        const [loadedClients, loadedIdeas, loadedTasks, loadedOkr, loadedForecasts, loadedMailCampaigns, loadedFunnelEntries] = await Promise.all([
           fetchClients(db),
           fetchIdeas(db),
           fetchClientTasks(db),
           fetchAllOkrRecords(db),
           fetchAllAnalysisForecasts(db),
           fetchMailCampaignData(db),
+          fetchCommercialFunnelEntries(db),
         ]);
         let normalized = normalizeClients(loadedClients);
         normalized = reconcileImportedClientsToMainList(normalized);
@@ -461,6 +496,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
         setMailCampaignSteps(loadedMailCampaigns.steps);
         setMailCampaignContacts(loadedMailCampaigns.contacts);
         setMailCampaignSendTracking(loadedMailCampaigns.tracking);
+        setCommercialFunnelEntries(loadedFunnelEntries);
       } catch (reloadError) {
         console.error('Jonny reload failed:', reloadError);
       }
@@ -492,13 +528,14 @@ export function CrmProvider({ children }: CrmProviderProps) {
         if (db) {
           const status = await testSupabaseConnection(db);
           if (!status.ok) throw new Error(status.message);
-          const [loadedClients, loadedIdeas, loadedTasks, loadedOkr, loadedForecasts, loadedMailCampaigns] = await Promise.all([
+          const [loadedClients, loadedIdeas, loadedTasks, loadedOkr, loadedForecasts, loadedMailCampaigns, loadedFunnelEntries] = await Promise.all([
             fetchClients(db),
             fetchIdeas(db),
             fetchClientTasks(db),
             fetchAllOkrRecords(db),
             fetchAllAnalysisForecasts(db),
             fetchMailCampaignData(db),
+            fetchCommercialFunnelEntries(db),
           ]);
           let normalized = normalizeClients(loadedClients);
           normalized = reconcileImportedClientsToMainList(normalized);
@@ -517,6 +554,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
           setMailCampaignSteps(loadedMailCampaigns.steps);
           setMailCampaignContacts(loadedMailCampaigns.contacts);
           setMailCampaignSendTracking(loadedMailCampaigns.tracking);
+          setCommercialFunnelEntries(loadedFunnelEntries);
           setIsSupabaseConnected(true);
           await refreshApolloStatus();
         } else {
@@ -1028,9 +1066,11 @@ export function CrmProvider({ children }: CrmProviderProps) {
     if (db) {
       await clearAllData(db);
       await clearMailCampaignData(db);
+      await clearCommercialFunnelData(db);
     }
     setClients([]);
     clientsRef.current = [];
+    setCommercialFunnelEntries([]);
     setIdeas([]);
     setClientTasks([]);
     setOkrRecords([]);
@@ -1217,6 +1257,11 @@ export function CrmProvider({ children }: CrmProviderProps) {
     updateMailSendStatus: mailCampaignActions.updateMailSendStatus,
     markMailSentToday: mailCampaignActions.markMailSentToday,
     saveCampaignSteps: mailCampaignActions.saveCampaignSteps,
+    commercialFunnelEntries,
+    addClientsToFunnel: commercialFunnelActions.addClientsToFunnel,
+    updateFunnelAction: commercialFunnelActions.updateFunnelAction,
+    updateFunnelLostReason: commercialFunnelActions.updateFunnelLostReason,
+    removeFunnelEntry: commercialFunnelActions.removeFunnelEntry,
   };
 
   return <CrmContext.Provider value={value}>{children}</CrmContext.Provider>;

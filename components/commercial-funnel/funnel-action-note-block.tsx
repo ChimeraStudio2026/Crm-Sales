@@ -44,14 +44,12 @@ export function FunnelActionNoteBlock({
   const taskPreset = useMemo((): TaskFormPreset => {
     const actionLabel = action.type || `Azione ${slotIndex + 1}`;
     return {
-      name: action.note.trim()
-        ? `${actionLabel}: ${action.note.trim().slice(0, 60)}`
-        : actionLabel,
+      name: actionLabel,
       clientId,
-      description: `Funnel · ${actionLabel}${action.note ? `\n${action.note}` : ''}`,
+      description: '',
       assignees: [currentOwner || defaultAssignee],
     };
-  }, [action.note, action.type, clientId, currentOwner, defaultAssignee, slotIndex]);
+  }, [action.type, clientId, currentOwner, defaultAssignee, slotIndex]);
 
   return (
     <div className="funnel-action-note-block">

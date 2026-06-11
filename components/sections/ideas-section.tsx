@@ -2,12 +2,11 @@
 
 import { useMemo, useRef, useState } from 'react';
 import { ChevronRight, Download, Paperclip, Plus, PlusCircle, Search, Trash2 } from 'lucide-react';
-import { OWNERS } from '@/lib/constants/crm';
-import { createUniqueId, getTodayString, isClientInActiveSection, isClientInColdSection } from '@/lib/crm/utils';
+import { createUniqueId, getTodayString } from '@/lib/crm/utils';
 import { useCrm } from '@/providers/crm-provider';
-import { ClientSearchSelect } from '@/components/clients/client-search-select';
+import { TaskFormDrawer } from '@/components/tasks/task-form-drawer';
 import { TopHeader } from '@/components/layout/top-header';
-import type { Idea, IdeaStatus, Owner, TaskSubtask } from '@/lib/types/crm';
+import type { Idea, IdeaStatus, TaskSubtask } from '@/lib/types/crm';
 
 const COLUMNS: { status: IdeaStatus; id: string; label: string; color: string }[] = [
   { status: 'Da fare', id: 'todo', label: 'Da fare', color: '#ef4444' },
@@ -48,27 +47,6 @@ export function IdeasSection() {
   const [newSubtaskTitles, setNewSubtaskTitles] = useState<Record<string, string>>({});
   const saveDescriptionTimerRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const saveSubtaskTitleTimerRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-  const [name, setName] = useState('');
-  const [clientId, setClientId] = useState('');
-  const [status, setStatus] = useState<IdeaStatus>('Da fare');
-  const [description, setDescription] = useState('');
-  const [dueDate, setDueDate] = useState('');
-  const [assignees, setAssignees] = useState<Owner[]>(['Jeck']);
-  const [formSubtasks, setFormSubtasks] = useState<TaskSubtask[]>([]);
-  const [newFormSubtaskTitle, setNewFormSubtaskTitle] = useState('');
-
-  const activeClients = useMemo(
-    () => clients
-      .filter((client) => isClientInActiveSection(client))
-      .sort((a, b) => a.name.localeCompare(b.name, 'it')),
-    [clients],
-  );
-  const coldClients = useMemo(
-    () => clients
-      .filter((client) => isClientInColdSection(client))
-      .sort((a, b) => a.name.localeCompare(b.name, 'it')),
-    [clients],
-  );
 
   const allTasks = useMemo(
     () => ideas.filter((idea) => idea.itemType === 'task'),
@@ -138,14 +116,6 @@ export function IdeasSection() {
 
   const resetForm = (): void => {
     setEditTask(null);
-    setName('');
-    setClientId('');
-    setStatus('Da fare');
-    setDescription('');
-    setDueDate('');
-    setAssignees(currentOwner ? [currentOwner] : ['Jeck']);
-    setFormSubtasks([]);
-    setNewFormSubtaskTitle('');
   };
 
   const openNew = (): void => {
@@ -155,64 +125,7 @@ export function IdeasSection() {
 
   const openEdit = (task: Idea): void => {
     setEditTask(task);
-    setName(task.name);
-    setClientId(task.clientId);
-    setStatus(task.status);
-    setDescription(task.description);
-    setDueDate(task.dueDate || '');
-    setAssignees(task.assignees?.length ? task.assignees : ['Jeck']);
-    setFormSubtasks(task.subtasks || []);
-    setNewFormSubtaskTitle('');
     setShowForm(true);
-  };
-
-  const toggleAssignee = (owner: Owner): void => {
-    setAssignees((prev) => {
-      if (prev.includes(owner)) {
-        const next = prev.filter((value) => value !== owner);
-        return next.length > 0 ? next : [owner];
-      }
-      if (prev.length >= 2) return prev;
-      return [...prev, owner];
-    });
-  };
-
-  const addFormSubtask = (): void => {
-    const title = newFormSubtaskTitle.trim();
-    if (!title) return;
-    setFormSubtasks((prev) => [
-      ...prev,
-      { id: createUniqueId('subtask'), title, completed: false },
-    ]);
-    setNewFormSubtaskTitle('');
-  };
-
-  const updateFormSubtaskTitle = (subtaskId: string, title: string): void => {
-    setFormSubtasks((prev) => prev.map((subtask) => (
-      subtask.id === subtaskId ? { ...subtask, title } : subtask
-    )));
-  };
-
-  const removeFormSubtask = (subtaskId: string): void => {
-    setFormSubtasks((prev) => prev.filter((subtask) => subtask.id !== subtaskId));
-  };
-
-  const handleSubmit = async (event: React.FormEvent): Promise<void> => {
-    event.preventDefault();
-    await saveIdea({
-      id: editTask?.id,
-      name,
-      category: 'Content',
-      clientId: clientId || '',
-      status,
-      description,
-      itemType: 'task',
-      dueDate,
-      assignees,
-      subtasks: formSubtasks,
-      attachments: editTask?.attachments || [],
-    });
-    setShowForm(false);
   };
 
   const toggleTaskExpanded = (taskId: string): void => {
@@ -336,54 +249,6 @@ export function IdeasSection() {
     if (!file) return;
     await uploadTaskAttachment(task.id, file);
   };
-
-  const renderFormSubtasks = () => (
-    <div className="form-group">
-      <label>Subtask</label>
-      <div className="task-subtasks">
-        <div className="task-subtasks-list">
-          {formSubtasks.map((subtask) => (
-            <div key={subtask.id} className="task-subtask-item task-subtask-item-editable">
-              <span className="task-subtask-check is-placeholder" aria-hidden="true" />
-              <input
-                type="text"
-                className="task-subtask-title-input"
-                value={subtask.title}
-                onChange={(event) => updateFormSubtaskTitle(subtask.id, event.target.value)}
-                placeholder="Titolo subtask"
-              />
-              <button
-                type="button"
-                className="btn-table-action delete task-subtask-delete"
-                onClick={() => removeFormSubtask(subtask.id)}
-                title="Elimina subtask"
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
-          ))}
-        </div>
-        <div className="task-subtask-add">
-          <input
-            type="text"
-            className="task-subtask-input"
-            value={newFormSubtaskTitle}
-            onChange={(event) => setNewFormSubtaskTitle(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                event.preventDefault();
-                addFormSubtask();
-              }
-            }}
-            placeholder="Aggiungi subtask..."
-          />
-          <button type="button" className="btn btn-secondary btn-sm task-subtask-add-btn" onClick={addFormSubtask}>
-            <Plus size={14} />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
 
   const renderTaskStatus = (task: Idea) => (
     <select
@@ -714,76 +579,14 @@ export function IdeasSection() {
           )}
         </section>
       </div>
-      {showForm && (
-        <>
-          <div className="drawer-overlay open" onClick={() => setShowForm(false)} />
-          <div className="drawer open">
-            <div className="drawer-header"><h3>{editTask ? 'Modifica Task' : 'Nuova Task'}</h3></div>
-            <form onSubmit={handleSubmit}>
-              <div className="drawer-body">
-                <div className="form-group">
-                  <label>Titolo Task *</label>
-                  <input className="form-input" value={name} onChange={(e) => setName(e.target.value)} required />
-                </div>
-                <div className="form-group">
-                  <label>Cliente (opzionale)</label>
-                  <ClientSearchSelect
-                    activeClients={activeClients}
-                    coldClients={coldClients}
-                    value={clientId}
-                    onChange={setClientId}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Deadline *</label>
-                  <input
-                    type="date"
-                    className="form-input"
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Owner (max 2)</label>
-                  <div className="idea-assignee-list">
-                    {OWNERS.map((owner) => (
-                      <label key={owner} className="idea-assignee-option">
-                        <input
-                          type="checkbox"
-                          checked={assignees.includes(owner)}
-                          disabled={!assignees.includes(owner) && assignees.length >= 2}
-                          onChange={() => toggleAssignee(owner)}
-                        />
-                        <span>{owner}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label>Stato</label>
-                  <select className="form-select" value={status} onChange={(e) => setStatus(e.target.value as IdeaStatus)}>
-                    {COLUMNS.map((c) => <option key={c.status} value={c.status}>{c.label}</option>)}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Descrizione</label>
-                  <textarea
-                    className="form-textarea"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                  />
-                </div>
-                {renderFormSubtasks()}
-              </div>
-              <div className="drawer-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>Annulla</button>
-                <button type="submit" className="btn btn-primary">Salva</button>
-              </div>
-            </form>
-          </div>
-        </>
-      )}
+      <TaskFormDrawer
+        isOpen={showForm}
+        onClose={() => {
+          setShowForm(false);
+          setEditTask(null);
+        }}
+        taskToEdit={editTask}
+      />
     </>
   );
 }

@@ -2,12 +2,9 @@
 
 import { useMemo } from 'react';
 import Link from 'next/link';
-import {
-  formatSentDate,
-  getClientCampaignEntries,
-  getStepsForCampaign,
-  resolveRelationshipLabel,
-} from '@/lib/mail-campaigns/index';
+import { getFunnelEntriesForClient } from '@/lib/commercial-funnel/campaigns';
+import { isFunnelTerminalLost, resolveFunnelStatus } from '@/lib/commercial-funnel/index';
+import { formatActionDateDisplay } from '@/lib/crm/utils';
 import { useCrm } from '@/providers/crm-provider';
 
 interface ClientMailCampaignsTabProps {
@@ -15,30 +12,26 @@ interface ClientMailCampaignsTabProps {
 }
 
 export function ClientMailCampaignsTab({ clientId }: ClientMailCampaignsTabProps) {
-  const {
-    clients,
-    mailCampaigns,
-    mailCampaignContacts,
-    mailCampaignSteps,
-    mailCampaignSendTracking,
-  } = useCrm();
+  const { mailCampaigns, commercialFunnelEntries } = useCrm();
 
-  const client = clients.find((item) => item.id === clientId);
-  const entries = useMemo(
-    () => getClientCampaignEntries(
-      clientId,
-      mailCampaigns,
-      mailCampaignContacts,
-      mailCampaignSteps,
-      mailCampaignSendTracking,
-    ),
-    [clientId, mailCampaigns, mailCampaignContacts, mailCampaignSteps, mailCampaignSendTracking],
-  );
+  const rows = useMemo(() => {
+    const entries = getFunnelEntriesForClient(commercialFunnelEntries, clientId);
+    return entries.map((entry) => {
+      const campaign = mailCampaigns.find((item) => item.id === entry.campaignId);
+      const status = resolveFunnelStatus(entry.actions);
+      return {
+        entry,
+        campaign,
+        status,
+        isLost: isFunnelTerminalLost(entry),
+      };
+    });
+  }, [clientId, commercialFunnelEntries, mailCampaigns]);
 
-  if (entries.length === 0) {
+  if (rows.length === 0) {
     return (
       <p className="client-campaigns-empty">
-        Nessuna campagna mail per questo cliente.
+        Nessuna campagna funnel per questo cliente.
       </p>
     );
   }
@@ -49,44 +42,28 @@ export function ClientMailCampaignsTab({ clientId }: ClientMailCampaignsTabProps
         <thead>
           <tr>
             <th>Campagna</th>
-            <th>Contatto</th>
-            <th>Rapporto</th>
-            <th>Step Mail</th>
-            <th>Stato Finale</th>
+            <th>Status funnel</th>
+            <th>Data ultima azione</th>
+            <th>Stato</th>
             <th>Azioni</th>
           </tr>
         </thead>
         <tbody>
-          {entries.map(({ campaign, contact, steps, tracking }) => {
-            const contactRecord = client?.contacts.find((item) => item.id === contact.contactId);
-            const orderedSteps = getStepsForCampaign(steps, campaign.id);
-            return (
-              <tr key={contact.id}>
-                <td><strong>{campaign.name}</strong></td>
-                <td>{contactRecord?.name || contactRecord?.email || '—'}</td>
-                <td>{resolveRelationshipLabel(client)}</td>
-                <td>
-                  <div className="client-campaign-steps">
-                    {orderedSteps.map((step) => {
-                      const item = tracking.find((entry) => entry.stepId === step.id);
-                      return (
-                        <span key={step.id} className="client-campaign-step-chip">
-                          {step.title}: {item?.sendStatus || '—'}
-                          {item?.sendStatus === 'Inviata' && item.sentAt ? ` (${formatSentDate(item.sentAt)})` : ''}
-                        </span>
-                      );
-                    })}
-                  </div>
-                </td>
-                <td>{contact.status}</td>
-                <td>
-                  <Link href={`/campaigns/${campaign.id}`} className="btn btn-secondary btn-sm">
+          {rows.map(({ entry, campaign, status, isLost }) => (
+            <tr key={entry.id}>
+              <td><strong>{campaign?.name || 'Campagna'}</strong></td>
+              <td>{status.label}</td>
+              <td>{status.date ? formatActionDateDisplay(status.date) : '—'}</td>
+              <td>{isLost ? 'Perso' : 'In corso'}</td>
+              <td>
+                {campaign && (
+                  <Link href={`/funnel/${campaign.id}`} className="btn btn-secondary btn-sm">
                     Apri campagna
                   </Link>
-                </td>
-              </tr>
-            );
-          })}
+                )}
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>

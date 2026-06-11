@@ -4,6 +4,7 @@ import type { CommercialFunnelEntry } from '@/lib/types/commercial-funnel';
 
 interface CommercialFunnelEntryRow {
   id: string;
+  campaign_id: string;
   client_id: string;
   actions: unknown;
   lost_reason: string;
@@ -13,6 +14,7 @@ interface CommercialFunnelEntryRow {
 function rowToEntry(row: CommercialFunnelEntryRow): CommercialFunnelEntry {
   return {
     id: row.id,
+    campaignId: row.campaign_id,
     clientId: row.client_id,
     actions: normalizeFunnelActions(row.actions),
     lostReason: row.lost_reason || '',
@@ -38,6 +40,7 @@ export async function persistCommercialFunnelEntries(
   if (entries.length === 0) return;
   const rows = entries.map((entry) => ({
     id: entry.id,
+    campaign_id: entry.campaignId,
     client_id: entry.clientId,
     actions: entry.actions,
     lost_reason: entry.lostReason || '',
@@ -52,6 +55,14 @@ export async function deleteCommercialFunnelEntry(
   entryId: string,
 ): Promise<void> {
   const { error } = await db.from('commercial_funnel_entries').delete().eq('id', entryId);
+  if (error) throw error;
+}
+
+export async function deleteCommercialFunnelEntriesByCampaign(
+  db: SupabaseClient,
+  campaignId: string,
+): Promise<void> {
+  const { error } = await db.from('commercial_funnel_entries').delete().eq('campaign_id', campaignId);
   if (error) throw error;
 }
 

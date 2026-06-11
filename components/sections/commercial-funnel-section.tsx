@@ -1,107 +1,49 @@
 'use client';
 
-import { Fragment, useMemo, useState } from 'react';
-import { ChevronRight, GitBranch, Plus, Trash2 } from 'lucide-react';
-import { FunnelColdClientPicker } from '@/components/commercial-funnel/funnel-cold-client-picker';
-import { FunnelPersoModal } from '@/components/commercial-funnel/funnel-perso-modal';
-import { TopHeader } from '@/components/layout/top-header';
-import {
-  FUNNEL_SLOT_COUNT,
-  isFunnelTerminalLost,
-  resolveFunnelSemaforo,
-  resolveFunnelStatus,
-} from '@/lib/commercial-funnel/index';
-import { formatActionDateDisplay } from '@/lib/crm/utils';
-import { FUNNEL_ACTION_TYPES } from '@/lib/types/commercial-funnel';
-import type { CommercialFunnelEntry, FunnelActionType } from '@/lib/types/commercial-funnel';
+import { useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { GitBranch, Plus } from 'lucide-react';
+import { buildFunnelCampaignDashboardRow } from '@/lib/commercial-funnel/campaigns';
+import { MAIL_CAMPAIGN_STATUS_LABELS } from '@/lib/constants/mail-campaigns';
 import { useCrm } from '@/providers/crm-provider';
-
-interface PersoModalState {
-  entryId: string;
-  clientName: string;
-  initialReason: string;
-}
+import { TopHeader } from '@/components/layout/top-header';
+import type { MailCampaignStatus } from '@/lib/types/mail-campaigns';
 
 export function CommercialFunnelSection() {
-  const {
-    clients,
-    commercialFunnelEntries,
-    addClientsToFunnel,
-    updateFunnelAction,
-    updateFunnelLostReason,
-    removeFunnelEntry,
-  } = useCrm();
-  const [showPicker, setShowPicker] = useState(false);
-  const [expandedEntries, setExpandedEntries] = useState<Set<string>>(new Set());
-  const [persoModal, setPersoModal] = useState<PersoModalState | null>(null);
-
-  const clientById = useMemo(
-    () => new Map(clients.map((client) => [client.id, client])),
-    [clients],
-  );
-
-  const existingClientIds = useMemo(
-    () => new Set(commercialFunnelEntries.map((entry) => entry.clientId)),
-    [commercialFunnelEntries],
-  );
+  const router = useRouter();
+  const { mailCampaigns, commercialFunnelEntries, saveMailCampaign } = useCrm();
+  const [showForm, setShowForm] = useState(false);
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [status, setStatus] = useState<MailCampaignStatus>('Bozza');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   const rows = useMemo(
-    () => commercialFunnelEntries
-      .map((entry) => ({
-        entry,
-        client: clientById.get(entry.clientId),
-        status: resolveFunnelStatus(entry.actions),
-        semaforo: resolveFunnelSemaforo(entry.actions),
-        isLost: isFunnelTerminalLost(entry),
-      }))
-      .sort((a, b) => {
-        const nameA = a.client?.name || '';
-        const nameB = b.client?.name || '';
-        return nameA.localeCompare(nameB, 'it');
-      }),
-    [commercialFunnelEntries, clientById],
+    () => mailCampaigns.map((campaign) => buildFunnelCampaignDashboardRow(
+      campaign,
+      commercialFunnelEntries,
+    )),
+    [mailCampaigns, commercialFunnelEntries],
   );
 
-  const toggleExpanded = (entryId: string): void => {
-    setExpandedEntries((prev) => {
-      const next = new Set(prev);
-      if (next.has(entryId)) next.delete(entryId);
-      else next.add(entryId);
-      return next;
+  const handleCreate = async (event: React.FormEvent): Promise<void> => {
+    event.preventDefault();
+    const campaignId = await saveMailCampaign({
+      name,
+      description,
+      status,
+      startDate,
+      endDate,
     });
-  };
-
-  const handleActionChange = async (
-    entry: CommercialFunnelEntry,
-    slotIndex: number,
-    value: string,
-  ): Promise<void> => {
-    const actionType = value as FunnelActionType | '';
-    if (actionType === 'Perso') {
-      const client = clientById.get(entry.clientId);
-      await updateFunnelAction(entry.id, slotIndex, 'Perso');
-      setPersoModal({
-        entryId: entry.id,
-        clientName: client?.name || 'Cliente',
-        initialReason: entry.lostReason,
-      });
-      return;
-    }
-    await updateFunnelAction(entry.id, slotIndex, actionType);
-  };
-
-  const handlePersoSave = async (reason: string): Promise<void> => {
-    if (!persoModal) return;
-    await updateFunnelLostReason(persoModal.entryId, reason);
-    setPersoModal(null);
-  };
-
-  const openPersoReason = (entry: CommercialFunnelEntry, clientName: string): void => {
-    setPersoModal({
-      entryId: entry.id,
-      clientName,
-      initialReason: entry.lostReason,
-    });
+    setShowForm(false);
+    setName('');
+    setDescription('');
+    setStatus('Bozza');
+    setStartDate('');
+    setEndDate('');
+    router.push(`/funnel/${campaignId}`);
   };
 
   return (
@@ -117,173 +59,99 @@ export function CommercialFunnelSection() {
               </h3>
             </div>
             <div className="filter-right">
-              <button type="button" className="btn btn-primary" onClick={() => setShowPicker(true)}>
+              <button type="button" className="btn btn-primary" onClick={() => setShowForm(true)}>
                 <Plus size={16} />
-                <span>Aggiungi cliente</span>
+                <span>Nuova campagna</span>
               </button>
             </div>
           </div>
-          <div className="commercial-funnel-table-wrap glass-card">
-            <div className="commercial-funnel-table-scroll">
-              <table className="analysis-table commercial-funnel-table">
-                <thead>
+          <div className="mail-campaigns-table-wrap glass-card">
+            <table className="analysis-table mail-campaigns-table">
+              <thead>
+                <tr>
+                  <th>Nome Campagna</th>
+                  <th>Stato</th>
+                  <th>Data Inizio</th>
+                  <th>Clienti</th>
+                  <th>Attivi</th>
+                  <th>Persi</th>
+                  <th>Azioni</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.length === 0 ? (
                   <tr>
-                    <th className="funnel-col-client">Cliente</th>
-                    <th className="funnel-col-status">Status</th>
-                    {Array.from({ length: FUNNEL_SLOT_COUNT }, (_, index) => (
-                      <th key={`action-header-${index}`} className="funnel-col-action">
-                        Azione {index + 1}
-                      </th>
-                    ))}
-                    <th className="funnel-col-semaforo">Semaforo</th>
-                    <th className="funnel-col-actions"> </th>
+                    <td colSpan={7} className="mail-campaigns-empty">
+                      Nessuna campagna. Creane una con + per iniziare il funnel commerciale.
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {rows.length === 0 ? (
-                    <tr>
-                      <td colSpan={FUNNEL_SLOT_COUNT + 4} className="mail-campaigns-empty">
-                        Nessun cliente nel funnel. Usa il pulsante + per aggiungere clienti freddi.
+                ) : (
+                  rows.map(({ campaign, totalClients, activeCount, lostCount }) => (
+                    <tr key={campaign.id}>
+                      <td><strong>{campaign.name}</strong></td>
+                      <td>
+                        <span className={`mail-campaign-status mail-campaign-status-${campaign.status.toLowerCase()}`}>
+                          {MAIL_CAMPAIGN_STATUS_LABELS[campaign.status]}
+                        </span>
+                      </td>
+                      <td>{campaign.startDate || '—'}</td>
+                      <td className="analysis-num">{totalClients}</td>
+                      <td className="analysis-num">{activeCount}</td>
+                      <td className="analysis-num">{lostCount}</td>
+                      <td>
+                        <Link href={`/funnel/${campaign.id}`} className="btn btn-secondary btn-sm">
+                          Gestisci campagna
+                        </Link>
                       </td>
                     </tr>
-                  ) : (
-                    rows.map(({ entry, client, status, semaforo, isLost }) => {
-                      const isExpanded = expandedEntries.has(entry.id);
-                      const clientName = client?.name || 'Cliente non trovato';
-                      return (
-                        <Fragment key={entry.id}>
-                          <tr className={`funnel-row${isLost ? ' is-lost' : ''}`}>
-                            <td className="funnel-col-client">
-                              <button
-                                type="button"
-                                className="funnel-client-toggle"
-                                onClick={() => toggleExpanded(entry.id)}
-                              >
-                                <ChevronRight
-                                  size={14}
-                                  className={`row-expand-icon${isExpanded ? ' is-expanded' : ''}`}
-                                />
-                                <strong>{clientName}</strong>
-                                {isLost && <span className="funnel-lost-badge">Perso</span>}
-                              </button>
-                            </td>
-                            <td className="funnel-col-status">
-                              <div className="funnel-status-cell">
-                                <span className="funnel-status-label">{status.label}</span>
-                                {status.date && (
-                                  <small>{formatActionDateDisplay(status.date)}</small>
-                                )}
-                              </div>
-                            </td>
-                            {entry.actions.map((action, slotIndex) => (
-                              <td key={`${entry.id}-action-${slotIndex}`} className="funnel-col-action">
-                                <div className="funnel-action-cell">
-                                  <select
-                                    className="table-cell-select funnel-action-select"
-                                    value={action.type}
-                                    disabled={isLost}
-                                    onChange={(e) => void handleActionChange(entry, slotIndex, e.target.value)}
-                                  >
-                                    <option value="">—</option>
-                                    {FUNNEL_ACTION_TYPES.map((type) => (
-                                      <option key={type} value={type}>{type}</option>
-                                    ))}
-                                  </select>
-                                  {action.date && (
-                                    <small className="funnel-action-date">
-                                      {formatActionDateDisplay(action.date)}
-                                    </small>
-                                  )}
-                                </div>
-                              </td>
-                            ))}
-                            <td className="funnel-col-semaforo">
-                              <span
-                                className={`funnel-semaforo funnel-semaforo-${semaforo}`}
-                                title={semaforo === 'green' ? 'Nei tempi' : 'Fuori tempo'}
-                              />
-                            </td>
-                            <td className="funnel-col-actions">
-                              <div className="table-row-actions">
-                                {isLost && (
-                                  <button
-                                    type="button"
-                                    className="btn-table-action"
-                                    title="Motivo perdita"
-                                    onClick={() => openPersoReason(entry, clientName)}
-                                  >
-                                    Motivo
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  className="btn-table-action btn-table-action-danger"
-                                  title="Rimuovi dal funnel"
-                                  onClick={() => void removeFunnelEntry(entry.id)}
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                          {isExpanded && client && (
-                            <tr className="funnel-row-expanded">
-                              <td colSpan={FUNNEL_SLOT_COUNT + 4}>
-                                <div className="funnel-expanded-body">
-                                  <div className="funnel-expanded-block">
-                                    <span className="funnel-expanded-label">Tipo cliente</span>
-                                    <strong>{client.type}</strong>
-                                  </div>
-                                  <div className="funnel-expanded-block funnel-expanded-contacts">
-                                    <span className="funnel-expanded-label">Contatti</span>
-                                    {client.contacts.length === 0 ? (
-                                      <span>Nessun contatto</span>
-                                    ) : (
-                                      <ul>
-                                        {client.contacts.map((contact) => (
-                                          <li key={contact.id}>
-                                            <strong>{contact.name || '—'}</strong>
-                                            {contact.email ? ` · ${contact.email}` : ''}
-                                            {contact.role ? ` · ${contact.role}` : ''}
-                                          </li>
-                                        ))}
-                                      </ul>
-                                    )}
-                                  </div>
-                                  {entry.lostReason && (
-                                    <div className="funnel-expanded-block">
-                                      <span className="funnel-expanded-label">Motivo perdita</span>
-                                      <p>{entry.lostReason}</p>
-                                    </div>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          )}
-                        </Fragment>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </section>
       </div>
-      {showPicker && (
-        <FunnelColdClientPicker
-          existingClientIds={existingClientIds}
-          onClose={() => setShowPicker(false)}
-          onAdd={(clientIds) => void addClientsToFunnel(clientIds).then(() => setShowPicker(false))}
-        />
-      )}
-      {persoModal && (
-        <FunnelPersoModal
-          clientName={persoModal.clientName}
-          initialReason={persoModal.initialReason}
-          onClose={() => setPersoModal(null)}
-          onSave={(reason) => void handlePersoSave(reason)}
-        />
+      {showForm && (
+        <>
+          <div className="drawer-overlay open" onClick={() => setShowForm(false)} />
+          <div className="drawer open">
+            <div className="drawer-header"><h3>Nuova campagna funnel</h3></div>
+            <form onSubmit={(event) => void handleCreate(event)}>
+              <div className="drawer-body">
+                <div className="form-group">
+                  <label>Nome Campagna *</label>
+                  <input className="form-input" value={name} onChange={(e) => setName(e.target.value)} required />
+                </div>
+                <div className="form-group">
+                  <label>Descrizione</label>
+                  <textarea className="form-textarea" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Stato</label>
+                    <select className="form-select" value={status} onChange={(e) => setStatus(e.target.value as MailCampaignStatus)}>
+                      <option value="Bozza">Bozza</option>
+                      <option value="Attiva">Attiva</option>
+                      <option value="Conclusa">Conclusa</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Data Inizio</label>
+                    <input type="date" className="form-input" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                  </div>
+                  <div className="form-group">
+                    <label>Data Fine</label>
+                    <input type="date" className="form-input" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                  </div>
+                </div>
+              </div>
+              <div className="drawer-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>Annulla</button>
+                <button type="submit" className="btn btn-primary">Crea campagna</button>
+              </div>
+            </form>
+          </div>
+        </>
       )}
     </>
   );

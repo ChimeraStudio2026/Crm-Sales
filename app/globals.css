@@ -6100,10 +6100,19 @@ body:has(.drawer.open) .jonny-chat-root {
     vertical-align: top;
 }
 
+.funnel-col-semaforo {
+    width: 72px;
+    text-align: center;
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    background: var(--bg-card);
+}
+
 .funnel-col-client {
     min-width: 180px;
     position: sticky;
-    left: 0;
+    left: 72px;
     z-index: 2;
     background: var(--bg-card);
 }
@@ -6114,11 +6123,6 @@ body:has(.drawer.open) .jonny-chat-root {
 
 .funnel-col-action {
     min-width: 140px;
-}
-
-.funnel-col-semaforo {
-    width: 72px;
-    text-align: center;
 }
 
 .funnel-col-actions {
@@ -6241,5 +6245,85 @@ body:has(.drawer.open) .jonny-chat-root {
     margin-bottom: 6px;
     font-weight: 700;
     font-size: 0.84rem;
+}
+
+.funnel-campaign-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 12px;
+}
+
+.funnel-campaign-detail-header {
+    padding: 18px;
+    margin-bottom: 16px;
+}
+
+.funnel-campaign-detail-top {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.funnel-campaign-detail-header h2 {
+    margin: 0 0 8px;
+}
+
+.funnel-campaign-detail-desc {
+    margin: 0 0 12px;
+    color: var(--text-secondary);
+}
+
+.funnel-campaign-detail-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    font-size: 0.86rem;
+    color: var(--text-secondary);
+}
+
+.bulk-clients-drawer {
+    max-width: 640px;
+}
+
+.bulk-clients-hint {
+    margin: 0 0 14px;
+    color: var(--text-secondary);
+    font-size: 0.86rem;
+}
+
+.bulk-clients-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.bulk-clients-row {
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-hover);
+}
+
+.bulk-clients-row-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.bulk-clients-row-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.bulk-clients-add-row {
+    margin-top: 12px;
+}
+
+@media (max-width: 640px) {
+    .bulk-clients-row-fields {
+        grid-template-columns: 1fr;
+    }
 }
 

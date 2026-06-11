@@ -134,7 +134,6 @@ export const EXCEL_IMPORT_DESC_PREFIX = 'Cliente creato da import Excel';
 export const NAV_ITEMS = [
   { href: '/analysis', label: 'Analisi', icon: 'BarChart3' },
   { href: '/clients', label: 'Lista Clienti', icon: 'Users' },
-  { href: '/campaigns', label: 'Campagne Mail', icon: 'Mail' },
   { href: '/funnel', label: 'Funnel Commerciale', icon: 'GitBranch' },
   { href: '/ideas', label: 'Task', icon: 'CheckSquare' },
   { href: '/recall', label: 'Random Recall', icon: 'PhoneCall' },
@@ -146,8 +145,7 @@ export const NAV_ITEMS = [
 export const PAGE_META: Record<string, { title: string; subtitle: string }> = {
   '/analysis': { title: 'Analisi', subtitle: 'OKR, previsioni e breakdown per quarter.' },
   '/clients': { title: 'Gestione Clienti', subtitle: 'Lista generica e schede clienti.' },
-  '/campaigns': { title: 'Campagne Mail', subtitle: 'Registro operativo per tracciare invii manuali e conversioni.' },
-  '/funnel': { title: 'Funnel Commerciale', subtitle: 'Pipeline commerciale sui clienti freddi con azioni, status e semaforo tempi.' },
+  '/funnel': { title: 'Funnel Commerciale', subtitle: 'Campagne commerciali con pipeline clienti, azioni, status e semaforo tempi.' },
   '/ideas': { title: 'Task', subtitle: 'Gestione task con deadline, owner, subtask e viste Righe, Kanban e Clienti.' },
   '/tasks': { title: 'Task', subtitle: 'Gestione task con deadline, owner, subtask e viste Righe, Kanban e Clienti.' },
   '/recall': { title: 'Random Recall', subtitle: '5 clienti al giorno da ricontattare, scelti a caso per rapporto.' },

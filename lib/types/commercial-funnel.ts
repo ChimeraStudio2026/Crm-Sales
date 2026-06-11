@@ -16,6 +16,7 @@ export interface FunnelActionSlot {
 
 export interface CommercialFunnelEntry {
   id: string;
+  campaignId: string;
   clientId: string;
   actions: FunnelActionSlot[];
   lostReason: string;

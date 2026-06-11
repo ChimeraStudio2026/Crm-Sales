@@ -147,6 +147,7 @@ interface CrmContextValue {
   dismissToast: (id: string) => void;
   refreshApolloStatus: () => Promise<void>;
   saveClient: (client: Partial<Client> & { name: string }, options?: { isCold?: boolean; isEdit?: boolean; id?: string }) => Promise<void>;
+  saveClients: (clients: Array<Partial<Client> & { name: string }>, options?: { isCold?: boolean }) => Promise<void>;
   deleteClient: (clientId: string) => Promise<void>;
   updateClientField: (clientId: string, field: keyof Client, value: unknown) => Promise<void>;
   updateClientContacts: (clientId: string, contacts: ClientContact[]) => Promise<void>;
@@ -205,7 +206,7 @@ interface CrmContextValue {
   markMailSentToday: (trackingId: string) => Promise<void>;
   saveCampaignSteps: (campaignId: string, steps: MailCampaignStep[]) => Promise<void>;
   commercialFunnelEntries: CommercialFunnelEntry[];
-  addClientsToFunnel: (clientIds: string[]) => Promise<void>;
+  addClientsToFunnel: (campaignId: string, clientIds: string[]) => Promise<void>;
   updateFunnelAction: (entryId: string, slotIndex: number, actionType: FunnelActionType | '') => Promise<void>;
   updateFunnelLostReason: (entryId: string, lostReason: string) => Promise<void>;
   removeFunnelEntry: (entryId: string) => Promise<void>;
@@ -368,6 +369,11 @@ export function CrmProvider({ children }: CrmProviderProps) {
     ),
     [db, promoteColdClientToMainList, showToast],
   );
+
+  const deleteMailCampaignById = useCallback(async (campaignId: string): Promise<void> => {
+    await mailCampaignActions.deleteMailCampaignById(campaignId);
+    await commercialFunnelActions.removeFunnelEntriesByCampaign(campaignId);
+  }, [commercialFunnelActions, mailCampaignActions]);
 
   const persistIdeasNow = useCallback(async (nextIdeas?: Idea[]) => {
     const data = nextIdeas ?? ideas;
@@ -650,6 +656,47 @@ export function CrmProvider({ children }: CrmProviderProps) {
       return [...prev, applyColdClientPromotion(newClient).client];
     });
     showToast(id ? `Cliente "${input.name}" aggiornato.` : `Cliente "${input.name}" creato.`, 'success');
+  }, [mutateClients, showToast]);
+
+  const saveClients = useCallback(async (
+    inputs: Array<Partial<Client> & { name: string }>,
+    options?: { isCold?: boolean },
+  ) => {
+    const isCold = options?.isCold ?? false;
+    const validInputs = inputs.filter((input) => input.name.trim());
+    if (validInputs.length === 0) return;
+    await mutateClients((prev) => {
+      const newClients = validInputs.map((input) => {
+        const trimmedAction = (input.action || '').trim();
+        const newClient: Client = {
+          id: createUniqueId('client'),
+          name: input.name.trim(),
+          type: input.type || 'Cliente Diretto',
+          owner: input.owner || 'Jeck',
+          clientOrigin: input.clientOrigin || '',
+          relationship: input.relationship || 'Nuovo Cliente',
+          manualRelationship: false,
+          rev2025: input.rev2025 || 0,
+          rev2026: input.rev2026 || 0,
+          action: trimmedAction,
+          actionDate: trimmedAction
+            ? resolveActionDateOnTextChange('', trimmedAction, DEFAULT_ACTION_DATE)
+            : '',
+          email: input.email || '',
+          description: input.description || '',
+          contacts: input.contacts || [],
+          productOffers: resolveClientProductOffers(
+            input.type || 'Cliente Diretto',
+            input.productOffers,
+          ),
+          needsProfileCompletion: true,
+          isColdClient: isCold || (input.rev2026 || 0) <= COLD_CLIENT_REV_THRESHOLD,
+        };
+        return applyColdClientPromotion(newClient).client;
+      });
+      return [...prev, ...newClients];
+    });
+    showToast(`${validInputs.length} clienti creati.`, 'success');
   }, [mutateClients, showToast]);
 
   const deleteClient = useCallback(async (clientId: string) => {
@@ -1208,6 +1255,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
     dismissToast,
     refreshApolloStatus,
     saveClient,
+    saveClients,
     deleteClient,
     updateClientField,
     updateClientContacts,
@@ -1249,7 +1297,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
     mailCampaignContacts,
     mailCampaignSendTracking,
     saveMailCampaign: mailCampaignActions.saveMailCampaign,
-    deleteMailCampaignById: mailCampaignActions.deleteMailCampaignById,
+    deleteMailCampaignById,
     addContactsToCampaign: mailCampaignActions.addContactsToCampaign,
     removeContactFromCampaign: mailCampaignActions.removeContactFromCampaign,
     updateCampaignContactStatus: mailCampaignActions.updateCampaignContactStatus,

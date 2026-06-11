@@ -1,10 +1,10 @@
-import { MailCampaignDetailSection } from '@/components/sections/mail-campaign-detail-section';
+import { redirect } from 'next/navigation';
 
-interface CampaignDetailPageProps {
+interface CampaignDetailRedirectProps {
   params: Promise<{ campaignId: string }>;
 }
 
-export default async function CampaignDetailPage({ params }: CampaignDetailPageProps) {
+export default async function CampaignDetailRedirectPage({ params }: CampaignDetailRedirectProps) {
   const { campaignId } = await params;
-  return <MailCampaignDetailSection campaignId={campaignId} />;
+  redirect(`/funnel/${campaignId}`);
 }

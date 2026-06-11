@@ -141,8 +141,6 @@ export function createMailCampaignActions(
         ...state.mailCampaignSteps.filter((step) => step.campaignId !== campaignId),
         ...steps.map((step) => ({ ...step, campaignId })),
       ];
-    } else if (!input.id) {
-      nextSteps = [...state.mailCampaignSteps, ...createDefaultCampaignSteps(campaignId)];
     }
     await applyState({
       ...state,

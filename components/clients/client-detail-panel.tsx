@@ -128,7 +128,7 @@ export function ClientDetailPanel({
           className={`client-detail-tab${activeTab === 'campaigns' ? ' is-active' : ''}`}
           onClick={() => setActiveTab('campaigns')}
         >
-          Campagne Mail
+          Campagne Funnel
         </button>
       </div>
       {activeTab === 'campaigns' ? (

@@ -1,5 +1,5 @@
-import { MailCampaignsSection } from '@/components/sections/mail-campaigns-section';
+import { redirect } from 'next/navigation';
 
-export default function CampaignsPage() {
-  return <MailCampaignsSection />;
+export default function CampaignsRedirectPage() {
+  redirect('/funnel');
 }

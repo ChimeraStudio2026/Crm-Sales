@@ -29,7 +29,7 @@ export function TopHeader({ onQuickAdd }: TopHeaderProps) {
         {onQuickAdd && (
           <button className="btn btn-primary" id="btn-quick-add" type="button" onClick={onQuickAdd}>
             <PlusCircle size={18} />
-            <span>Nuovo Cliente</span>
+            <span>Nuovi Clienti</span>
           </button>
         )}
       </div>

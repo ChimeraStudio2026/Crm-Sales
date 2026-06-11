@@ -19,6 +19,7 @@ import {
 } from '@/lib/crm/utils';
 import { useCrm } from '@/providers/crm-provider';
 import { ClientDrawer } from '@/components/drawers/client-drawer';
+import { BulkClientsDrawer } from '@/components/drawers/bulk-clients-drawer';
 import { ClientDetailPanel } from '@/components/clients/client-detail-panel';
 import { ClientOriginSelect } from '@/components/clients/client-origin-select';
 import { TopHeader } from '@/components/layout/top-header';
@@ -57,6 +58,7 @@ export function ClientsSection() {
   const [filterRelationship, setFilterRelationship] = useState('');
   const [sort, setSort] = useState<SortState>({ column: 'name', direction: 'asc' });
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [bulkDrawerOpen, setBulkDrawerOpen] = useState(false);
   const [editClient, setEditClient] = useState<Client | null>(null);
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
 
@@ -125,7 +127,7 @@ export function ClientsSection() {
 
   const openNew = () => {
     setEditClient(null);
-    setDrawerOpen(true);
+    setBulkDrawerOpen(true);
   };
 
   const openEdit = (client: Client) => {
@@ -384,6 +386,12 @@ export function ClientsSection() {
           client={editClient}
           isCold={false}
           onClose={() => setDrawerOpen(false)}
+        />
+      )}
+      {bulkDrawerOpen && (
+        <BulkClientsDrawer
+          isCold={false}
+          onClose={() => setBulkDrawerOpen(false)}
         />
       )}
     </>

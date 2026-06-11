@@ -4,6 +4,7 @@ import { createEmptyFunnelActions } from '@/lib/commercial-funnel/index';
 import { createUniqueId } from '@/lib/crm/utils';
 import {
   deleteCommercialFunnelEntry,
+  deleteCommercialFunnelEntriesByCampaign,
   persistCommercialFunnelEntries,
 } from '@/lib/supabase/commercial-funnel-database';
 import type { CommercialFunnelEntry, FunnelActionType } from '@/lib/types/commercial-funnel';
@@ -33,24 +34,29 @@ export function createCommercialFunnelActions(
     }
   };
 
-  const addClientsToFunnel = async (clientIds: string[]): Promise<void> => {
+  const addClientsToFunnel = async (campaignId: string, clientIds: string[]): Promise<void> => {
     const state = getEntries();
-    const existingIds = new Set(state.map((entry) => entry.clientId));
+    const existingIds = new Set(
+      state
+        .filter((entry) => entry.campaignId === campaignId)
+        .map((entry) => entry.clientId),
+    );
     const newEntries: CommercialFunnelEntry[] = clientIds
       .filter((clientId) => !existingIds.has(clientId))
       .map((clientId) => ({
         id: createUniqueId('funnel-entry'),
+        campaignId,
         clientId,
         actions: createEmptyFunnelActions(),
         lostReason: '',
         createdAt: new Date().toISOString(),
       }));
     if (newEntries.length === 0) {
-      deps.showToast('Nessun nuovo cliente da aggiungere al funnel.', 'info');
+      deps.showToast('Nessun nuovo cliente da aggiungere alla campagna.', 'info');
       return;
     }
     await applyEntries([...state, ...newEntries]);
-    deps.showToast(`${newEntries.length} clienti aggiunti al funnel.`, 'success');
+    deps.showToast(`${newEntries.length} clienti aggiunti alla campagna.`, 'success');
   };
 
   const updateFunnelAction = async (
@@ -77,10 +83,6 @@ export function createCommercialFunnelActions(
       ...entry,
       actions: nextActions,
     };
-    if (actionType === 'Perso') {
-      await applyEntries(state.map((item) => (item.id === entryId ? nextEntry : item)));
-      return;
-    }
     await applyEntries(state.map((item) => (item.id === entryId ? nextEntry : item)));
   };
 
@@ -95,7 +97,13 @@ export function createCommercialFunnelActions(
     const state = getEntries();
     if (deps.db) await deleteCommercialFunnelEntry(deps.db, entryId);
     await applyEntries(state.filter((item) => item.id !== entryId));
-    deps.showToast('Cliente rimosso dal funnel.', 'info');
+    deps.showToast('Cliente rimosso dalla campagna.', 'info');
+  };
+
+  const removeFunnelEntriesByCampaign = async (campaignId: string): Promise<void> => {
+    const state = getEntries();
+    if (deps.db) await deleteCommercialFunnelEntriesByCampaign(deps.db, campaignId);
+    await applyEntries(state.filter((entry) => entry.campaignId !== campaignId));
   };
 
   return {
@@ -103,5 +111,6 @@ export function createCommercialFunnelActions(
     updateFunnelAction,
     updateFunnelLostReason,
     removeFunnelEntry,
+    removeFunnelEntriesByCampaign,
   };
 }

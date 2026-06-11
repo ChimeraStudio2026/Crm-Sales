@@ -41,7 +41,7 @@ import type {
   MailCampaignStep,
   MailSendStatus,
 } from '@/lib/types/mail-campaigns';
-import type { CommercialFunnelEntry, FunnelActionType } from '@/lib/types/commercial-funnel';
+import type { CommercialFunnelEntry, FunnelActionType, FunnelClientRef } from '@/lib/types/commercial-funnel';
 import {
   clearMailCampaignData,
   fetchMailCampaignData,
@@ -206,9 +206,10 @@ interface CrmContextValue {
   markMailSentToday: (trackingId: string) => Promise<void>;
   saveCampaignSteps: (campaignId: string, steps: MailCampaignStep[]) => Promise<void>;
   commercialFunnelEntries: CommercialFunnelEntry[];
-  addClientsToFunnel: (campaignId: string, clientIds: string[]) => Promise<void>;
+  addClientsToFunnel: (campaignId: string, clientRefs: FunnelClientRef[]) => Promise<void>;
   updateFunnelAction: (entryId: string, slotIndex: number, actionType: FunnelActionType | '') => Promise<void>;
   updateFunnelLostReason: (entryId: string, lostReason: string) => Promise<void>;
+  updateFunnelActionNote: (entryId: string, slotIndex: number, note: string) => Promise<void>;
   removeFunnelEntry: (entryId: string) => Promise<void>;
 }
 
@@ -1309,6 +1310,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
     addClientsToFunnel: commercialFunnelActions.addClientsToFunnel,
     updateFunnelAction: commercialFunnelActions.updateFunnelAction,
     updateFunnelLostReason: commercialFunnelActions.updateFunnelLostReason,
+    updateFunnelActionNote: commercialFunnelActions.updateFunnelActionNote,
     removeFunnelEntry: commercialFunnelActions.removeFunnelEntry,
   };
 

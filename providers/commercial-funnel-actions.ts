@@ -7,7 +7,7 @@ import {
   deleteCommercialFunnelEntriesByCampaign,
   persistCommercialFunnelEntries,
 } from '@/lib/supabase/commercial-funnel-database';
-import type { CommercialFunnelEntry, FunnelActionType } from '@/lib/types/commercial-funnel';
+import type { CommercialFunnelEntry, FunnelActionType, FunnelClientRef } from '@/lib/types/commercial-funnel';
 
 interface CommercialFunnelPersistDeps {
   db: SupabaseClient | null;
@@ -34,19 +34,23 @@ export function createCommercialFunnelActions(
     }
   };
 
-  const addClientsToFunnel = async (campaignId: string, clientIds: string[]): Promise<void> => {
+  const addClientsToFunnel = async (
+    campaignId: string,
+    clientRefs: FunnelClientRef[],
+  ): Promise<void> => {
     const state = getEntries();
     const existingIds = new Set(
       state
         .filter((entry) => entry.campaignId === campaignId)
         .map((entry) => entry.clientId),
     );
-    const newEntries: CommercialFunnelEntry[] = clientIds
-      .filter((clientId) => !existingIds.has(clientId))
-      .map((clientId) => ({
+    const newEntries: CommercialFunnelEntry[] = clientRefs
+      .filter((ref) => !existingIds.has(ref.clientId))
+      .map((ref) => ({
         id: createUniqueId('funnel-entry'),
         campaignId,
-        clientId,
+        clientId: ref.clientId,
+        clientSource: ref.clientSource,
         actions: createEmptyFunnelActions(),
         lostReason: '',
         createdAt: new Date().toISOString(),
@@ -69,10 +73,20 @@ export function createCommercialFunnelActions(
     if (!entry) return;
     const nextActions = entry.actions.map((action, index) => {
       if (index !== slotIndex) return action;
-      if (!actionType) return { type: '' as const, date: '' };
-      return { type: actionType, date: new Date().toISOString().slice(0, 10) };
+      if (!actionType) return { type: '' as const, date: '', note: '' };
+      return {
+        ...action,
+        type: actionType,
+        date: new Date().toISOString().slice(0, 10),
+      };
     });
     if (actionType === 'Convertito') {
+      if (entry.clientSource === 'main') {
+        const nextEntry: CommercialFunnelEntry = { ...entry, actions: nextActions };
+        await applyEntries(state.map((item) => (item.id === entryId ? nextEntry : item)));
+        deps.showToast('Cliente segnato come convertito. Resta in Lista Clienti.', 'success');
+        return;
+      }
       if (deps.db) await deleteCommercialFunnelEntry(deps.db, entryId);
       await deps.promoteColdClientToMainList(entry.clientId);
       await applyEntries(state.filter((item) => item.id !== entryId));
@@ -93,6 +107,22 @@ export function createCommercialFunnelActions(
     )));
   };
 
+  const updateFunnelActionNote = async (
+    entryId: string,
+    slotIndex: number,
+    note: string,
+  ): Promise<void> => {
+    const state = getEntries();
+    const entry = state.find((item) => item.id === entryId);
+    if (!entry) return;
+    const nextActions = entry.actions.map((action, index) => (
+      index === slotIndex ? { ...action, note } : action
+    ));
+    await applyEntries(state.map((item) => (
+      item.id === entryId ? { ...item, actions: nextActions } : item
+    )));
+  };
+
   const removeFunnelEntry = async (entryId: string): Promise<void> => {
     const state = getEntries();
     if (deps.db) await deleteCommercialFunnelEntry(deps.db, entryId);
@@ -110,6 +140,7 @@ export function createCommercialFunnelActions(
     addClientsToFunnel,
     updateFunnelAction,
     updateFunnelLostReason,
+    updateFunnelActionNote,
     removeFunnelEntry,
     removeFunnelEntriesByCampaign,
   };

@@ -12,12 +12,21 @@ export type FunnelActionType = typeof FUNNEL_ACTION_TYPES[number];
 export interface FunnelActionSlot {
   type: FunnelActionType | '';
   date: string;
+  note: string;
+}
+
+export type FunnelClientSource = 'cold' | 'main';
+
+export interface FunnelClientRef {
+  clientId: string;
+  clientSource: FunnelClientSource;
 }
 
 export interface CommercialFunnelEntry {
   id: string;
   campaignId: string;
   clientId: string;
+  clientSource: FunnelClientSource;
   actions: FunnelActionSlot[];
   lostReason: string;
   createdAt: string;

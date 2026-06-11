@@ -3,29 +3,39 @@
 import { useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
 import { CLIENT_TYPES } from '@/lib/constants/crm';
-import { isClientInColdSection } from '@/lib/crm/utils';
+import { isClientInColdSection, isClientInMainList } from '@/lib/crm/utils';
 import { useCrm } from '@/providers/crm-provider';
+import type { FunnelClientRef, FunnelClientSource } from '@/lib/types/commercial-funnel';
 
-interface FunnelColdClientPickerProps {
+type FunnelPickerTab = 'cold' | 'main';
+
+interface FunnelClientPickerProps {
   existingClientIds: Set<string>;
   onClose: () => void;
-  onAdd: (clientIds: string[]) => void;
+  onAdd: (refs: FunnelClientRef[]) => void;
 }
 
-export function FunnelColdClientPicker({
+export function FunnelClientPicker({
   existingClientIds,
   onClose,
   onAdd,
-}: FunnelColdClientPickerProps) {
+}: FunnelClientPickerProps) {
   const { clients } = useCrm();
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
+  const [activeTab, setActiveTab] = useState<FunnelPickerTab>('cold');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const clientSource: FunnelClientSource = activeTab === 'main' ? 'main' : 'cold';
 
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase();
     return clients
-      .filter((client) => isClientInColdSection(client))
+      .filter((client) => (
+        activeTab === 'cold'
+          ? isClientInColdSection(client)
+          : isClientInMainList(client)
+      ))
       .filter((client) => !existingClientIds.has(client.id))
       .filter((client) => !typeFilter || client.type === typeFilter)
       .filter((client) => {
@@ -34,11 +44,12 @@ export function FunnelColdClientPicker({
           client.name,
           client.type,
           client.owner,
+          client.relationship,
           ...client.contacts.flatMap((contact) => [contact.name, contact.email]),
         ].some((value) => value.toLowerCase().includes(query));
       })
       .sort((a, b) => a.name.localeCompare(b.name, 'it'));
-  }, [clients, existingClientIds, search, typeFilter]);
+  }, [activeTab, clients, existingClientIds, search, typeFilter]);
 
   const toggleRow = (clientId: string): void => {
     setSelectedIds((prev) => {
@@ -53,16 +64,37 @@ export function FunnelColdClientPicker({
     setSelectedIds(new Set(rows.map((row) => row.id)));
   };
 
+  const handleTabChange = (tab: FunnelPickerTab): void => {
+    setActiveTab(tab);
+    setSelectedIds(new Set());
+  };
+
   const handleSubmit = (): void => {
-    onAdd([...selectedIds]);
+    onAdd([...selectedIds].map((clientId) => ({ clientId, clientSource })));
   };
 
   return (
     <>
       <div className="drawer-overlay open" onClick={onClose} />
       <div className="drawer open mail-contact-picker-drawer">
-        <div className="drawer-header"><h3>Aggiungi clienti freddi al funnel</h3></div>
+        <div className="drawer-header"><h3>Aggiungi clienti alla campagna</h3></div>
         <div className="drawer-body">
+          <div className="funnel-picker-tabs">
+            <button
+              type="button"
+              className={`funnel-picker-tab${activeTab === 'cold' ? ' is-active' : ''}`}
+              onClick={() => handleTabChange('cold')}
+            >
+              Clienti freddi
+            </button>
+            <button
+              type="button"
+              className={`funnel-picker-tab${activeTab === 'main' ? ' is-active' : ''}`}
+              onClick={() => handleTabChange('main')}
+            >
+              Lista clienti
+            </button>
+          </div>
           <div className="mail-picker-toolbar">
             <div className="search-box">
               <Search size={18} />
@@ -88,11 +120,13 @@ export function FunnelColdClientPicker({
             </button>
           </div>
           <p className="mail-picker-hint">
-            Solo clienti freddi non già presenti nel funnel commerciale.
+            {activeTab === 'cold'
+              ? 'Clienti freddi: se convertiti passano in Lista Clienti. Se persi restano nel funnel.'
+              : 'Lista clienti: il cliente resta sempre in Lista Clienti, anche se convertito o perso nella campagna.'}
           </p>
           <div className="mail-picker-list">
             {rows.length === 0 ? (
-              <p className="mail-campaigns-empty">Nessun cliente freddo disponibile.</p>
+              <p className="mail-campaigns-empty">Nessun cliente disponibile con i filtri attuali.</p>
             ) : (
               rows.map((client) => (
                 <label

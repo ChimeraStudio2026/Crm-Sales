@@ -2,11 +2,13 @@
 
 import { Fragment, useMemo, useState } from 'react';
 import { ChevronRight, Plus, Trash2 } from 'lucide-react';
-import { FunnelColdClientPicker } from '@/components/commercial-funnel/funnel-cold-client-picker';
+import { FunnelClientPicker } from '@/components/commercial-funnel/funnel-client-picker';
 import { FunnelPersoModal } from '@/components/commercial-funnel/funnel-perso-modal';
 import {
   FUNNEL_SLOT_COUNT,
+  isFunnelActionLocked,
   isFunnelTerminalLost,
+  isFunnelTerminalConvertedEntry,
   resolveFunnelSemaforo,
   resolveFunnelStatus,
 } from '@/lib/commercial-funnel/index';
@@ -37,6 +39,7 @@ export function FunnelClientsTable({
     addClientsToFunnel,
     updateFunnelAction,
     updateFunnelLostReason,
+    updateFunnelActionNote,
     removeFunnelEntry,
   } = useCrm();
   const [showPicker, setShowPicker] = useState(false);
@@ -61,6 +64,8 @@ export function FunnelClientsTable({
         status: resolveFunnelStatus(entry.actions),
         semaforo: resolveFunnelSemaforo(entry.actions),
         isLost: isFunnelTerminalLost(entry),
+        isConverted: isFunnelTerminalConvertedEntry(entry),
+        isLocked: isFunnelActionLocked(entry),
       }))
       .sort((a, b) => {
         const nameA = a.client?.name || '';
@@ -146,12 +151,12 @@ export function FunnelClientsTable({
                   </td>
                 </tr>
               ) : (
-                rows.map(({ entry, client, status, semaforo, isLost }) => {
+                rows.map(({ entry, client, status, semaforo, isLost, isConverted, isLocked }) => {
                   const isExpanded = expandedEntries.has(entry.id);
                   const clientName = client?.name || 'Cliente non trovato';
                   return (
                     <Fragment key={entry.id}>
-                      <tr className={`funnel-row${isLost ? ' is-lost' : ''}`}>
+                      <tr className={`funnel-row${isLost ? ' is-lost' : ''}${isConverted ? ' is-converted' : ''}`}>
                         <td className="funnel-col-semaforo">
                           <span
                             className={`funnel-semaforo funnel-semaforo-${semaforo}`}
@@ -168,8 +173,12 @@ export function FunnelClientsTable({
                               size={14}
                               className={`row-expand-icon${isExpanded ? ' is-expanded' : ''}`}
                             />
-                            <strong>{clientName}</strong>
-                            {isLost && <span className="funnel-lost-badge">Perso</span>}
+                                <strong>{clientName}</strong>
+                                {entry.clientSource === 'main' && (
+                                  <span className="funnel-main-list-badge">Lista</span>
+                                )}
+                                {isLost && <span className="funnel-lost-badge">Perso</span>}
+                                {isConverted && <span className="funnel-converted-badge">Convertito</span>}
                           </button>
                         </td>
                         <td className="funnel-col-status">
@@ -186,7 +195,7 @@ export function FunnelClientsTable({
                               <select
                                 className="table-cell-select funnel-action-select"
                                 value={action.type}
-                                disabled={isLost}
+                                disabled={isLocked}
                                 onChange={(e) => void handleActionChange(entry, slotIndex, e.target.value)}
                               >
                                 <option value="">—</option>
@@ -255,6 +264,34 @@ export function FunnelClientsTable({
                                   <p>{entry.lostReason}</p>
                                 </div>
                               )}
+                              <div className="funnel-expanded-block funnel-expanded-notes">
+                                <span className="funnel-expanded-label">Note azioni</span>
+                                <div className="funnel-action-notes-grid">
+                                  {entry.actions.map((action, slotIndex) => (
+                                    <div key={`${entry.id}-note-${slotIndex}`} className="funnel-action-note-block">
+                                      <label htmlFor={`funnel-note-${entry.id}-${slotIndex}`}>
+                                        Azione {slotIndex + 1}
+                                        {action.type ? ` · ${action.type}` : ''}
+                                        {action.date ? ` (${formatActionDateDisplay(action.date)})` : ''}
+                                      </label>
+                                      <textarea
+                                        id={`funnel-note-${entry.id}-${slotIndex}`}
+                                        className="funnel-action-note-input"
+                                        defaultValue={action.note || ''}
+                                        placeholder="Descrivi cosa hai fatto in questa azione..."
+                                        rows={2}
+                                        readOnly={isLocked}
+                                        onBlur={(event) => {
+                                          const nextNote = event.currentTarget.value.trim();
+                                          if (nextNote !== (action.note || '').trim()) {
+                                            void updateFunnelActionNote(entry.id, slotIndex, nextNote);
+                                          }
+                                        }}
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
                             </div>
                           </td>
                         </tr>
@@ -268,10 +305,10 @@ export function FunnelClientsTable({
         </div>
       </div>
       {showPicker && (
-        <FunnelColdClientPicker
+        <FunnelClientPicker
           existingClientIds={existingClientIds}
           onClose={() => setShowPicker(false)}
-          onAdd={(clientIds) => void addClientsToFunnel(campaignId, clientIds).then(() => setShowPicker(false))}
+          onAdd={(refs) => void addClientsToFunnel(campaignId, refs).then(() => setShowPicker(false))}
         />
       )}
       {persoModal && (

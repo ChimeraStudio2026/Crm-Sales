@@ -1,14 +1,19 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { normalizeFunnelActions } from '@/lib/commercial-funnel/index';
-import type { CommercialFunnelEntry } from '@/lib/types/commercial-funnel';
+import type { CommercialFunnelEntry, FunnelClientSource } from '@/lib/types/commercial-funnel';
 
 interface CommercialFunnelEntryRow {
   id: string;
   campaign_id: string;
   client_id: string;
+  client_source: string | null;
   actions: unknown;
   lost_reason: string;
   created_at: string;
+}
+
+function normalizeClientSource(value: string | null | undefined): FunnelClientSource {
+  return value === 'main' ? 'main' : 'cold';
 }
 
 function rowToEntry(row: CommercialFunnelEntryRow): CommercialFunnelEntry {
@@ -16,6 +21,7 @@ function rowToEntry(row: CommercialFunnelEntryRow): CommercialFunnelEntry {
     id: row.id,
     campaignId: row.campaign_id,
     clientId: row.client_id,
+    clientSource: normalizeClientSource(row.client_source),
     actions: normalizeFunnelActions(row.actions),
     lostReason: row.lost_reason || '',
     createdAt: row.created_at || '',
@@ -42,6 +48,7 @@ export async function persistCommercialFunnelEntries(
     id: entry.id,
     campaign_id: entry.campaignId,
     client_id: entry.clientId,
+    client_source: entry.clientSource,
     actions: entry.actions,
     lost_reason: entry.lostReason || '',
     updated_at: new Date().toISOString(),

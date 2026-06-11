@@ -12,7 +12,7 @@ export const FUNNEL_SLOT_COUNT = 5;
 export const FUNNEL_GAP_THRESHOLDS_DAYS = [7, 10, 14, 20] as const;
 
 export function createEmptyFunnelActions(): FunnelActionSlot[] {
-  return Array.from({ length: FUNNEL_SLOT_COUNT }, () => ({ type: '', date: '' }));
+  return Array.from({ length: FUNNEL_SLOT_COUNT }, () => ({ type: '', date: '', note: '' }));
 }
 
 export function normalizeFunnelActions(value: unknown): FunnelActionSlot[] {
@@ -24,9 +24,11 @@ export function normalizeFunnelActions(value: unknown): FunnelActionSlot[] {
     const record = item as Partial<FunnelActionSlot>;
     const type = typeof record.type === 'string' ? record.type : '';
     const date = typeof record.date === 'string' ? record.date : '';
+    const note = typeof record.note === 'string' ? record.note : '';
     return {
       type: isFunnelActionType(type) ? type : '',
       date,
+      note,
     };
   });
 }
@@ -88,4 +90,12 @@ export function isFunnelTerminalLost(entry: CommercialFunnelEntry): boolean {
 
 export function isFunnelTerminalConverted(actions: FunnelActionSlot[]): boolean {
   return actions.some((action) => action.type === 'Convertito');
+}
+
+export function isFunnelTerminalConvertedEntry(entry: CommercialFunnelEntry): boolean {
+  return isFunnelTerminalConverted(entry.actions);
+}
+
+export function isFunnelActionLocked(entry: CommercialFunnelEntry): boolean {
+  return isFunnelTerminalLost(entry) || isFunnelTerminalConvertedEntry(entry);
 }

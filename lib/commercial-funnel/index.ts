@@ -12,7 +12,12 @@ export const FUNNEL_SLOT_COUNT = 5;
 export const FUNNEL_GAP_THRESHOLDS_DAYS = [7, 10, 14, 20] as const;
 
 export function createEmptyFunnelActions(): FunnelActionSlot[] {
-  return Array.from({ length: FUNNEL_SLOT_COUNT }, () => ({ type: '', date: '', note: '' }));
+  return Array.from({ length: FUNNEL_SLOT_COUNT }, () => ({
+    type: '',
+    date: '',
+    note: '',
+    taskIds: [],
+  }));
 }
 
 export function normalizeFunnelActions(value: unknown): FunnelActionSlot[] {
@@ -25,10 +30,14 @@ export function normalizeFunnelActions(value: unknown): FunnelActionSlot[] {
     const type = typeof record.type === 'string' ? record.type : '';
     const date = typeof record.date === 'string' ? record.date : '';
     const note = typeof record.note === 'string' ? record.note : '';
+    const taskIds = Array.isArray(record.taskIds)
+      ? record.taskIds.filter((id): id is string => typeof id === 'string')
+      : [];
     return {
       type: isFunnelActionType(type) ? type : '',
       date,
       note,
+      taskIds,
     };
   });
 }

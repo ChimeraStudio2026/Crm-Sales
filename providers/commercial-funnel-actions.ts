@@ -73,7 +73,7 @@ export function createCommercialFunnelActions(
     if (!entry) return;
     const nextActions = entry.actions.map((action, index) => {
       if (index !== slotIndex) return action;
-      if (!actionType) return { type: '' as const, date: '', note: '' };
+      if (!actionType) return { type: '' as const, date: '', note: '', taskIds: [] };
       return {
         ...action,
         type: actionType,
@@ -136,11 +136,31 @@ export function createCommercialFunnelActions(
     await applyEntries(state.filter((entry) => entry.campaignId !== campaignId));
   };
 
+  const addTaskToFunnelAction = async (
+    entryId: string,
+    slotIndex: number,
+    taskId: string,
+  ): Promise<void> => {
+    const state = getEntries();
+    const entry = state.find((item) => item.id === entryId);
+    if (!entry) return;
+    const nextActions = entry.actions.map((action, index) => {
+      if (index !== slotIndex) return action;
+      const taskIds = action.taskIds || [];
+      if (taskIds.includes(taskId)) return action;
+      return { ...action, taskIds: [...taskIds, taskId] };
+    });
+    await applyEntries(state.map((item) => (
+      item.id === entryId ? { ...item, actions: nextActions } : item
+    )));
+  };
+
   return {
     addClientsToFunnel,
     updateFunnelAction,
     updateFunnelLostReason,
     updateFunnelActionNote,
+    addTaskToFunnelAction,
     removeFunnelEntry,
     removeFunnelEntriesByCampaign,
   };

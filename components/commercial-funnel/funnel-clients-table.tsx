@@ -2,6 +2,7 @@
 
 import { Fragment, useMemo, useState } from 'react';
 import { ChevronRight, Plus, Trash2 } from 'lucide-react';
+import { FunnelActionNoteBlock } from '@/components/commercial-funnel/funnel-action-note-block';
 import { FunnelClientPicker } from '@/components/commercial-funnel/funnel-client-picker';
 import { FunnelPersoModal } from '@/components/commercial-funnel/funnel-perso-modal';
 import {
@@ -39,7 +40,6 @@ export function FunnelClientsTable({
     addClientsToFunnel,
     updateFunnelAction,
     updateFunnelLostReason,
-    updateFunnelActionNote,
     removeFunnelEntry,
   } = useCrm();
   const [showPicker, setShowPicker] = useState(false);
@@ -268,27 +268,15 @@ export function FunnelClientsTable({
                                 <span className="funnel-expanded-label">Note azioni</span>
                                 <div className="funnel-action-notes-grid">
                                   {entry.actions.map((action, slotIndex) => (
-                                    <div key={`${entry.id}-note-${slotIndex}`} className="funnel-action-note-block">
-                                      <label htmlFor={`funnel-note-${entry.id}-${slotIndex}`}>
-                                        Azione {slotIndex + 1}
-                                        {action.type ? ` · ${action.type}` : ''}
-                                        {action.date ? ` (${formatActionDateDisplay(action.date)})` : ''}
-                                      </label>
-                                      <textarea
-                                        id={`funnel-note-${entry.id}-${slotIndex}`}
-                                        className="funnel-action-note-input"
-                                        defaultValue={action.note || ''}
-                                        placeholder="Descrivi cosa hai fatto in questa azione..."
-                                        rows={2}
-                                        readOnly={isLocked}
-                                        onBlur={(event) => {
-                                          const nextNote = event.currentTarget.value.trim();
-                                          if (nextNote !== (action.note || '').trim()) {
-                                            void updateFunnelActionNote(entry.id, slotIndex, nextNote);
-                                          }
-                                        }}
-                                      />
-                                    </div>
+                                    <FunnelActionNoteBlock
+                                      key={`${entry.id}-note-${slotIndex}`}
+                                      entryId={entry.id}
+                                      slotIndex={slotIndex}
+                                      action={action}
+                                      clientId={entry.clientId}
+                                      defaultAssignee={client.owner}
+                                      isLocked={isLocked}
+                                    />
                                   ))}
                                 </div>
                               </div>

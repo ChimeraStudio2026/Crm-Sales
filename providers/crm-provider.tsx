@@ -210,6 +210,7 @@ interface CrmContextValue {
   updateFunnelAction: (entryId: string, slotIndex: number, actionType: FunnelActionType | '') => Promise<void>;
   updateFunnelLostReason: (entryId: string, lostReason: string) => Promise<void>;
   updateFunnelActionNote: (entryId: string, slotIndex: number, note: string) => Promise<void>;
+  addTaskToFunnelAction: (entryId: string, slotIndex: number, taskId: string) => Promise<void>;
   removeFunnelEntry: (entryId: string) => Promise<void>;
 }
 
@@ -791,7 +792,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
       ));
     } else {
       nextIdeas = [...ideas, {
-        id: createUniqueId('idea'),
+        id: input.id || createUniqueId('idea'),
         name: input.name,
         category: input.category || 'Content',
         clientId: input.clientId || '',
@@ -1311,6 +1312,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
     updateFunnelAction: commercialFunnelActions.updateFunnelAction,
     updateFunnelLostReason: commercialFunnelActions.updateFunnelLostReason,
     updateFunnelActionNote: commercialFunnelActions.updateFunnelActionNote,
+    addTaskToFunnelAction: commercialFunnelActions.addTaskToFunnelAction,
     removeFunnelEntry: commercialFunnelActions.removeFunnelEntry,
   };
 

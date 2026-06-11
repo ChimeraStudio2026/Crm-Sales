@@ -13,6 +13,7 @@ export interface FunnelActionSlot {
   type: FunnelActionType | '';
   date: string;
   note: string;
+  taskIds: string[];
 }
 
 export type FunnelClientSource = 'cold' | 'main';

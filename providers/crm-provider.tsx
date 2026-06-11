@@ -774,8 +774,9 @@ export function CrmProvider({ children }: CrmProviderProps) {
     const normalizedAssignees: Owner[] = input.itemType === 'task'
       ? (input.assignees?.length ? input.assignees.slice(0, 2) : ['Jeck'])
       : [];
+    const isUpdate = Boolean(input.id && ideas.some((item) => item.id === input.id));
     let nextIdeas: Idea[];
-    if (input.id) {
+    if (isUpdate) {
       nextIdeas = ideas.map((i) => (
         i.id === input.id
           ? {
@@ -808,7 +809,13 @@ export function CrmProvider({ children }: CrmProviderProps) {
     }
     setIdeas(nextIdeas);
     await persistIdeasNow(nextIdeas);
-    showToast(input.id ? (input.itemType === 'task' ? 'Task aggiornata.' : 'Elemento aggiornato.') : 'Task creata.', 'success');
+    const isTask = input.itemType === 'task';
+    showToast(
+      isUpdate
+        ? (isTask ? 'Task aggiornata.' : 'Elemento aggiornato.')
+        : (isTask ? 'Task creata.' : 'Elemento creato.'),
+      'success',
+    );
   }, [ideas, persistIdeasNow, showToast]);
 
   const deleteIdea = useCallback(async (ideaId: string) => {

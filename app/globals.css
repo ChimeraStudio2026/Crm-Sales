@@ -1193,6 +1193,15 @@ body.crm-col-resizing {
     color: var(--text-secondary);
     border: 1px solid rgba(107, 114, 128, 0.3);
 }
+.client-row-eliminato {
+    opacity: 0.72;
+}
+
+.client-row-eliminato .client-name-cell strong {
+    text-decoration: line-through;
+    color: var(--text-muted);
+}
+
 .badge-eliminato {
     background: rgba(239, 68, 68, 0.15);
     color: #f87171;

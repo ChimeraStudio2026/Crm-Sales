@@ -142,7 +142,7 @@ export function ColdClientsSection() {
               />
               <strong>{client.name}</strong>
               {isDraft && (
-                <span className="client-draft-badge" title="Aggiungi contatti e azione per completare il profilo">
+                <span className="client-draft-badge" title="Completa nome, tipologia, owner, origine e almeno un contatto con email. L'azione è opzionale.">
                   <span className="client-draft-dot" aria-hidden="true" />
                   Bozza
                 </span>

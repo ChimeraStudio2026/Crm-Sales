@@ -135,7 +135,7 @@ export function ImportSection() {
                     ))}
                   </select>
                   <p className="import-preview-note">
-                    I clienti già completi (contatti + azione) restano intatti. Vengono aggiunti solo OKR nuovi e clienti nuovi in bozza.
+                    I clienti già completi (contatti, origine, owner, tipologia) restano intatti. Vengono aggiunti solo OKR nuovi e clienti nuovi in bozza.
                   </p>
                 </div>
                 <div className="import-preview-wrapper">

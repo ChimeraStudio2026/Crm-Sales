@@ -14,6 +14,7 @@ import {
   formatCurrency,
   isActionDateStale,
   isClientInActiveSection,
+  isClientInMainList,
   shouldHighlightIncompleteClient,
 } from '@/lib/crm/utils';
 import { useCrm } from '@/providers/crm-provider';
@@ -67,7 +68,7 @@ export function ClientsSection() {
   const filtered = useMemo(() => {
     const query = search.toLowerCase().trim();
     let list = clients.filter((c) => {
-      if (!isClientInActiveSection(c)) return false;
+      if (!isClientInMainList(c)) return false;
       if (filterIncomplete && !shouldHighlightIncompleteClient(c)) return false;
       const matchesQuery =
         !query ||
@@ -101,7 +102,7 @@ export function ClientsSection() {
     return list;
   }, [clients, filterIncomplete, filterOwner, filterRelationship, filterType, search, sort]);
 
-  const totalActive = clients.filter(isClientInActiveSection).length;
+  const totalInList = clients.filter(isClientInMainList).length;
   const columnCount = DEFAULT_TABLE_COLUMN_ORDER.length;
 
   const handleSort = (column: string) => {
@@ -145,7 +146,7 @@ export function ClientsSection() {
               />
               <strong>{client.name}</strong>
               {isDraft && (
-                <span className="client-draft-badge" title="Aggiungi contatti e azione per completare il profilo">
+                <span className="client-draft-badge" title="Completa nome, tipologia, owner, origine e almeno un contatto con email. L'azione è opzionale.">
                   <span className="client-draft-dot" aria-hidden="true" />
                   Bozza
                 </span>
@@ -338,6 +339,7 @@ export function ClientsSection() {
                           <tr
                             className={[
                               'client-row-expandable',
+                              client.relationship === 'Eliminato' ? 'client-row-eliminato' : '',
                               isExpanded ? 'is-row-expanded' : '',
                             ].filter(Boolean).join(' ')}
                             onClick={(event) => {
@@ -368,7 +370,7 @@ export function ClientsSection() {
             </div>
             <div className="table-footer">
               <div className="table-info">
-                Mostrati {filtered.length} di {totalActive} clienti
+                Mostrati {filtered.length} di {totalInList} clienti
                 {incompleteCount > 0 && (
                   <> · <span style={{ color: 'var(--primary)' }}>{incompleteCount} in bozza</span></>
                 )}

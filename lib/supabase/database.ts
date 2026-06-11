@@ -196,15 +196,18 @@ export async function fetchIdeas(db: SupabaseClient): Promise<Idea[]> {
 }
 
 export async function persistClients(db: SupabaseClient, allClients: Client[]): Promise<void> {
+  if (allClients.length === 0) return;
   const rows = allClients.map(clientToRow);
-  if (rows.length === 0) {
-    const { error } = await db.from('clients').delete().neq('id', '');
-    if (error) throw error;
-    return;
-  }
   const { error: upsertError } = await db.from('clients').upsert(rows, { onConflict: 'id' });
   if (upsertError) throw upsertError;
-  await removeOrphanRows(db, 'clients', rows.map((r) => r.id));
+}
+
+export async function deleteClientRecord(
+  db: SupabaseClient,
+  clientId: string,
+): Promise<void> {
+  const { error } = await db.from('clients').delete().eq('id', clientId);
+  if (error) throw error;
 }
 
 export async function persistIdeas(db: SupabaseClient, allIdeas: Idea[]): Promise<void> {

@@ -63,7 +63,7 @@ import {
   reconcileImportedClientsToMainList,
   resolveActionDateOnTextChange,
   syncClientLegacyFields,
-  updateClientProfileCompletion,
+  syncClientsProfileCompletion,
 } from '@/lib/crm/utils';
 import { appendApolloDescription, resolveActionWithWebsite } from '@/lib/crm/apollo';
 import {
@@ -94,6 +94,7 @@ import {
   persistAnalysisForecasts,
   persistClientTasks,
   persistClients,
+  deleteClientRecord,
   persistIdeas,
   upsertOkrRecords,
   persistOkrRecords,
@@ -254,7 +255,14 @@ export function CrmProvider({ children }: CrmProviderProps) {
   const supabaseConfigured = isSupabaseConfigured();
   const db = useMemo(() => createBrowserSupabaseClient(), []);
   const ideasMutationRef = useRef(0);
+  const clientsMutationRef = useRef(0);
+  const clientsRef = useRef<Client[]>([]);
+  const clientsMutationQueueRef = useRef<Promise<Client[]>>(Promise.resolve([]));
   const jonnyReloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    clientsRef.current = clients;
+  }, [clients]);
 
   const showToast = useCallback((message: string, type: ToastType = 'info') => {
     const id = createUniqueId('toast');
@@ -284,13 +292,48 @@ export function CrmProvider({ children }: CrmProviderProps) {
   );
 
   const persistClientsNow = useCallback(async (nextClients?: Client[]) => {
-    const data = nextClients ?? clients;
+    const data = nextClients ?? clientsRef.current;
     if (!db) {
       throw new Error('Supabase non configurato');
     }
     await persistClients(db, data);
     setIsSupabaseConnected(true);
-  }, [clients, db]);
+  }, [db]);
+
+  const mutateClients = useCallback((
+    buildNext: (prev: Client[]) => Client[],
+    options?: { recalculate?: boolean },
+  ): Promise<Client[]> => {
+    const runMutation = async (): Promise<Client[]> => {
+      if (!db) {
+        throw new Error('Supabase non configurato');
+      }
+      clientsMutationRef.current += 1;
+      try {
+        let nextClients = buildNext(clientsRef.current);
+        if (options?.recalculate !== false) {
+          nextClients = recalculateRelationships(nextClients);
+        }
+        nextClients = syncClientsProfileCompletion(nextClients);
+        clientsRef.current = nextClients;
+        setClients(nextClients);
+        await persistClients(db, nextClients);
+        setIsSupabaseConnected(true);
+        return nextClients;
+      } catch (error) {
+        showToast(
+          `Errore salvataggio clienti: ${error instanceof Error ? error.message : 'errore'}`,
+          'danger',
+        );
+        throw error;
+      } finally {
+        clientsMutationRef.current -= 1;
+      }
+    };
+    clientsMutationQueueRef.current = clientsMutationQueueRef.current
+      .then(runMutation, runMutation);
+    return clientsMutationQueueRef.current;
+  }, [db, showToast]);
 
   const persistIdeasNow = useCallback(async (nextIdeas?: Idea[]) => {
     const data = nextIdeas ?? ideas;
@@ -384,7 +427,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
   useEffect(() => {
     async function reloadFromJonny(): Promise<void> {
       if (!db) return;
-      if (ideasMutationRef.current > 0) {
+      if (ideasMutationRef.current > 0 || clientsMutationRef.current > 0) {
         if (jonnyReloadTimerRef.current) clearTimeout(jonnyReloadTimerRef.current);
         jonnyReloadTimerRef.current = setTimeout(() => {
           jonnyReloadTimerRef.current = null;
@@ -405,7 +448,9 @@ export function CrmProvider({ children }: CrmProviderProps) {
         normalized = reconcileImportedClientsToMainList(normalized);
         normalized = applyColdClientPromotionToAll(normalized);
         normalized = recalculateRelationships(normalized);
+        normalized = syncClientsProfileCompletion(normalized);
         setClients(normalized);
+        clientsRef.current = normalized;
         setIdeas(loadedIdeas);
         setClientTasks(loadedTasks);
         setOkrRecords(linkOkrRecordsToClients(loadedOkr, normalized));
@@ -459,7 +504,9 @@ export function CrmProvider({ children }: CrmProviderProps) {
           normalized = reconcileImportedClientsToMainList(normalized);
           normalized = applyColdClientPromotionToAll(normalized);
           normalized = recalculateRelationships(normalized);
+          normalized = syncClientsProfileCompletion(normalized);
           setClients(normalized);
+          clientsRef.current = normalized;
           setIdeas(loadedIdeas);
           setClientTasks(loadedTasks);
           setOkrRecords(linkOkrRecordsToClients(loadedOkr, normalized));
@@ -509,35 +556,34 @@ export function CrmProvider({ children }: CrmProviderProps) {
   ) => {
     const id = options?.id || input.id;
     const isCold = options?.isCold ?? false;
-    let nextClients = [...clients];
-    if (id) {
-      nextClients = nextClients.map((c) => {
-        if (c.id !== id) return c;
-        const { action: inputAction, actionDate: _ignoredActionDate, ...restInput } = input;
-        const trimmedAction = inputAction !== undefined ? inputAction.trim() : undefined;
-        const updated: Client = {
-          ...c,
-          ...restInput,
-          id: c.id,
-          contacts: input.contacts ?? c.contacts,
-          productOffers: input.productOffers ?? c.productOffers,
-          manualRelationship: input.manualRelationship ?? c.manualRelationship,
-          actionDate: c.actionDate,
-        };
-        if (input.relationship !== undefined && input.relationship !== c.relationship) {
-          updated.manualRelationship = true;
-        }
-        if (trimmedAction !== undefined) {
-          updated.action = trimmedAction;
-          updated.actionDate = resolveActionDateOnTextChange(c.action || '', trimmedAction, c.actionDate);
-        }
-        updateClientProfileCompletion(updated);
-        if (isCold || isClientInColdSection(updated)) {
-          updated.isColdClient = (updated.rev2026 || 0) <= COLD_CLIENT_REV_THRESHOLD;
-        }
-        return applyColdClientPromotion(updated).client;
-      });
-    } else {
+    await mutateClients((prev) => {
+      if (id) {
+        return prev.map((c) => {
+          if (c.id !== id) return c;
+          const { action: inputAction, actionDate: _ignoredActionDate, ...restInput } = input;
+          const trimmedAction = inputAction !== undefined ? inputAction.trim() : undefined;
+          const updated: Client = {
+            ...c,
+            ...restInput,
+            id: c.id,
+            contacts: input.contacts ?? c.contacts,
+            productOffers: input.productOffers ?? c.productOffers,
+            manualRelationship: input.manualRelationship ?? c.manualRelationship,
+            actionDate: c.actionDate,
+          };
+          if (input.relationship !== undefined && input.relationship !== c.relationship) {
+            updated.manualRelationship = true;
+          }
+          if (trimmedAction !== undefined) {
+            updated.action = trimmedAction;
+            updated.actionDate = resolveActionDateOnTextChange(c.action || '', trimmedAction, c.actionDate);
+          }
+          if (isCold || isClientInColdSection(updated)) {
+            updated.isColdClient = (updated.rev2026 || 0) <= COLD_CLIENT_REV_THRESHOLD;
+          }
+          return applyColdClientPromotion(updated).client;
+        });
+      }
       const trimmedAction = (input.action || '').trim();
       const newClient: Client = {
         id: createUniqueId('client'),
@@ -563,28 +609,26 @@ export function CrmProvider({ children }: CrmProviderProps) {
         needsProfileCompletion: true,
         isColdClient: isCold || (input.rev2026 || 0) <= COLD_CLIENT_REV_THRESHOLD,
       };
-      updateClientProfileCompletion(newClient);
-      nextClients.push(applyColdClientPromotion(newClient).client);
-    }
-    nextClients = recalculateRelationships(nextClients);
-    setClients(nextClients);
-    await persistClientsNow(nextClients);
+      return [...prev, applyColdClientPromotion(newClient).client];
+    });
     showToast(id ? `Cliente "${input.name}" aggiornato.` : `Cliente "${input.name}" creato.`, 'success');
-  }, [clients, persistClientsNow, showToast]);
+  }, [mutateClients, showToast]);
 
   const deleteClient = useCallback(async (clientId: string) => {
-    const nextClients = clients.filter((c) => c.id !== clientId);
-    setClients(nextClients);
-    await persistClientsNow(nextClients);
-    showToast('Cliente eliminato.', 'info');
-  }, [clients, persistClientsNow, showToast]);
+    if (!db) {
+      throw new Error('Supabase non configurato');
+    }
+    await deleteClientRecord(db, clientId);
+    await mutateClients((prev) => prev.filter((c) => c.id !== clientId), { recalculate: false });
+    showToast('Cliente rimosso dal database.', 'info');
+  }, [db, mutateClients, showToast]);
 
   const updateClientField = useCallback(async (
     clientId: string,
     field: keyof Client,
     value: unknown,
   ) => {
-    let nextClients = clients.map((c) => {
+    await mutateClients((prev) => prev.map((c) => {
       if (c.id !== clientId) return c;
       const updated = { ...c, [field]: value } as Client;
       if (field === 'relationship') updated.manualRelationship = true;
@@ -594,13 +638,9 @@ export function CrmProvider({ children }: CrmProviderProps) {
           updated.productOffers,
         );
       }
-      updateClientProfileCompletion(updated);
       return applyColdClientPromotion(updated).client;
-    });
-    nextClients = recalculateRelationships(nextClients);
-    setClients(nextClients);
-    await persistClientsNow(nextClients);
-  }, [clients, persistClientsNow]);
+    }));
+  }, [mutateClients]);
 
   const updateClientContacts = useCallback(async (
     clientId: string,
@@ -612,46 +652,34 @@ export function CrmProvider({ children }: CrmProviderProps) {
       name: contact.name || '',
       role: contact.role || '',
     }));
-    let nextClients = clients.map((c) => {
+    await mutateClients((prev) => prev.map((c) => {
       if (c.id !== clientId) return c;
       const updated = { ...c, contacts: normalizedContacts };
       syncClientLegacyFields(updated);
-      updateClientProfileCompletion(updated);
       return applyColdClientPromotion(updated).client;
-    });
-    nextClients = recalculateRelationships(nextClients);
-    setClients(nextClients);
-    await persistClientsNow(nextClients);
-  }, [clients, persistClientsNow]);
+    }));
+  }, [mutateClients]);
 
   const updateClientAction = useCallback(async (clientId: string, action: string) => {
     const trimmedAction = action.trim();
-    let nextClients = clients.map((c) => {
+    await mutateClients((prev) => prev.map((c) => {
       if (c.id !== clientId) return c;
-      const updated: Client = {
+      return {
         ...c,
         action: trimmedAction,
         actionDate: resolveActionDateOnTextChange(c.action || '', trimmedAction, c.actionDate),
       };
-      updateClientProfileCompletion(updated);
-      return updated;
-    });
-    setClients(nextClients);
-    await persistClientsNow(nextClients);
-  }, [clients, persistClientsNow]);
+    }), { recalculate: false });
+  }, [mutateClients]);
 
   const updateClientProductOffers = useCallback(async (
     clientId: string,
     offerIds: ProductOfferId[],
   ) => {
-    let nextClients = clients.map((c) => {
-      if (c.id !== clientId) return c;
-      const updated = { ...c, productOffers: offerIds };
-      return updated;
-    });
-    setClients(nextClients);
-    await persistClientsNow(nextClients);
-  }, [clients, persistClientsNow]);
+    await mutateClients((prev) => prev.map((c) => (
+      c.id === clientId ? { ...c, productOffers: offerIds } : c
+    )), { recalculate: false });
+  }, [mutateClients]);
 
   const saveIdea = useCallback(async (
     input: Partial<Idea> & { name: string; description?: string; clientId?: string },
@@ -933,24 +961,20 @@ export function CrmProvider({ children }: CrmProviderProps) {
   const completeRecallWithAction = useCallback(async (clientId: string, action: string) => {
     const trimmedAction = action.trim();
     if (!trimmedAction) return;
-    let nextClients = clients.map((c) => {
+    await mutateClients((prev) => prev.map((c) => {
       if (c.id !== clientId) return c;
-      const updated: Client = {
+      return {
         ...c,
         action: trimmedAction,
         actionDate: resolveActionDateOnTextChange(c.action || '', trimmedAction, c.actionDate),
       };
-      updateClientProfileCompletion(updated);
-      return updated;
-    });
-    setClients(nextClients);
-    await persistClientsNow(nextClients);
+    }), { recalculate: false });
     const nextRecall = dailyRecallItems.map((item) =>
       item.clientId === clientId ? { ...item, status: 'Done' as const } : item,
     );
     setDailyRecallItems(nextRecall);
     await persistDailyRecallItems(nextRecall);
-  }, [clients, dailyRecallItems, persistClientsNow, persistDailyRecallItems]);
+  }, [dailyRecallItems, mutateClients, persistDailyRecallItems]);
 
   const processExcelImport = useCallback(async (
     parsedClients: ParsedExcelClient[],
@@ -961,11 +985,13 @@ export function CrmProvider({ children }: CrmProviderProps) {
       if (!db) {
         throw new Error('Supabase non configurato. Imposta le variabili NEXT_PUBLIC_SUPABASE_* su Vercel o in .env.local.');
       }
-      const clientMerge = mergeClientsWithExcelImport(clients, parsedClients, importYear);
+      const clientMerge = mergeClientsWithExcelImport(clientsRef.current, parsedClients, importYear);
     let nextClients = recalculateRelationships(clientMerge.merged);
     nextClients = reconcileImportedClientsToMainList(nextClients);
+    nextClients = syncClientsProfileCompletion(nextClients);
     const okrMerge = mergeOkrRecordsWithImport(okrRecords, newOkrRecords, nextClients);
     await persistClientsNow(nextClients);
+    clientsRef.current = nextClients;
     if (okrMerge.upserted.length > 0) {
       await upsertOkrRecords(db, okrMerge.upserted);
     }
@@ -977,8 +1003,10 @@ export function CrmProvider({ children }: CrmProviderProps) {
     normalized = reconcileImportedClientsToMainList(normalized);
     normalized = applyColdClientPromotionToAll(normalized);
     normalized = recalculateRelationships(normalized);
+    normalized = syncClientsProfileCompletion(normalized);
     const linkedOkr = linkOkrRecordsToClients(loadedOkr, normalized);
     setClients(normalized);
+    clientsRef.current = normalized;
     setOkrRecords(linkedOkr);
     setIsSupabaseConnected(true);
     showToast(
@@ -990,7 +1018,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
       showToast(`Import fallito: ${message}`, 'danger');
       throw error;
     }
-  }, [clients, db, okrRecords, persistClientsNow, showToast]);
+  }, [db, okrRecords, persistClientsNow, showToast]);
 
   const parseExcelBuffer = useCallback((buffer: ArrayBuffer, filename?: string) => {
     return parseExcelImportBuffer(buffer, filename);
@@ -1002,6 +1030,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
       await clearMailCampaignData(db);
     }
     setClients([]);
+    clientsRef.current = [];
     setIdeas([]);
     setClientTasks([]);
     setOkrRecords([]);
@@ -1083,7 +1112,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
       showToast('Supabase non configurato.', 'danger');
       return;
     }
-    const client = clients.find((c) => c.id === clientId);
+    const client = clientsRef.current.find((c) => c.id === clientId);
     if (!client) return;
     showToast('Arricchimento Apollo in corso...', 'info');
     const result = await enrichClientWithApollo(db, {
@@ -1094,7 +1123,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
       showToast(result.error || 'Errore Apollo', 'danger');
       return;
     }
-    const nextClients = clients.map((c) => {
+    await mutateClients((prev) => prev.map((c) => {
       if (c.id !== clientId) return c;
       const contacts: ClientContact[] = [...c.contacts];
       if (result.email && typeof result.email === 'string') {
@@ -1111,12 +1140,12 @@ export function CrmProvider({ children }: CrmProviderProps) {
         c.action,
         typeof result.website === 'string' ? result.website : undefined,
       );
-      return { ...c, contacts, description, action, email: contacts[0]?.email || c.email };
-    });
-    setClients(nextClients);
-    await persistClientsNow(nextClients);
+      const updated = { ...c, contacts, description, action, email: contacts[0]?.email || c.email };
+      syncClientLegacyFields(updated);
+      return updated;
+    }), { recalculate: false });
     showToast('Cliente arricchito con Apollo.', 'success');
-  }, [clients, db, persistClientsNow, showToast]);
+  }, [db, mutateClients, showToast]);
 
   const value: CrmContextValue = {
     isLoading,

@@ -82,8 +82,20 @@ export function isClientInColdSection(client: Client): boolean {
   return client.isColdClient === true && client.relationship !== 'Eliminato';
 }
 
+/** Clienti nella lista principale (inclusi Eliminato), esclusi i freddi. */
+export function isClientInMainList(client: Client): boolean {
+  return !client.isColdClient;
+}
+
+/** Clienti attivi per analisi, recall e totali fatturato (esclusi Eliminato). */
 export function isClientInActiveSection(client: Client): boolean {
   return !client.isColdClient && client.relationship !== 'Eliminato';
+}
+
+export function isManualRelationshipLocked(client: Client): boolean {
+  return client.manualRelationship
+    || client.relationship === 'Perso'
+    || client.relationship === 'Eliminato';
 }
 
 export function hasExcelRevenueDifference(
@@ -97,9 +109,13 @@ export function hasExcelRevenueDifference(
 }
 
 export function isClientProfileComplete(client: Client): boolean {
-  const hasContacts = client.contacts.some((c) => (c.email || '').trim());
-  const hasAction = !!(client.action && client.action.trim());
-  return hasContacts && hasAction && !!client.type && !!client.owner;
+  normalizeClientContacts(client);
+  const hasName = !!(client.name && client.name.trim());
+  const hasType = !!client.type;
+  const hasOwner = !!client.owner;
+  const hasOrigin = !!(client.clientOrigin && client.clientOrigin.trim());
+  const hasContactEmail = client.contacts.some((contact) => (contact.email || '').trim());
+  return hasName && hasType && hasOwner && hasOrigin && hasContactEmail;
 }
 
 /** Clienti completi non vengono modificati da un re-import OKR/Excel. */
@@ -108,11 +124,19 @@ export function shouldPreserveClientOnImport(client: Client): boolean {
 }
 
 export function shouldHighlightIncompleteClient(client: Client): boolean {
-  return client.needsProfileCompletion || !isClientProfileComplete(client);
+  return !isClientProfileComplete(client);
 }
 
 export function updateClientProfileCompletion(client: Client): void {
   client.needsProfileCompletion = !isClientProfileComplete(client);
+}
+
+export function syncClientsProfileCompletion(clients: Client[]): Client[] {
+  return clients.map((client) => {
+    const normalized = { ...client };
+    updateClientProfileCompletion(normalized);
+    return normalized;
+  });
 }
 
 export function normalizeClientContacts(client: Client): ClientContact[] {
@@ -196,7 +220,7 @@ export function recalculateRelationships(clients: Client[]): Client[] {
     activeClientsWithRevenue2026.slice(0, top20Count).map((c) => c.id),
   );
   return clients.map((c) => {
-    if (c.manualRelationship) {
+    if (isManualRelationshipLocked(c)) {
       return c;
     }
     if (top20Ids.has(c.id)) {

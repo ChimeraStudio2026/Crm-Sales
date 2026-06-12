@@ -106,7 +106,6 @@ export const CRM_TABLE_COLUMN_DEFS = {
   type: { label: 'Tipologia', sortKey: 'type', align: 'left' as const, defaultWidth: 155, minWidth: 130, expandedWidth: 200 },
   owner: { label: 'Owner', sortKey: 'owner', align: 'left' as const, defaultWidth: 120, minWidth: 100, expandedWidth: 160 },
   clientOrigin: { label: 'Origine Cliente', sortKey: 'clientOrigin', align: 'left' as const, defaultWidth: 150, minWidth: 130, expandedWidth: 190 },
-  relationshipIndex: { label: 'Indice', sortKey: 'relationshipIndex', align: 'center' as const, defaultWidth: 72, minWidth: 60, expandedWidth: 90 },
   relationship: { label: 'Rapporto', sortKey: 'relationship', align: 'left' as const, defaultWidth: 160, minWidth: 130, expandedWidth: 220 },
   rev2026: { label: 'Fatturato 2026', sortKey: 'rev2026', align: 'right' as const, defaultWidth: 130, minWidth: 110, expandedWidth: 150 },
   rev2025: { label: 'Fatturato 2025', sortKey: 'rev2025', align: 'right' as const, defaultWidth: 130, minWidth: 110, expandedWidth: 150 },

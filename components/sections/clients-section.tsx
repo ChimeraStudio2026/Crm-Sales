@@ -7,7 +7,9 @@ import {
   CRM_TABLE_COLUMN_DEFS,
   DEFAULT_TABLE_COLUMN_ORDER,
   OWNERS,
+  RECURRENT_REV_THRESHOLD,
   RELATIONSHIPS,
+  TOP_20_REV_THRESHOLD,
 } from '@/lib/constants/crm';
 import {
   formatActionDateDisplay,
@@ -17,11 +19,6 @@ import {
   isClientInMainList,
   shouldHighlightIncompleteClient,
 } from '@/lib/crm/utils';
-import {
-  getRelationshipIndex,
-  getRelationshipStars,
-  isManualOnlyRelationship,
-} from '@/lib/crm/relationship-rules';
 import { useCrm } from '@/providers/crm-provider';
 import { ClientDrawer } from '@/components/drawers/client-drawer';
 import { BulkClientsDrawer } from '@/components/drawers/bulk-clients-drawer';
@@ -32,11 +29,11 @@ import { getClientOriginCellClass } from '@/lib/crm/client-origin';
 import type { Client, Relationship, SortState } from '@/lib/types/crm';
 
 const RELATIONSHIP_LABELS: Record<Relationship, string> = {
-  'Nuovo Cliente': 'Nuovo Cliente',
-  Ricorrente: 'Ricorrente',
-  'Top 20%': 'Top 20%',
-  Perso: 'Perso (manuale)',
-  Eliminato: 'Eliminato (manuale)',
+  'Nuovo Cliente': '⭐ Nuovo Cliente',
+  Ricorrente: '⭐⭐ Ricorrente',
+  'Top 20%': '⭐⭐⭐ Top 20%',
+  Perso: '🟠 Perso',
+  Eliminato: '🔴 Eliminato',
 };
 
 function isInteractiveTableTarget(target: EventTarget | null): boolean {
@@ -91,17 +88,10 @@ export function ClientsSection() {
         (!filterRelationship || c.relationship === filterRelationship)
       );
     });
-    const col = sort.column as keyof Client | 'relationshipIndex';
+    const col = sort.column as keyof Client;
     list = [...list].sort((a, b) => {
-      let valA: string | number;
-      let valB: string | number;
-      if (col === 'relationshipIndex') {
-        valA = getRelationshipIndex(a.relationship);
-        valB = getRelationshipIndex(b.relationship);
-      } else {
-        valA = a[col as keyof Client] as string | number;
-        valB = b[col as keyof Client] as string | number;
-      }
+      let valA: string | number = a[col] as string | number;
+      let valB: string | number = b[col] as string | number;
       if (col === 'rev2025' || col === 'rev2026') {
         valA = Number(a[col]) || 0;
         valB = Number(b[col]) || 0;
@@ -202,33 +192,12 @@ export function ClientsSection() {
             />
           </td>
         );
-      case 'relationshipIndex': {
-        const stars = getRelationshipStars(client.relationship);
-        const index = getRelationshipIndex(client.relationship);
-        return (
-          <td
-            key={columnId}
-            className="col-relationship-index"
-            title={
-              isManualOnlyRelationship(client.relationship)
-                ? 'Stato impostato manualmente'
-                : client.manualRelationship
-                  ? 'Rapporto impostato manualmente'
-                  : `Indice ${index} — calcolato dal fatturato 2026`
-            }
-            style={{ textAlign: 'center' }}
-          >
-            <span className="relationship-index-badge">{stars}</span>
-          </td>
-        );
-      }
       case 'relationship':
         return (
           <td key={columnId} onClick={(event) => event.stopPropagation()}>
             <select
               className="table-cell-select"
               value={client.relationship}
-              title={client.manualRelationship ? 'Rapporto impostato manualmente' : 'Calcolato automaticamente dal fatturato 2026'}
               onChange={(e) => void updateClientField(client.id, 'relationship', e.target.value)}
             >
               {RELATIONSHIPS.map((r) => <option key={r} value={r}>{RELATIONSHIP_LABELS[r]}</option>)}
@@ -281,6 +250,20 @@ export function ClientsSection() {
       <TopHeader onQuickAdd={openNew} />
       <div className="content-body is-clients-section">
         <section id="section-clients" className="app-section active">
+          <div className="clients-relationship-legend recall-legend">
+            <span className="recall-legend-item">
+              <strong>⭐</strong> Nuovo Cliente · fino a {formatCurrency(RECURRENT_REV_THRESHOLD)}
+            </span>
+            <span className="recall-legend-item">
+              <strong>⭐⭐</strong> Ricorrente · {formatCurrency(RECURRENT_REV_THRESHOLD)}–{formatCurrency(TOP_20_REV_THRESHOLD)}
+            </span>
+            <span className="recall-legend-item">
+              <strong>⭐⭐⭐</strong> Top 20% · oltre {formatCurrency(TOP_20_REV_THRESHOLD)}
+            </span>
+            <span className="recall-legend-item">
+              🟠 Perso · 🔴 Eliminato · solo manuali
+            </span>
+          </div>
           <div className="table-filter-bar">
             <div className="filter-left">
               <div className="search-box">

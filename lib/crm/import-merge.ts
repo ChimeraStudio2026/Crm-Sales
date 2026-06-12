@@ -9,7 +9,6 @@ import { resolveClientProductOffers } from '@/lib/crm/product-offers';
 import {
   createUniqueId,
   hasExcelRevenueDifference,
-  shouldPreserveClientOnImport,
 } from '@/lib/crm/utils';
 
 export interface OkrMergeResult {
@@ -25,7 +24,6 @@ export interface ClientImportMergeResult {
   addedCount: number;
   updatedCount: number;
   skippedCount: number;
-  preservedCount: number;
 }
 
 export function getOkrRecordMergeKey(record: OkrRecord): string {
@@ -62,7 +60,6 @@ export function mergeClientsWithExcelImport(
   let addedCount = 0;
   let updatedCount = 0;
   let skippedCount = 0;
-  let preservedCount = 0;
   parsedClients.forEach((imported) => {
     const existingIndex = merged.findIndex(
       (client) => client.name.toLowerCase() === imported.name.toLowerCase(),
@@ -91,10 +88,6 @@ export function mergeClientsWithExcelImport(
       return;
     }
     const existing = { ...merged[existingIndex] };
-    if (shouldPreserveClientOnImport(existing)) {
-      preservedCount += 1;
-      return;
-    }
     const currentRevenue = existing[revField];
     if (!hasExcelRevenueDifference(currentRevenue, imported.revenue)) {
       skippedCount += 1;
@@ -113,7 +106,6 @@ export function mergeClientsWithExcelImport(
     addedCount,
     updatedCount,
     skippedCount,
-    preservedCount,
   };
 }
 

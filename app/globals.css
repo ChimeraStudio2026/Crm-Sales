@@ -1894,12 +1894,6 @@ body.drawer-open {
     border: 1px solid var(--border-color);
 }
 
-.import-status-protected {
-    color: #166534;
-    background: #ecfdf5;
-    border: 1px solid rgba(15, 194, 123, 0.25);
-}
-
 /* ==========================================================================
    NOTIFICATIONS / TOAST
    ========================================================================== */

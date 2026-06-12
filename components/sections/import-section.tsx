@@ -12,7 +12,7 @@ import {
   parseExcelImportBufferWithYear,
   type ExcelImportParseResult,
 } from '@/lib/crm/excel';
-import { formatCurrency, hasExcelRevenueDifference, shouldPreserveClientOnImport } from '@/lib/crm/utils';
+import { formatCurrency, hasExcelRevenueDifference } from '@/lib/crm/utils';
 import { useCrm } from '@/providers/crm-provider';
 import { TopHeader } from '@/components/layout/top-header';
 import type { ParsedExcelClient } from '@/lib/types/crm';
@@ -135,7 +135,7 @@ export function ImportSection() {
                     ))}
                   </select>
                   <p className="import-preview-note">
-                    I clienti già completi (contatti, origine, owner, tipologia) restano intatti. Vengono aggiunti solo OKR nuovi e clienti nuovi in bozza.
+                    Vengono aggiornati i fatturati dei clienti esistenti e aggiunti solo OKR nuovi e clienti nuovi in bozza.
                   </p>
                 </div>
                 <div className="import-preview-wrapper">
@@ -156,11 +156,8 @@ export function ImportSection() {
                         let statusLabel = 'Nuovo (bozza)';
                         let statusClass = 'import-status-new';
                         if (existing) {
-                          if (shouldPreserveClientOnImport(existing)) {
-                            statusLabel = 'Protetto';
-                            statusClass = 'import-status-protected';
-                          } else if (hasExcelRevenueDifference(existing[revenueField], imported.revenue)) {
-                            statusLabel = 'Aggiorna bozza';
+                          if (hasExcelRevenueDifference(existing[revenueField], imported.revenue)) {
+                            statusLabel = 'Aggiorna fatturato';
                             statusClass = 'import-status-update';
                           } else {
                             statusLabel = 'Invariato';

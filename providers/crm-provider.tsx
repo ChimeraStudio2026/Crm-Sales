@@ -1179,7 +1179,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
     setOkrRecords(linkedOkr);
     setIsSupabaseConnected(true);
     showToast(
-      `Import ${importYear}: ${clientMerge.addedCount} clienti in bozza, ${clientMerge.preservedCount} profili protetti, ${clientMerge.updatedCount} bozze aggiornate. OKR +${okrMerge.addedCount} nuovi, ${okrMerge.skippedCount} già presenti.`,
+      `Import ${importYear}: ${clientMerge.addedCount} clienti aggiunti, ${clientMerge.updatedCount} aggiornati, ${clientMerge.skippedCount} invariati. OKR +${okrMerge.addedCount} nuovi, ${okrMerge.skippedCount} già presenti.`,
       'success',
     );
     } catch (error) {

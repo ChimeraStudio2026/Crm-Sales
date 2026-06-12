@@ -118,11 +118,6 @@ export function isClientProfileComplete(client: Client): boolean {
   return hasName && hasType && hasOwner && hasOrigin && hasContactEmail;
 }
 
-/** Clienti completi non vengono modificati da un re-import OKR/Excel. */
-export function shouldPreserveClientOnImport(client: Client): boolean {
-  return isClientProfileComplete(client);
-}
-
 export function shouldHighlightIncompleteClient(client: Client): boolean {
   return !isClientProfileComplete(client);
 }

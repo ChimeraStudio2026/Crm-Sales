@@ -159,9 +159,11 @@ export function SettingsSection() {
                 <h3><Info size={20} /> Regole Automatiche del CRM</h3>
               </div>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.6 }}>
-                • <strong>Top 20%:</strong> clienti nel top 20% per fatturato 2026<br />
-                • <strong>Ricorrente:</strong> fatturato 2025 &gt; €15.000<br />
-                • <strong>Clienti freddi:</strong> prospect mai lavorati (solo inserimento manuale). Import OKR → sempre Lista Clienti
+                • <strong>Indice 1 — Nuovo Cliente:</strong> fatturato 2026 da €0 a €10.000<br />
+                • <strong>Indice 2 — Ricorrente:</strong> fatturato 2026 da €10.000 a €30.000<br />
+                • <strong>Indice 3 — Top 20%:</strong> fatturato 2026 oltre €30.000<br />
+                • <strong>Perso</strong> e <strong>Eliminato:</strong> solo impostazione manuale<br />
+                • Puoi cambiare il rapporto a mano dalla lista clienti; resta bloccato finché non lo modifichi di nuovo
               </p>
             </div>
           </div>

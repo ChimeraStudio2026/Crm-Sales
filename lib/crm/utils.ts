@@ -1,5 +1,6 @@
 import type { Client, ClientContact } from '@/lib/types/crm';
 import { ACTION_DATE_STALE_DAYS, COLD_CLIENT_REV_THRESHOLD, DEFAULT_ACTION_DATE, EXCEL_IMPORT_ACTION_PREFIX } from '@/lib/constants/crm';
+import { applyAutoRelationships } from '@/lib/crm/relationship-rules';
 import { normalizeClientProductOffers } from '@/lib/crm/product-offers';
 
 export function createUniqueId(prefix: string): string {
@@ -90,12 +91,6 @@ export function isClientInMainList(client: Client): boolean {
 /** Clienti attivi per analisi, recall e totali fatturato (esclusi Eliminato). */
 export function isClientInActiveSection(client: Client): boolean {
   return !client.isColdClient && client.relationship !== 'Eliminato';
-}
-
-export function isManualRelationshipLocked(client: Client): boolean {
-  return client.manualRelationship
-    || client.relationship === 'Perso'
-    || client.relationship === 'Eliminato';
 }
 
 export function hasExcelRevenueDifference(
@@ -206,26 +201,7 @@ export function formatActionDateDisplay(actionDateStr: string): string {
 }
 
 export function recalculateRelationships(clients: Client[]): Client[] {
-  const activeClientsWithRevenue2026 = clients.filter(
-    (c) => c.relationship !== 'Eliminato' && c.rev2026 > 0,
-  );
-  activeClientsWithRevenue2026.sort((a, b) => b.rev2026 - a.rev2026);
-  const top20Count = Math.ceil(activeClientsWithRevenue2026.length * 0.2);
-  const top20Ids = new Set(
-    activeClientsWithRevenue2026.slice(0, top20Count).map((c) => c.id),
-  );
-  return clients.map((c) => {
-    if (isManualRelationshipLocked(c)) {
-      return c;
-    }
-    if (top20Ids.has(c.id)) {
-      return { ...c, relationship: 'Top 20%' };
-    }
-    if (c.rev2025 > 15000) {
-      return { ...c, relationship: 'Ricorrente' };
-    }
-    return { ...c, relationship: 'Nuovo Cliente' };
-  });
+  return applyAutoRelationships(clients);
 }
 
 export function applyColdClientPromotion(

@@ -25,7 +25,7 @@ CHIARIMENTI:
 CONTESTO GESTIONALE:
 - Fatturato ${PREVIOUS_ANALYSIS_YEAR} = rev2025, ${ANALYSIS_YEAR} = rev2026
 - Owner: Jeck, Virgi, Martina
-- Rapporto: Nuovo Cliente, Ricorrente, Top 20%, Perso, Eliminato
+- Rapporto (auto da fatturato 2026, salvo override manuale): Nuovo Cliente (€0–€10k), Ricorrente (€10k–€30k), Top 20% (>€30k). Perso ed Eliminato solo manuali.
 - Task e idee nel kanban unificato; clienti freddi = rev2026 ≤ €1
 
 ESEMPI:

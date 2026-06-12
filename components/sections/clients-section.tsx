@@ -17,6 +17,11 @@ import {
   isClientInMainList,
   shouldHighlightIncompleteClient,
 } from '@/lib/crm/utils';
+import {
+  getRelationshipIndex,
+  getRelationshipStars,
+  isManualOnlyRelationship,
+} from '@/lib/crm/relationship-rules';
 import { useCrm } from '@/providers/crm-provider';
 import { ClientDrawer } from '@/components/drawers/client-drawer';
 import { BulkClientsDrawer } from '@/components/drawers/bulk-clients-drawer';
@@ -27,11 +32,11 @@ import { getClientOriginCellClass } from '@/lib/crm/client-origin';
 import type { Client, Relationship, SortState } from '@/lib/types/crm';
 
 const RELATIONSHIP_LABELS: Record<Relationship, string> = {
-  'Nuovo Cliente': '⭐ Nuovo Cliente',
-  Ricorrente: '⭐⭐ Ricorrente',
-  'Top 20%': '⭐⭐⭐ Top 20%',
-  Perso: '🟠 Perso',
-  Eliminato: '🔴 Eliminato',
+  'Nuovo Cliente': 'Nuovo Cliente',
+  Ricorrente: 'Ricorrente',
+  'Top 20%': 'Top 20%',
+  Perso: 'Perso (manuale)',
+  Eliminato: 'Eliminato (manuale)',
 };
 
 function isInteractiveTableTarget(target: EventTarget | null): boolean {
@@ -86,10 +91,17 @@ export function ClientsSection() {
         (!filterRelationship || c.relationship === filterRelationship)
       );
     });
-    const col = sort.column as keyof Client;
+    const col = sort.column as keyof Client | 'relationshipIndex';
     list = [...list].sort((a, b) => {
-      let valA: string | number = a[col] as string | number;
-      let valB: string | number = b[col] as string | number;
+      let valA: string | number;
+      let valB: string | number;
+      if (col === 'relationshipIndex') {
+        valA = getRelationshipIndex(a.relationship);
+        valB = getRelationshipIndex(b.relationship);
+      } else {
+        valA = a[col as keyof Client] as string | number;
+        valB = b[col as keyof Client] as string | number;
+      }
       if (col === 'rev2025' || col === 'rev2026') {
         valA = Number(a[col]) || 0;
         valB = Number(b[col]) || 0;
@@ -190,12 +202,33 @@ export function ClientsSection() {
             />
           </td>
         );
+      case 'relationshipIndex': {
+        const stars = getRelationshipStars(client.relationship);
+        const index = getRelationshipIndex(client.relationship);
+        return (
+          <td
+            key={columnId}
+            className="col-relationship-index"
+            title={
+              isManualOnlyRelationship(client.relationship)
+                ? 'Stato impostato manualmente'
+                : client.manualRelationship
+                  ? 'Rapporto impostato manualmente'
+                  : `Indice ${index} — calcolato dal fatturato 2026`
+            }
+            style={{ textAlign: 'center' }}
+          >
+            <span className="relationship-index-badge">{stars}</span>
+          </td>
+        );
+      }
       case 'relationship':
         return (
           <td key={columnId} onClick={(event) => event.stopPropagation()}>
             <select
               className="table-cell-select"
               value={client.relationship}
+              title={client.manualRelationship ? 'Rapporto impostato manualmente' : 'Calcolato automaticamente dal fatturato 2026'}
               onChange={(e) => void updateClientField(client.id, 'relationship', e.target.value)}
             >
               {RELATIONSHIPS.map((r) => <option key={r} value={r}>{RELATIONSHIP_LABELS[r]}</option>)}

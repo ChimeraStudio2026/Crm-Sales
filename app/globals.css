@@ -1380,6 +1380,20 @@ body.crm-col-resizing {
     font-size: 0.8rem;
 }
 
+.col-relationship-index {
+    width: 72px;
+}
+
+.relationship-index-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    font-size: 0.85rem;
+    letter-spacing: -0.04em;
+    color: var(--text-secondary);
+}
+
 /* Tipologia */
 .cell-type-diretto { --chip-color: #0891b2; --chip-fill: #cffafe; }
 .cell-type-agenzia { --chip-color: var(--primary); --chip-fill: #ede9fe; }

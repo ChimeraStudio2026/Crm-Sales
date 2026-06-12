@@ -4,7 +4,8 @@ export const ANALYSIS_YEAR = 2026;
 export const PREVIOUS_ANALYSIS_YEAR = ANALYSIS_YEAR - 1;
 export const SUPPORTED_IMPORT_YEARS = [PREVIOUS_ANALYSIS_YEAR, ANALYSIS_YEAR] as const;
 export const COLD_CLIENT_REV_THRESHOLD = 1;
-export const RECURRENT_REV_2025_THRESHOLD = 15000;
+export const TOP_20_REV_THRESHOLD = 30000;
+export const RECURRENT_REV_THRESHOLD = 10000;
 export const EXCEL_REV_EPSILON = 0.005;
 
 export const OWNERS: Owner[] = ['Jeck', 'Virgi', 'Martina'];
@@ -105,6 +106,7 @@ export const CRM_TABLE_COLUMN_DEFS = {
   type: { label: 'Tipologia', sortKey: 'type', align: 'left' as const, defaultWidth: 155, minWidth: 130, expandedWidth: 200 },
   owner: { label: 'Owner', sortKey: 'owner', align: 'left' as const, defaultWidth: 120, minWidth: 100, expandedWidth: 160 },
   clientOrigin: { label: 'Origine Cliente', sortKey: 'clientOrigin', align: 'left' as const, defaultWidth: 150, minWidth: 130, expandedWidth: 190 },
+  relationshipIndex: { label: 'Indice', sortKey: 'relationshipIndex', align: 'center' as const, defaultWidth: 72, minWidth: 60, expandedWidth: 90 },
   relationship: { label: 'Rapporto', sortKey: 'relationship', align: 'left' as const, defaultWidth: 160, minWidth: 130, expandedWidth: 220 },
   rev2026: { label: 'Fatturato 2026', sortKey: 'rev2026', align: 'right' as const, defaultWidth: 130, minWidth: 110, expandedWidth: 150 },
   rev2025: { label: 'Fatturato 2025', sortKey: 'rev2025', align: 'right' as const, defaultWidth: 130, minWidth: 110, expandedWidth: 150 },

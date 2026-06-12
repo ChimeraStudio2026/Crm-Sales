@@ -102,6 +102,9 @@ import {
   persistClients,
   deleteClientRecord,
   persistIdeas,
+  persistIdeasReplace,
+  upsertIdea,
+  deleteIdeaRecord,
   upsertOkrRecords,
   persistOkrRecords,
   saveDailyRecall,
@@ -275,12 +278,19 @@ export function CrmProvider({ children }: CrmProviderProps) {
   const ideasMutationRef = useRef(0);
   const clientsMutationRef = useRef(0);
   const clientsRef = useRef<Client[]>([]);
+  const ideasRef = useRef<Idea[]>([]);
   const clientsMutationQueueRef = useRef<Promise<Client[]>>(Promise.resolve([]));
+  const ideasMutationQueueRef = useRef<Promise<Idea[]>>(Promise.resolve([]));
   const jonnyReloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const focusReloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     clientsRef.current = clients;
   }, [clients]);
+
+  useEffect(() => {
+    ideasRef.current = ideas;
+  }, [ideas]);
 
   const showToast = useCallback((message: string, type: ToastType = 'info') => {
     const id = createUniqueId('toast');
@@ -377,18 +387,55 @@ export function CrmProvider({ children }: CrmProviderProps) {
     await commercialFunnelActions.removeFunnelEntriesByCampaign(campaignId);
   }, [commercialFunnelActions, mailCampaignActions]);
 
-  const persistIdeasNow = useCallback(async (nextIdeas?: Idea[]) => {
-    const data = nextIdeas ?? ideas;
+  const persistIdeasNow = useCallback(async (nextIdeas?: Idea[], replace = false) => {
+    const data = nextIdeas ?? ideasRef.current;
     if (db) {
       ideasMutationRef.current += 1;
       try {
-        await persistIdeas(db, data);
+        if (replace) {
+          await persistIdeasReplace(db, data);
+          ideasRef.current = data;
+        } else {
+          await persistIdeas(db, data);
+        }
         setIsSupabaseConnected(true);
       } finally {
         ideasMutationRef.current -= 1;
       }
     }
-  }, [db, ideas]);
+  }, [db]);
+
+  const mutateIdeas = useCallback((
+    buildNext: (prev: Idea[]) => Idea[],
+    persist?: { upsert?: Idea | Idea[]; deleteId?: string },
+  ): Promise<Idea[]> => {
+    const runMutation = async (): Promise<Idea[]> => {
+      if (!db) {
+        throw new Error('Supabase non configurato');
+      }
+      ideasMutationRef.current += 1;
+      try {
+        const nextIdeas = buildNext(ideasRef.current);
+        ideasRef.current = nextIdeas;
+        setIdeas(nextIdeas);
+        if (persist?.deleteId) {
+          await deleteIdeaRecord(db, persist.deleteId);
+        }
+        if (persist?.upsert) {
+          const rows = Array.isArray(persist.upsert) ? persist.upsert : [persist.upsert];
+          for (const idea of rows) {
+            await upsertIdea(db, idea);
+          }
+        }
+        setIsSupabaseConnected(true);
+        return nextIdeas;
+      } finally {
+        ideasMutationRef.current -= 1;
+      }
+    };
+    ideasMutationQueueRef.current = ideasMutationQueueRef.current.then(runMutation, runMutation);
+    return ideasMutationQueueRef.current;
+  }, [db]);
 
   const persistTasksNow = useCallback(async (nextTasks?: ClientTask[]) => {
     const data = nextTasks ?? clientTasks;
@@ -466,62 +513,75 @@ export function CrmProvider({ children }: CrmProviderProps) {
     setApolloStatus(status);
   }, [db]);
 
-  useEffect(() => {
-    async function reloadFromJonny(): Promise<void> {
-      if (!db) return;
-      if (ideasMutationRef.current > 0 || clientsMutationRef.current > 0) {
-        if (jonnyReloadTimerRef.current) clearTimeout(jonnyReloadTimerRef.current);
-        jonnyReloadTimerRef.current = setTimeout(() => {
-          jonnyReloadTimerRef.current = null;
-          void reloadFromJonny();
-        }, 800);
-        return;
+  const reloadRemoteCrmState = useCallback(async (): Promise<void> => {
+    if (!db) return;
+    if (ideasMutationRef.current > 0 || clientsMutationRef.current > 0) return;
+    try {
+      const [loadedClients, loadedIdeas, loadedTasks, loadedOkr, loadedForecasts, loadedMailCampaigns, loadedFunnelEntries] = await Promise.all([
+        fetchClients(db),
+        fetchIdeas(db),
+        fetchClientTasks(db),
+        fetchAllOkrRecords(db),
+        fetchAllAnalysisForecasts(db),
+        fetchMailCampaignData(db),
+        fetchCommercialFunnelEntries(db),
+      ]);
+      let normalized = normalizeClients(loadedClients);
+      normalized = reconcileImportedClientsToMainList(normalized);
+      normalized = applyColdClientPromotionToAll(normalized);
+      normalized = recalculateRelationships(normalized);
+      normalized = syncClientsProfileCompletion(normalized);
+      setClients(normalized);
+      clientsRef.current = normalized;
+      setIdeas(loadedIdeas);
+      ideasRef.current = loadedIdeas;
+      setClientTasks(loadedTasks);
+      setOkrRecords(linkOkrRecordsToClients(loadedOkr, normalized));
+      if (Object.keys(loadedForecasts).length > 0) {
+        setForecastsByYear(loadedForecasts);
       }
-      try {
-        const [loadedClients, loadedIdeas, loadedTasks, loadedOkr, loadedForecasts, loadedMailCampaigns, loadedFunnelEntries] = await Promise.all([
-          fetchClients(db),
-          fetchIdeas(db),
-          fetchClientTasks(db),
-          fetchAllOkrRecords(db),
-          fetchAllAnalysisForecasts(db),
-          fetchMailCampaignData(db),
-          fetchCommercialFunnelEntries(db),
-        ]);
-        let normalized = normalizeClients(loadedClients);
-        normalized = reconcileImportedClientsToMainList(normalized);
-        normalized = applyColdClientPromotionToAll(normalized);
-        normalized = recalculateRelationships(normalized);
-        normalized = syncClientsProfileCompletion(normalized);
-        setClients(normalized);
-        clientsRef.current = normalized;
-        setIdeas(loadedIdeas);
-        setClientTasks(loadedTasks);
-        setOkrRecords(linkOkrRecordsToClients(loadedOkr, normalized));
-        if (Object.keys(loadedForecasts).length > 0) {
-          setForecastsByYear(loadedForecasts);
-        }
-        setMailCampaigns(loadedMailCampaigns.campaigns);
-        setMailCampaignSteps(loadedMailCampaigns.steps);
-        setMailCampaignContacts(loadedMailCampaigns.contacts);
-        setMailCampaignSendTracking(loadedMailCampaigns.tracking);
-        setCommercialFunnelEntries(loadedFunnelEntries);
-      } catch (reloadError) {
-        console.error('Jonny reload failed:', reloadError);
-      }
+      setMailCampaigns(loadedMailCampaigns.campaigns);
+      setMailCampaignSteps(loadedMailCampaigns.steps);
+      setMailCampaignContacts(loadedMailCampaigns.contacts);
+      setMailCampaignSendTracking(loadedMailCampaigns.tracking);
+      setCommercialFunnelEntries(loadedFunnelEntries);
+    } catch (reloadError) {
+      console.error('Remote CRM reload failed:', reloadError);
     }
+  }, [db]);
+
+  useEffect(() => {
+    const scheduleReload = (timerRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>, delayMs: number): void => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        timerRef.current = null;
+        void (async () => {
+          if (ideasMutationRef.current > 0 || clientsMutationRef.current > 0) {
+            scheduleReload(timerRef, 800);
+            return;
+          }
+          await reloadRemoteCrmState();
+        })();
+      }, delayMs);
+    };
     const handleJonnyUpdated = (): void => {
-      if (jonnyReloadTimerRef.current) clearTimeout(jonnyReloadTimerRef.current);
-      jonnyReloadTimerRef.current = setTimeout(() => {
-        jonnyReloadTimerRef.current = null;
-        void reloadFromJonny();
-      }, 600);
+      scheduleReload(jonnyReloadTimerRef, 600);
+    };
+    const handleFocusReload = (): void => {
+      if (document.visibilityState !== 'visible') return;
+      scheduleReload(focusReloadTimerRef, 400);
     };
     window.addEventListener('jonny:crm-updated', handleJonnyUpdated);
+    document.addEventListener('visibilitychange', handleFocusReload);
+    window.addEventListener('focus', handleFocusReload);
     return () => {
       window.removeEventListener('jonny:crm-updated', handleJonnyUpdated);
+      document.removeEventListener('visibilitychange', handleFocusReload);
+      window.removeEventListener('focus', handleFocusReload);
       if (jonnyReloadTimerRef.current) clearTimeout(jonnyReloadTimerRef.current);
+      if (focusReloadTimerRef.current) clearTimeout(focusReloadTimerRef.current);
     };
-  }, [db]);
+  }, [reloadRemoteCrmState]);
 
   useEffect(() => {
     if (!db) return;
@@ -553,6 +613,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
           setClients(normalized);
           clientsRef.current = normalized;
           setIdeas(loadedIdeas);
+          ideasRef.current = loadedIdeas;
           setClientTasks(loadedTasks);
           setOkrRecords(linkOkrRecordsToClients(loadedOkr, normalized));
           if (Object.keys(loadedForecasts).length > 0) {
@@ -771,28 +832,27 @@ export function CrmProvider({ children }: CrmProviderProps) {
   const saveIdea = useCallback(async (
     input: Partial<Idea> & { name: string; description?: string; clientId?: string },
   ) => {
+    const prev = ideasRef.current;
     const normalizedAssignees: Owner[] = input.itemType === 'task'
       ? (input.assignees?.length ? input.assignees.slice(0, 2) : ['Jeck'])
       : [];
-    const isUpdate = Boolean(input.id && ideas.some((item) => item.id === input.id));
-    let nextIdeas: Idea[];
+    const isUpdate = Boolean(input.id && prev.some((item) => item.id === input.id));
+    let savedIdea: Idea;
     if (isUpdate) {
-      nextIdeas = ideas.map((i) => (
-        i.id === input.id
-          ? {
-            ...i,
-            ...input,
-            id: i.id,
-            clientId: input.clientId ?? i.clientId ?? '',
-            description: input.description ?? i.description ?? '',
-            assignees: normalizedAssignees,
-            attachments: input.attachments ?? i.attachments ?? [],
-            subtasks: input.subtasks ?? i.subtasks ?? [],
-          } as Idea
-          : i
-      ));
+      const existing = prev.find((item) => item.id === input.id);
+      if (!existing) return;
+      savedIdea = {
+        ...existing,
+        ...input,
+        id: existing.id,
+        clientId: input.clientId ?? existing.clientId ?? '',
+        description: input.description ?? existing.description ?? '',
+        assignees: normalizedAssignees,
+        attachments: input.attachments ?? existing.attachments ?? [],
+        subtasks: input.subtasks ?? existing.subtasks ?? [],
+      } as Idea;
     } else {
-      nextIdeas = [...ideas, {
+      savedIdea = {
         id: input.id || createUniqueId('idea'),
         name: input.name,
         category: input.category || 'Content',
@@ -805,10 +865,16 @@ export function CrmProvider({ children }: CrmProviderProps) {
         assignees: normalizedAssignees,
         attachments: input.attachments || [],
         subtasks: input.subtasks || [],
-      }];
+      };
     }
-    setIdeas(nextIdeas);
-    await persistIdeasNow(nextIdeas);
+    await mutateIdeas(
+      (current) => (
+        isUpdate
+          ? current.map((item) => (item.id === savedIdea.id ? savedIdea : item))
+          : [...current, savedIdea]
+      ),
+      { upsert: savedIdea },
+    );
     const isTask = input.itemType === 'task';
     showToast(
       isUpdate
@@ -816,28 +882,33 @@ export function CrmProvider({ children }: CrmProviderProps) {
         : (isTask ? 'Task creata.' : 'Elemento creato.'),
       'success',
     );
-  }, [ideas, persistIdeasNow, showToast]);
+  }, [mutateIdeas, showToast]);
 
   const deleteIdea = useCallback(async (ideaId: string) => {
-    const removed = ideas.find((item) => item.id === ideaId);
-    const nextIdeas = ideas.filter((i) => i.id !== ideaId);
-    setIdeas(nextIdeas);
-    await persistIdeasNow(nextIdeas);
+    const removed = ideasRef.current.find((item) => item.id === ideaId);
+    await mutateIdeas(
+      (prev) => prev.filter((item) => item.id !== ideaId),
+      { deleteId: ideaId },
+    );
     showToast(removed?.itemType === 'task' ? 'Task eliminata.' : 'Idea eliminata.', 'info');
-  }, [ideas, persistIdeasNow, showToast]);
+  }, [mutateIdeas, showToast]);
 
   const moveIdeaStatus = useCallback(async (ideaId: string, newStatus: Idea['status']) => {
-    const nextIdeas = ideas.map((i) => (i.id === ideaId ? { ...i, status: newStatus } : i));
-    setIdeas(nextIdeas);
-    await persistIdeasNow(nextIdeas);
-  }, [ideas, persistIdeasNow]);
+    const existing = ideasRef.current.find((item) => item.id === ideaId);
+    if (!existing) return;
+    const savedIdea: Idea = { ...existing, status: newStatus };
+    await mutateIdeas(
+      (prev) => prev.map((item) => (item.id === ideaId ? savedIdea : item)),
+      { upsert: savedIdea },
+    );
+  }, [mutateIdeas]);
 
   const uploadTaskAttachment = useCallback(async (ideaId: string, file: File): Promise<void> => {
     if (!db) {
       showToast('Supabase non configurato.', 'danger');
       return;
     }
-    const idea = ideas.find((item) => item.id === ideaId);
+    const idea = ideasRef.current.find((item) => item.id === ideaId);
     if (!idea) return;
     const attachmentId = createUniqueId('attachment');
     const fileName = sanitizeStorageSegment(file.name);
@@ -857,15 +928,16 @@ export function CrmProvider({ children }: CrmProviderProps) {
       type: file.type || 'application/octet-stream',
       uploadedAt: new Date().toISOString(),
     };
-    const nextIdeas = ideas.map((item) => (
-      item.id === ideaId
-        ? { ...item, attachments: [...(item.attachments || []), attachment] }
-        : item
-    ));
-    setIdeas(nextIdeas);
-    await persistIdeasNow(nextIdeas);
+    const savedIdea: Idea = {
+      ...idea,
+      attachments: [...(idea.attachments || []), attachment],
+    };
+    await mutateIdeas(
+      (prev) => prev.map((item) => (item.id === ideaId ? savedIdea : item)),
+      { upsert: savedIdea },
+    );
     showToast('Documento allegato alla task.', 'success');
-  }, [db, ideas, persistIdeasNow, showToast]);
+  }, [db, mutateIdeas, showToast]);
 
   const downloadTaskAttachment = useCallback(async (attachment: TaskAttachment): Promise<void> => {
     if (!db) {
@@ -902,15 +974,18 @@ export function CrmProvider({ children }: CrmProviderProps) {
       showToast(`Rimozione fallita: ${error.message}`, 'danger');
       return;
     }
-    const nextIdeas = ideas.map((item) => (
-      item.id === ideaId
-        ? { ...item, attachments: (item.attachments || []).filter((value) => value.id !== attachment.id) }
-        : item
-    ));
-    setIdeas(nextIdeas);
-    await persistIdeasNow(nextIdeas);
+    const current = ideasRef.current.find((item) => item.id === ideaId);
+    if (!current) return;
+    const savedIdea: Idea = {
+      ...current,
+      attachments: (current.attachments || []).filter((value) => value.id !== attachment.id),
+    };
+    await mutateIdeas(
+      (prev) => prev.map((item) => (item.id === ideaId ? savedIdea : item)),
+      { upsert: savedIdea },
+    );
     showToast('Documento rimosso.', 'info');
-  }, [db, ideas, persistIdeasNow, showToast]);
+  }, [db, mutateIdeas, showToast]);
 
   const saveTask = useCallback(async (
     input: Partial<ClientTask> & { title: string; clientId: string },
@@ -1175,12 +1250,14 @@ export function CrmProvider({ children }: CrmProviderProps) {
       reconcileImportedClientsToMainList(normalizeClients(data.clients || [])),
     );
     setClients(nextClients);
+    clientsRef.current = nextClients;
     const normalizedIdeas = (data.ideas || []).map((idea) => ({
       ...idea,
       attachments: idea.attachments || [],
       subtasks: idea.subtasks || [],
     }));
     setIdeas(normalizedIdeas);
+    ideasRef.current = normalizedIdeas;
     setClientTasks(data.clientTasks || []);
     setOkrRecords(data.okrRecords || []);
     if (data.analysisForecastsByYear) {
@@ -1193,7 +1270,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
     }
     if (data.analysisYear) setAnalysisYear(data.analysisYear);
     await persistClientsNow(nextClients);
-    await persistIdeasNow(normalizedIdeas);
+    await persistIdeasNow(normalizedIdeas, true);
     await persistTasksNow(data.clientTasks || []);
     await persistAnalysisNow(
       data.okrRecords || [],

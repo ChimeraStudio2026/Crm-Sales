@@ -210,8 +210,8 @@ export async function deleteClientRecord(
   if (error) throw error;
 }
 
-export async function persistIdeas(db: SupabaseClient, allIdeas: Idea[]): Promise<void> {
-  const rows = allIdeas.map((idea) => ({
+function ideaToRow(idea: Idea): Record<string, unknown> {
+  return {
     id: idea.id,
     name: idea.name,
     category: idea.category || 'Content',
@@ -224,15 +224,36 @@ export async function persistIdeas(db: SupabaseClient, allIdeas: Idea[]): Promis
     assignees: idea.assignees || [],
     attachments: idea.attachments || [],
     subtasks: idea.subtasks || [],
-  }));
-  if (rows.length === 0) {
+  };
+}
+
+export async function upsertIdea(db: SupabaseClient, idea: Idea): Promise<void> {
+  const { error } = await db.from('ideas').upsert(ideaToRow(idea), { onConflict: 'id' });
+  if (error) throw error;
+}
+
+export async function deleteIdeaRecord(db: SupabaseClient, ideaId: string): Promise<void> {
+  const { error } = await db.from('ideas').delete().eq('id', ideaId);
+  if (error) throw error;
+}
+
+export async function persistIdeas(db: SupabaseClient, allIdeas: Idea[]): Promise<void> {
+  if (allIdeas.length === 0) return;
+  const rows = allIdeas.map(ideaToRow);
+  const { error: upsertError } = await db.from('ideas').upsert(rows, { onConflict: 'id' });
+  if (upsertError) throw upsertError;
+}
+
+export async function persistIdeasReplace(db: SupabaseClient, allIdeas: Idea[]): Promise<void> {
+  if (allIdeas.length === 0) {
     const { error } = await db.from('ideas').delete().neq('id', '');
     if (error) throw error;
     return;
   }
+  const rows = allIdeas.map(ideaToRow);
   const { error: upsertError } = await db.from('ideas').upsert(rows, { onConflict: 'id' });
   if (upsertError) throw upsertError;
-  await removeOrphanRows(db, 'ideas', rows.map((r) => r.id));
+  await removeOrphanRows(db, 'ideas', rows.map((row) => row.id as string));
 }
 
 export async function fetchDailyRecall(

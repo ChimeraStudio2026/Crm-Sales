@@ -1,4 +1,7 @@
 export const LOGO_DESKTOP_SIZE_STORAGE_KEY = 'crm_sales_logo_desktop_size';
+export const THEME_MODE_STORAGE_KEY = 'crm_sales_theme_mode';
+
+export type ThemeMode = 'light' | 'dark';
 
 export const DEFAULT_LOGO_DESKTOP_SIZE = 28;
 export const MIN_LOGO_DESKTOP_SIZE = 20;
@@ -25,4 +28,28 @@ export function writeLogoDesktopSize(size: number): number {
 export function applyLogoDesktopSizeToDocument(size: number): void {
   if (typeof document === 'undefined') return;
   document.documentElement.style.setProperty('--logo-desktop-size', `${size}px`);
+}
+
+export function readThemeMode(): ThemeMode {
+  if (typeof window === 'undefined') return 'light';
+  const storedValue = window.localStorage.getItem(THEME_MODE_STORAGE_KEY);
+  return storedValue === 'dark' ? 'dark' : 'light';
+}
+
+export function applyThemeModeToDocument(mode: ThemeMode): void {
+  if (typeof document === 'undefined') return;
+  document.documentElement.setAttribute('data-theme', mode);
+  document.documentElement.style.colorScheme = mode;
+}
+
+export function writeThemeMode(mode: ThemeMode): ThemeMode {
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(THEME_MODE_STORAGE_KEY, mode);
+    applyThemeModeToDocument(mode);
+  }
+  return mode;
+}
+
+export function toggleThemeMode(currentMode: ThemeMode): ThemeMode {
+  return writeThemeMode(currentMode === 'dark' ? 'light' : 'dark');
 }

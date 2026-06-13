@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { InstallPrompt } from '@/components/pwa/install-prompt';
 import { PwaRegister } from '@/components/pwa/pwa-register';
 import { PwaInstallProvider } from '@/providers/pwa-install-provider';
+import { UiPreferencesProvider } from '@/providers/ui-preferences-provider';
 import './globals.css';
 
 export const viewport: Viewport = {
@@ -54,13 +55,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="it">
+    <html lang="it" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var m=localStorage.getItem('crm_sales_theme_mode');document.documentElement.setAttribute('data-theme',m==='dark'?'dark':'light');document.documentElement.style.colorScheme=m==='dark'?'dark':'light';}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body>
-        <PwaInstallProvider>
-          {children}
-          <PwaRegister />
-          <InstallPrompt />
-        </PwaInstallProvider>
+        <UiPreferencesProvider>
+          <PwaInstallProvider>
+            {children}
+            <PwaRegister />
+            <InstallPrompt />
+          </PwaInstallProvider>
+        </UiPreferencesProvider>
       </body>
     </html>
   );

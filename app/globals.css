@@ -7,6 +7,7 @@
 
 
 :root {
+    color-scheme: light;
     /* Attio-inspired palette */
     --bg-main: #f4f5f6;
     --bg-sidebar: #fafafb;
@@ -14,6 +15,8 @@
     --bg-card-hover: #f4f5f6;
     --bg-subtle: #edeff3;
     --bg-hover: #eeeff1;
+    --surface-input: #ffffff;
+    --surface-header: rgba(255, 255, 255, 0.95);
     --border-color: #e4e7ec;
     --border-color-hover: #d1d3d6;
     --border-subtle: #e6e7ea;
@@ -141,7 +144,7 @@ input, select, textarea, button {
     align-items: center;
     justify-content: space-between;
     border-bottom: 1px solid var(--border-color);
-    background: rgba(255, 255, 255, 0.95);
+    background: var(--surface-header);
     backdrop-filter: blur(12px);
     position: sticky;
     top: 0;
@@ -636,7 +639,7 @@ input, select, textarea, button {
 .search-input {
     width: 100%;
     padding: 10px 14px 10px 40px;
-    background: #ffffff;
+    background: var(--surface-input);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
     color: var(--text-primary);
@@ -656,7 +659,7 @@ input, select, textarea, button {
 
 .filter-select {
     padding: 10px 16px;
-    background: #ffffff;
+    background: var(--surface-input);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
     color: var(--text-secondary);
@@ -677,7 +680,7 @@ input, select, textarea, button {
 }
 
 .filter-select option {
-    background: #ffffff;
+    background: var(--surface-input);
     color: var(--text-primary);
 }
 
@@ -914,7 +917,7 @@ input, select, textarea, button {
     height: 24px;
     border: 1px solid var(--border-color);
     border-radius: 4px;
-    background: #fff;
+    background: var(--bg-card);
     color: var(--text-muted);
     cursor: pointer;
     flex-shrink: 0;
@@ -1118,7 +1121,7 @@ body.crm-col-resizing {
 .inline-edit-input {
     width: 100%;
     padding: 6px 10px;
-    background: #ffffff;
+    background: var(--surface-input);
     border: 1px solid var(--primary);
     border-radius: var(--radius-sm);
     color: var(--text-primary);
@@ -1327,7 +1330,7 @@ body.crm-col-resizing {
 .cell-rapporto,
 .col-data-azione {
     padding: 10px 14px !important;
-    background: #ffffff;
+    background: var(--surface-input);
     vertical-align: middle;
 }
 
@@ -1582,7 +1585,7 @@ body.drawer-open {
 .form-input, .form-select, .form-textarea {
     width: 100%;
     padding: 12px 16px;
-    background: #ffffff;
+    background: var(--surface-input);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
     color: var(--text-primary);
@@ -1592,7 +1595,7 @@ body.drawer-open {
 .form-input:focus, .form-select:focus, .form-textarea:focus {
     border-color: var(--primary);
     box-shadow: 0 0 0 3px var(--primary-glow);
-    background: #ffffff;
+    background: var(--surface-input);
 }
 
 .form-textarea {
@@ -1908,7 +1911,7 @@ body.drawer-open {
 }
 
 .toast {
-    background: #ffffff;
+    background: var(--surface-input);
     border: 1px solid var(--border-color);
     border-left: 4px solid var(--primary);
     padding: 14px 20px;
@@ -2058,7 +2061,7 @@ body.drawer-open {
 }
 
 .kanban-column {
-    background: #ffffff;
+    background: var(--surface-input);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
     padding: 20px;
@@ -3196,7 +3199,7 @@ body.drawer-open {
 }
 
 .cold-category {
-    background: #ffffff;
+    background: var(--surface-input);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
     overflow: hidden;
@@ -3473,7 +3476,7 @@ body.drawer-open {
     padding: 10px 12px;
     border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
-    background: #fff;
+    background: var(--bg-card);
 }
 .contact-card-header {
     display: flex;
@@ -3487,7 +3490,7 @@ body.drawer-open {
     padding: 8px 10px;
     font-size: 0.82rem;
     font-family: inherit;
-    background: #fff;
+    background: var(--bg-card);
 }
 .contact-field-input:focus {
     outline: none;
@@ -3500,7 +3503,7 @@ body.drawer-open {
     height: 28px;
     border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
-    background: #fff;
+    background: var(--bg-card);
     color: var(--text-muted);
     cursor: pointer;
     display: inline-flex;
@@ -3776,7 +3779,7 @@ body.drawer-open {
     padding: 16px;
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
-    background: #fff;
+    background: var(--bg-card);
 }
 .analysis-kpi-label {
     display: block;
@@ -4872,6 +4875,13 @@ body:has(.login-page) {
     justify-content: center;
     padding: 24px;
     background: var(--bg-main);
+    position: relative;
+}
+
+.login-theme-toggle {
+    position: absolute;
+    top: 20px;
+    right: 20px;
 }
 
 .login-card {
@@ -5142,7 +5152,7 @@ body:has(.login-page) {
 
 .jonny-chat-message-assistant {
     align-self: flex-start;
-    background: #fff;
+    background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-bottom-left-radius: 4px;
 }
@@ -5173,7 +5183,7 @@ body:has(.login-page) {
     gap: 10px;
     padding: 14px;
     border-top: 1px solid var(--border-color);
-    background: #fff;
+    background: var(--bg-card);
 }
 
 .jonny-chat-input {
@@ -5184,7 +5194,7 @@ body:has(.login-page) {
     padding: 10px 12px;
     font: inherit;
     color: var(--text-primary);
-    background: #fff;
+    background: var(--bg-card);
 }
 
 .jonny-chat-input:focus {
@@ -5391,7 +5401,7 @@ body:has(.drawer.open) .jonny-chat-root {
         height: 44px;
         margin: 0;
         border-radius: 12px;
-        background: #ffffff;
+        background: var(--surface-input);
         border: 1px solid var(--border-color);
         box-shadow: var(--shadow-sm);
         color: var(--text-primary);
@@ -6502,3 +6512,138 @@ body:has(.drawer.open) .jonny-chat-root {
     }
 }
 
+/* ==========================================================================
+   THEME — MODALITÀ NOTTE
+   ========================================================================== */
+[data-theme="dark"] {
+    color-scheme: dark;
+
+    --bg-main: #0f1114;
+    --bg-sidebar: #14171c;
+    --bg-card: #1a1d24;
+    --bg-card-hover: #21252d;
+    --bg-subtle: #252932;
+    --bg-hover: #2a3039;
+    --surface-input: #1f242c;
+    --surface-header: rgba(20, 23, 28, 0.96);
+
+    --border-color: #2f3540;
+    --border-color-hover: #3b4350;
+    --border-subtle: #2a3038;
+
+    --text-primary: #f3f4f6;
+    --text-secondary: #b7bcc6;
+    --text-muted: #808894;
+    --text-tertiary: rgba(255, 255, 255, 0.58);
+
+    --primary-soft: rgba(38, 109, 240, 0.2);
+    --primary-glow: rgba(38, 109, 240, 0.28);
+    --secondary-glow: rgba(23, 189, 233, 0.22);
+    --success-glow: rgba(15, 194, 123, 0.22);
+    --warning-glow: rgba(245, 185, 0, 0.22);
+    --danger-glow: rgba(229, 72, 77, 0.24);
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --shadow-md: 0 8px 18px rgba(0, 0, 0, 0.38);
+    --shadow-lg: 0 14px 32px rgba(0, 0, 0, 0.42);
+    --shadow-glow: 0 0 0 1px rgba(38, 109, 240, 0.28);
+}
+
+[data-theme="dark"] .crm-table thead th {
+    background: var(--bg-subtle);
+}
+
+[data-theme="dark"] .crm-table tbody tr:hover {
+    background: var(--bg-hover);
+}
+
+[data-theme="dark"] .sidebar-nav-item.is-active {
+    background: rgba(38, 109, 240, 0.16);
+}
+
+[data-theme="dark"] .jonny-chat-panel,
+[data-theme="dark"] .jonny-chat-bubble,
+[data-theme="dark"] .drawer,
+[data-theme="dark"] .okr-detail-drawer {
+    background: var(--bg-card);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .toast {
+    background: var(--bg-card);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .analysis-kpi-card,
+[data-theme="dark"] .okr-comparison-stat-card,
+[data-theme="dark"] .analysis-accordion-toggle {
+    background: var(--bg-card);
+}
+
+[data-theme="dark"] .login-card {
+    box-shadow: var(--shadow-lg);
+}
+
+.theme-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 40px;
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.theme-toggle-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--border-color-hover);
+    background: var(--bg-hover);
+}
+
+.theme-mode-setting-copy {
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+    line-height: 1.55;
+    margin-bottom: 16px;
+}
+
+.theme-mode-setting-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.theme-mode-option {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-subtle);
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: 0.92rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.theme-mode-option:hover {
+    border-color: var(--border-color-hover);
+    color: var(--text-primary);
+}
+
+.theme-mode-option.is-active {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-glow);
+}

@@ -4,6 +4,7 @@ import { PlusCircle } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { PAGE_META } from '@/lib/constants/crm';
 import { useCrm } from '@/providers/crm-provider';
+import { ThemeToggleButton } from '@/components/ui/theme-toggle-button';
 import { formatCurrency } from '@/lib/crm/utils';
 
 interface TopHeaderProps {
@@ -22,6 +23,7 @@ export function TopHeader({ onQuickAdd }: TopHeaderProps) {
         <p id="header-subtitle">{meta.subtitle}</p>
       </div>
       <div className="header-actions">
+        <ThemeToggleButton />
         <div className="quick-stats-badge">
           <span>Fatturato 2026: </span>
           <strong id="header-total-revenue">{formatCurrency(totalRevenue2026)}</strong>

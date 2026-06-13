@@ -4,6 +4,7 @@ import { useRef } from 'react';
 import { Cloud, Database, ExternalLink, FileJson, Info, RefreshCw, Sparkles, Trash2, Upload } from 'lucide-react';
 import { useCrm } from '@/providers/crm-provider';
 import { DesktopLogoSetting } from '@/components/settings/desktop-logo-setting';
+import { ThemeModeSetting } from '@/components/settings/theme-mode-setting';
 import { PwaInstallSetting } from '@/components/settings/pwa-install-setting';
 import { TopHeader } from '@/components/layout/top-header';
 
@@ -37,6 +38,7 @@ export function SettingsSection() {
         <section className="app-section active">
           <div style={{ maxWidth: 650, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
             <DesktopLogoSetting />
+            <ThemeModeSetting />
             <PwaInstallSetting />
             <div className="glass-card">
               <div className="chart-header">

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CrmLogo } from '@/components/ui/crm-logo';
+import { ThemeToggleButton } from '@/components/ui/theme-toggle-button';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 
 export default function LoginPageClient() {
@@ -38,6 +39,9 @@ export default function LoginPageClient() {
 
   return (
     <div className="login-page">
+      <div className="login-theme-toggle">
+        <ThemeToggleButton showLabel />
+      </div>
       <div className="login-card glass-card">
         <div className="login-logo">
           <div className="logo-icon">

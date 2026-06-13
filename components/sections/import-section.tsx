@@ -79,7 +79,7 @@ export function ImportSection() {
   const handleCommit = async () => {
     setIsProcessing(true);
     try {
-      await processExcelImport(parsedClients, pendingOkr, importYear);
+      await processExcelImport(parsedClients, pendingOkr, importYear, importMeta.format);
       setStep('dropzone');
       setParsedClients([]);
       setPendingOkr([]);

@@ -400,6 +400,14 @@ export async function fetchOkrRecords(
   }));
 }
 
+export async function deleteOkrRecordsForYear(
+  db: SupabaseClient,
+  year: number,
+): Promise<void> {
+  const { error } = await db.from('okr_records').delete().eq('year', year);
+  if (error) throw error;
+}
+
 export async function upsertOkrRecords(
   db: SupabaseClient,
   records: OkrRecord[],

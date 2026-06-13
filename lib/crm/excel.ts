@@ -74,6 +74,7 @@ export interface DetectedExcelColumns {
   yearCol: number;
   productCol: number;
   monthCol: number;
+  dateCol: number;
   projectCol: number;
   ownerCol: number;
   headerRowIndex: number;
@@ -107,12 +108,21 @@ function isLegacyLineRevenueSheet(rows: unknown[][]): boolean {
 
 function detectColumnsFromInvoiceHeader(headers: unknown[]): DetectedExcelColumns {
   const lower = headers.map((cell) => String(cell).trim().toLowerCase());
+  const dateCol = lower.findIndex((cell) => (
+    cell === 'data ft'
+    || cell === 'data doc'
+    || cell === 'data documento'
+    || cell === 'data fattura'
+    || cell.startsWith('data f')
+    || cell === 'data'
+  ));
   return {
     clientCol: lower.findIndex((cell) => cell === 'cliente'),
     importoCol: lower.findIndex((cell) => cell.startsWith('imponib')),
     yearCol: lower.findIndex((cell) => cell === 'anno ft' || cell === 'anno'),
     productCol: -1,
     monthCol: lower.findIndex((cell) => cell === 'mese ft' || cell === 'mese'),
+    dateCol,
     projectCol: -1,
     ownerCol: -1,
     headerRowIndex: 0,
@@ -127,7 +137,8 @@ function detectLegacyLineColumns(): DetectedExcelColumns {
     yearCol: -1,
     productCol: -1,
     monthCol: -1,
-    projectCol: 1,
+    dateCol: 1,
+    projectCol: -1,
     ownerCol: -1,
     headerRowIndex: -1,
     sheetName: '',
@@ -152,11 +163,108 @@ export function detectExcelColumns(headers: unknown[]): DetectedExcelColumns {
     yearCol: yearCol >= 0 ? yearCol : findExcelColumnIndex(headers, 'year'),
     productCol: findExcelColumnIndex(headers, 'prodotto'),
     monthCol: findExcelColumnIndex(headers, 'mese'),
+    dateCol: findExcelColumnIndex(headers, 'data'),
     projectCol: findExcelColumnIndex(headers, 'codice progetto'),
     ownerCol: findExcelColumnIndex(headers, 'documento owner'),
     headerRowIndex: 0,
     sheetName: '',
   };
+}
+
+export function isRowPerOkrImportFormat(format: ExcelImportFormat): boolean {
+  return format === 'legacy-line' || format === 'invoice';
+}
+
+const ITALIAN_MONTH_LABELS = [
+  'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+  'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre',
+] as const;
+
+export interface ExcelOkrDateParts {
+  year: number;
+  monthNumber: number;
+  monthLabel: string;
+  quarter: number;
+}
+
+export function parseExcelSerialDate(serial: number): Date {
+  const utcMs = Math.round((serial - 25569) * 86400 * 1000);
+  return new Date(utcMs);
+}
+
+function buildExcelOkrDateParts(year: number, monthNumber: number): ExcelOkrDateParts {
+  const safeMonth = Math.min(Math.max(monthNumber, 1), 12);
+  return {
+    year,
+    monthNumber: safeMonth,
+    monthLabel: ITALIAN_MONTH_LABELS[safeMonth - 1],
+    quarter: Math.ceil(safeMonth / 3),
+  };
+}
+
+export function parseExcelOkrDateParts(value: unknown): ExcelOkrDateParts | null {
+  if (value === undefined || value === null || value === '') return null;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return buildExcelOkrDateParts(
+      value.getFullYear(),
+      value.getMonth() + 1,
+    );
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    if (value >= 30000 && value <= 60000) {
+      const date = parseExcelSerialDate(value);
+      return buildExcelOkrDateParts(date.getUTCFullYear(), date.getUTCMonth() + 1);
+    }
+    const monthNumber = parseOkrMonthNumber(value);
+    if (monthNumber > 0) {
+      return buildExcelOkrDateParts(ANALYSIS_YEAR, monthNumber);
+    }
+    return null;
+  }
+  const text = String(value).trim();
+  if (!text) return null;
+  const slashMatch = text.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})$/);
+  if (slashMatch) {
+    const first = parseInt(slashMatch[1], 10);
+    const second = parseInt(slashMatch[2], 10);
+    let year = parseInt(slashMatch[3], 10);
+    if (year < 100) year += 2000;
+    const dayFirst = first > 12 && second <= 12;
+    const monthNumber = dayFirst ? second : (second <= 12 ? second : first);
+    if (monthNumber >= 1 && monthNumber <= 12 && year >= 2000 && year <= 2100) {
+      return buildExcelOkrDateParts(year, monthNumber);
+    }
+  }
+  const monthNumber = parseOkrMonthNumber(text);
+  if (monthNumber > 0) {
+    return buildExcelOkrDateParts(ANALYSIS_YEAR, monthNumber);
+  }
+  return null;
+}
+
+function resolveOkrDatePartsFromRow(
+  row: unknown[],
+  worksheet: XLSX.WorkSheet,
+  rows: unknown[][],
+  rowIndex: number,
+  detected: DetectedExcelColumns,
+  importYear: number,
+): ExcelOkrDateParts | null {
+  if (detected.dateCol >= 0) {
+    const dateRaw = getExcelCellValue(worksheet, rows, rowIndex, detected.dateCol);
+    const parsedDate = parseExcelOkrDateParts(dateRaw);
+    if (parsedDate) {
+      return { ...parsedDate, year: importYear };
+    }
+  }
+  if (detected.monthCol >= 0) {
+    const monthRaw = getExcelCellValue(worksheet, rows, rowIndex, detected.monthCol);
+    const monthNumber = parseOkrMonthNumber(monthRaw);
+    if (monthNumber > 0) {
+      return buildExcelOkrDateParts(importYear, monthNumber);
+    }
+  }
+  return null;
 }
 
 export function isSupportedImportYear(year: number): boolean {
@@ -440,26 +548,27 @@ export function buildOkrRecordsFromImport(
     const amountRaw = getExcelCellValue(worksheet, rows, i, detected.importoCol);
     if (amountRaw === null || amountRaw === undefined || amountRaw === '') continue;
     const amount = parseExcelImporto(amountRaw);
+    const dateParts = resolveOkrDatePartsFromRow(row, worksheet, rows, i, detected, importYear);
     const productRaw =
       detected.productCol >= 0 ? getExcelCellValue(worksheet, rows, i, detected.productCol) : '';
-    const monthRaw =
-      detected.monthCol >= 0 ? getExcelCellValue(worksheet, rows, i, detected.monthCol) : '';
     const projectRaw =
       detected.projectCol >= 0 ? row[detected.projectCol] : '';
     const ownerRaw =
       detected.ownerCol >= 0 ? row[detected.ownerCol] : '';
+    const recordYear = dateParts?.year ?? rowYear;
+    if (recordYear !== importYear) continue;
     const candidate: OkrRecord = {
       id: useRowIds ? createOkrImportRowId(importYear, i) : createUniqueId('okr'),
       clientName,
       clientId: '',
       productType: normalizeProductType(String(productRaw || '')),
       amount,
-      monthLabel: String(monthRaw || ''),
-      monthNumber: parseOkrMonthNumber(monthRaw),
-      quarter: parseQuarterFromMonth(monthRaw),
+      monthLabel: dateParts?.monthLabel ?? '',
+      monthNumber: dateParts?.monthNumber ?? 0,
+      quarter: dateParts?.quarter ?? 0,
       projectCode: String(projectRaw ?? '').trim(),
       owner: String(ownerRaw || ''),
-      year: rowYear,
+      year: recordYear,
     };
     if (mergeDuplicates && recordMap) {
       const mergeKey = getOkrRecordMergeKey(candidate);

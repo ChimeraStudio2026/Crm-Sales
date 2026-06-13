@@ -53,7 +53,9 @@ import {
 import { createMailCampaignActions } from '@/providers/mail-campaign-actions';
 import { createCommercialFunnelActions } from '@/providers/commercial-funnel-actions';
 import {
+  isRowPerOkrImportFormat,
   parseExcelImportBuffer,
+  type ExcelImportFormat,
   type ExcelImportParseResult,
 } from '@/lib/crm/excel';
 import { mergeClientsWithExcelImport, mergeOkrRecordsWithImport, linkOkrRecordsToClients } from '@/lib/crm/import-merge';
@@ -97,6 +99,7 @@ import {
   fetchIdeas,
   fetchAllOkrRecords,
   fetchOkrRecords,
+  deleteOkrRecordsForYear,
   getApolloStatus,
   persistAnalysisForecasts,
   persistClientTasks,
@@ -176,6 +179,7 @@ interface CrmContextValue {
     parsedClients: ParsedExcelClient[],
     okrRecords: OkrRecord[],
     importYear: number,
+    format?: ExcelImportFormat,
   ) => Promise<void>;
   parseExcelBuffer: (buffer: ArrayBuffer, filename?: string) => ExcelImportParseResult;
   resetAllData: () => Promise<void>;
@@ -1151,6 +1155,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
     parsedClients: ParsedExcelClient[],
     newOkrRecords: OkrRecord[],
     importYear: number,
+    format: ExcelImportFormat = 'okr',
   ) => {
     try {
       if (!db) {
@@ -1158,15 +1163,22 @@ export function CrmProvider({ children }: CrmProviderProps) {
       }
       await assertClientsHistoricalRevenueSchema(db);
       const clientMerge = mergeClientsWithExcelImport(clientsRef.current, parsedClients, importYear);
-    let nextClients = recalculateRelationships(clientMerge.merged);
-    nextClients = reconcileImportedClientsToMainList(nextClients);
-    nextClients = syncClientsProfileCompletion(nextClients);
-    const okrMerge = mergeOkrRecordsWithImport(okrRecords, newOkrRecords, nextClients);
-    await persistClientsNow(nextClients);
-    clientsRef.current = nextClients;
-    if (okrMerge.upserted.length > 0) {
-      await upsertOkrRecords(db, okrMerge.upserted);
-    }
+      let nextClients = recalculateRelationships(clientMerge.merged);
+      nextClients = reconcileImportedClientsToMainList(nextClients);
+      nextClients = syncClientsProfileCompletion(nextClients);
+      const replaceYearOkr = isRowPerOkrImportFormat(format);
+      const baseOkrRecords = replaceYearOkr
+        ? okrRecords.filter((record) => record.year !== importYear)
+        : okrRecords;
+      const okrMerge = mergeOkrRecordsWithImport(baseOkrRecords, newOkrRecords, nextClients);
+      await persistClientsNow(nextClients);
+      clientsRef.current = nextClients;
+      if (replaceYearOkr) {
+        await deleteOkrRecordsForYear(db, importYear);
+      }
+      if (okrMerge.upserted.length > 0) {
+        await upsertOkrRecords(db, okrMerge.upserted);
+      }
     const [loadedClients, loadedOkr] = await Promise.all([
       fetchClients(db),
       fetchAllOkrRecords(db),

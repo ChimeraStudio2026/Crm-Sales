@@ -806,7 +806,7 @@ input, select, textarea, button {
 }
 
 #section-clients .crm-table-scroll-viewport {
-    overflow-x: hidden;
+    overflow-x: auto;
     overflow-y: auto;
     flex: 1;
     min-height: 0;
@@ -3413,9 +3413,15 @@ body.drawer-open {
 }
 .form-contact-row-inline {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 8px;
     margin-bottom: 8px;
+}
+
+@media (max-width: 768px) {
+    .form-contact-row-inline {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 .client-actions-panel {
     margin-bottom: 14px;

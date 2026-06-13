@@ -139,6 +139,7 @@ export function normalizeClientContacts(client: Client): ClientContact[] {
       email: client.email,
       name: '',
       role: '',
+      phone: '',
     });
   }
   client.contacts = client.contacts.map((contact) => ({
@@ -146,6 +147,7 @@ export function normalizeClientContacts(client: Client): ClientContact[] {
     email: contact.email || '',
     name: contact.name || '',
     role: contact.role || '',
+    phone: contact.phone || '',
   }));
   return client.contacts;
 }
@@ -161,7 +163,7 @@ export function syncClientLegacyFields(client: Client): void {
 export function getClientContactsSearchText(client: Client): string {
   normalizeClientContacts(client);
   const contactText = client.contacts
-    .map((contact) => [contact.name || '', contact.email || '', contact.role || ''].join(' '))
+    .map((contact) => [contact.name || '', contact.email || '', contact.role || '', contact.phone || ''].join(' '))
     .join(' ')
     .toLowerCase();
   return `${contactText} ${(client.description || '').toLowerCase()}`.trim();

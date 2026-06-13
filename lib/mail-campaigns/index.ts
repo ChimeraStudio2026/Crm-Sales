@@ -185,7 +185,7 @@ export function flattenClientContacts(clients: Client[]): {
     const relationshipLabel = resolveRelationshipLabel(client);
     const contacts = client.contacts.length > 0
       ? client.contacts
-      : [{ id: `legacy-${client.id}`, name: '', email: client.email || '', role: '' }];
+      : [{ id: `legacy-${client.id}`, name: '', email: client.email || '', role: '', phone: '' }];
     contacts.forEach((contact) => {
       rows.push({
         clientId: client.id,

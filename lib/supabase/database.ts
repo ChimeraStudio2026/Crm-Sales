@@ -51,6 +51,7 @@ function normalizeContactsArray(
       email: contact.email || '',
       name: contact.name || '',
       role: contact.role || '',
+      phone: contact.phone || '',
     }));
   }
   if (legacyEmail || legacyDescription) {
@@ -59,6 +60,7 @@ function normalizeContactsArray(
       email: legacyEmail || '',
       name: '',
       role: '',
+      phone: '',
     }];
   }
   return [];

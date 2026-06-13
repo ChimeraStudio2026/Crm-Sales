@@ -26,7 +26,9 @@ export function ClientDrawer({ client, isCold, onClose }: ClientDrawerProps) {
   const [rev2026, setRev2026] = useState(0);
   const [description, setDescription] = useState('');
   const [action, setAction] = useState('');
-  const [contacts, setContacts] = useState<ClientContact[]>([{ id: createUniqueId('contact'), email: '', name: '', role: '' }]);
+  const [contacts, setContacts] = useState<ClientContact[]>([
+    { id: createUniqueId('contact'), email: '', name: '', role: '', phone: '' },
+  ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -42,7 +44,9 @@ export function ClientDrawer({ client, isCold, onClose }: ClientDrawerProps) {
       setRev2026(client.rev2026);
       setDescription(client.description);
       setAction(client.action);
-      setContacts(client.contacts.length > 0 ? client.contacts : [{ id: createUniqueId('contact'), email: '', name: '', role: '' }]);
+      setContacts(client.contacts.length > 0 ? client.contacts : [
+        { id: createUniqueId('contact'), email: '', name: '', role: '', phone: '' },
+      ]);
     }
   }, [client]);
 
@@ -155,6 +159,11 @@ export function ClientDrawer({ client, isCold, onClose }: ClientDrawerProps) {
                     next[index] = { ...contact, email: e.target.value };
                     setContacts(next);
                   }} />
+                  <input className="form-input" placeholder="Telefono" value={contact.phone} onChange={(e) => {
+                    const next = [...contacts];
+                    next[index] = { ...contact, phone: e.target.value };
+                    setContacts(next);
+                  }} />
                   <input className="form-input" placeholder="Posizione" value={contact.role} onChange={(e) => {
                     const next = [...contacts];
                     next[index] = { ...contact, role: e.target.value };
@@ -162,7 +171,10 @@ export function ClientDrawer({ client, isCold, onClose }: ClientDrawerProps) {
                   }} />
                 </div>
               ))}
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setContacts([...contacts, { id: createUniqueId('contact'), email: '', name: '', role: '' }])}>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setContacts([
+                ...contacts,
+                { id: createUniqueId('contact'), email: '', name: '', role: '', phone: '' },
+              ])}>
                 Aggiungi contatto
               </button>
             </div>

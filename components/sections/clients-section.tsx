@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useMemo, useRef, useState } from 'react';
 import { ChevronRight, Download, Edit, FilterX, Search, Sparkles, Trash2 } from 'lucide-react';
 import {
   CLIENT_TYPES,
@@ -23,6 +23,7 @@ import { useCrm } from '@/providers/crm-provider';
 import { ClientDrawer } from '@/components/drawers/client-drawer';
 import { BulkClientsDrawer } from '@/components/drawers/bulk-clients-drawer';
 import { ClientDetailPanel } from '@/components/clients/client-detail-panel';
+import { useCrmTableHorizontalScroll } from '@/components/clients/use-crm-table-horizontal-scroll';
 import { ClientOriginSelect } from '@/components/clients/client-origin-select';
 import { TopHeader } from '@/components/layout/top-header';
 import { getClientOriginCellClass } from '@/lib/crm/client-origin';
@@ -83,6 +84,16 @@ export function ClientsSection() {
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
   const [showRev2023, setShowRev2023] = useState(false);
   const [showRev2024, setShowRev2024] = useState(false);
+  const tableViewportRef = useRef<HTMLDivElement>(null);
+  const tableRef = useRef<HTMLTableElement>(null);
+  const tableScrollBarRef = useRef<HTMLDivElement>(null);
+
+  useCrmTableHorizontalScroll({
+    viewportRef: tableViewportRef,
+    tableRef,
+    barRef: tableScrollBarRef,
+    isActive: true,
+  });
 
   const tableColumnOrder = useMemo(
     () => buildClientsTableColumnOrder(showRev2023, showRev2024),
@@ -104,7 +115,7 @@ export function ClientsSection() {
         c.name.toLowerCase().includes(query) ||
         c.action.toLowerCase().includes(query) ||
         c.contacts.some((ct) =>
-          `${ct.name} ${ct.email} ${ct.role}`.toLowerCase().includes(query),
+          `${ct.name} ${ct.email} ${ct.role} ${ct.phone}`.toLowerCase().includes(query),
         );
       return (
         matchesQuery &&
@@ -369,8 +380,8 @@ export function ClientsSection() {
             </div>
           </div>
           <div className="table-container">
-            <div className="crm-table-scroll-viewport">
-              <table className="crm-table">
+            <div className="crm-table-scroll-viewport" ref={tableViewportRef}>
+              <table className="crm-table" ref={tableRef}>
                 <thead>
                   <tr>
                     {tableColumnOrder.map((colId) => {
@@ -431,6 +442,11 @@ export function ClientsSection() {
                 </tbody>
               </table>
             </div>
+            <div
+              ref={tableScrollBarRef}
+              className="table-h-scroll-bar table-h-scroll-bar-fixed is-active"
+              aria-label="Trascina per scorrere le colonne"
+            />
             <div className="table-footer">
               <div className="table-info">
                 Mostrati {filtered.length} di {totalInList} clienti

@@ -808,6 +808,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
       email: contact.email || '',
       name: contact.name || '',
       role: contact.role || '',
+      phone: contact.phone || '',
     }));
     await mutateClients((prev) => prev.map((c) => {
       if (c.id !== clientId) return c;
@@ -1351,10 +1352,13 @@ export function CrmProvider({ children }: CrmProviderProps) {
       const contacts: ClientContact[] = [...c.contacts];
       if (result.email && typeof result.email === 'string') {
         if (contacts.length === 0) {
-          contacts.push({ id: createUniqueId('contact'), email: result.email, name: '', role: '' });
+          contacts.push({ id: createUniqueId('contact'), email: result.email, name: '', role: '', phone: '' });
         } else if (!contacts[0]?.email?.trim()) {
           contacts[0] = { ...contacts[0], email: result.email };
         }
+      }
+      if (result.phone && typeof result.phone === 'string' && contacts.length > 0 && !contacts[0]?.phone?.trim()) {
+        contacts[0] = { ...contacts[0], phone: result.phone };
       }
       const description = result.description
         ? appendApolloDescription(c.description, result.description)

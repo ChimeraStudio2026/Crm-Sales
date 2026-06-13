@@ -82,7 +82,7 @@ export function ColdClientsSection() {
         client.name.toLowerCase().includes(query) ||
         client.action.toLowerCase().includes(query) ||
         client.contacts.some((contact) =>
-          `${contact.name} ${contact.email} ${contact.role}`.toLowerCase().includes(query),
+          `${contact.name} ${contact.email} ${contact.role} ${contact.phone}`.toLowerCase().includes(query),
         );
       return matchesQuery && (!filterOwner || client.owner === filterOwner);
     });

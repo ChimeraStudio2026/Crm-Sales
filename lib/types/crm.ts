@@ -3,6 +3,7 @@ export interface ClientContact {
   email: string;
   name: string;
   role: string;
+  phone: string;
 }
 
 export interface ClientActionLogEntry {

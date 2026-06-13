@@ -26,6 +26,7 @@ function createEmptyContact(): ClientContact {
     email: '',
     name: '',
     role: '',
+    phone: '',
   };
 }
 
@@ -56,7 +57,11 @@ export function ClientDetailPanel({
 
   const persistContacts = async (nextContacts: ClientContact[]) => {
     const filtered = nextContacts.filter(
-      (contact) => contact.email.trim() || contact.name.trim() || contact.role.trim(),
+      (contact) =>
+        contact.email.trim()
+        || contact.name.trim()
+        || contact.role.trim()
+        || contact.phone.trim(),
     );
     const displayContacts = filtered.length > 0 ? nextContacts : [createEmptyContact()];
     setContacts(displayContacts);
@@ -212,6 +217,20 @@ export function ClientDetailPanel({
                   }}
                   onBlur={() => void handleContactBlur()}
                   placeholder="Mail"
+                />
+                <input
+                  type="tel"
+                  className="contact-field-input"
+                  value={contact.phone}
+                  onChange={(event) => {
+                    setContacts((prev) =>
+                      prev.map((item) =>
+                        item.id === contact.id ? { ...item, phone: event.target.value } : item,
+                      ),
+                    );
+                  }}
+                  onBlur={() => void handleContactBlur()}
+                  placeholder="Telefono"
                 />
                 <input
                   type="text"

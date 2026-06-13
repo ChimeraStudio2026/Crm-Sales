@@ -4,6 +4,7 @@ import {
   EXCEL_IMPORT_ACTION_PREFIX,
   EXCEL_IMPORT_DESC_PREFIX,
 } from '@/lib/constants/crm';
+import { resolveCanonicalClientBrandName } from '@/lib/crm/client-brand-aliases';
 import { getRevenueFieldForImportYear } from '@/lib/crm/excel';
 import { resolveClientProductOffers } from '@/lib/crm/product-offers';
 import {
@@ -38,12 +39,19 @@ export function getOkrRecordMergeKey(record: OkrRecord): string {
 }
 
 function linkOkrClientId(record: OkrRecord, clients: Client[]): OkrRecord {
-  const matchedClient = clients.find(
-    (client) => client.name.trim().toLowerCase() === record.clientName.trim().toLowerCase(),
-  );
+  const canonicalName = resolveCanonicalClientBrandName(record.clientName);
+  const matchedClient = clients.find((client) => {
+    const clientKey = client.name.trim().toLowerCase();
+    return clientKey === canonicalName.toLowerCase()
+      || clientKey === record.clientName.trim().toLowerCase();
+  });
   if (!matchedClient) return record;
-  if (record.clientId === matchedClient.id) return record;
-  return { ...record, clientId: matchedClient.id };
+  if (record.clientId === matchedClient.id && record.clientName === matchedClient.name) return record;
+  return {
+    ...record,
+    clientName: matchedClient.name,
+    clientId: matchedClient.id,
+  };
 }
 
 export function linkOkrRecordsToClients(records: OkrRecord[], clients: Client[]): OkrRecord[] {

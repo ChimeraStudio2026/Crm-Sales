@@ -7,7 +7,14 @@ import {
   SUPPORTED_IMPORT_YEARS,
 } from '@/lib/constants/crm';
 import { createUniqueId } from '@/lib/crm/utils';
+import { resolveCanonicalClientBrandName } from '@/lib/crm/client-brand-aliases';
 import { getOkrRecordMergeKey } from '@/lib/crm/import-merge';
+
+function sanitizeImportedClientName(rawName: unknown): string {
+  const cleanedName = String(rawName ?? '').trim().replace(/\s+/g, ' ');
+  if (!cleanedName) return cleanedName;
+  return resolveCanonicalClientBrandName(cleanedName);
+}
 
 export function parseExcelImporto(value: unknown): number {
   if (value === undefined || value === null || value === '') return 0;
@@ -482,7 +489,7 @@ export function aggregateExcelClients(
     if (!row || row.length === 0) continue;
     const rawName = row[clientColIndex];
     if (!rawName) continue;
-    const clientName = String(rawName).trim().replace(/\s+/g, ' ');
+    const clientName = sanitizeImportedClientName(rawName);
     if (!clientName) continue;
     const rowYear = resolveRowImportYear(row, detected, importYear);
     if (rowYear !== importYear) continue;
@@ -541,7 +548,7 @@ export function buildOkrRecordsFromImport(
     if (!row || row.length === 0) continue;
     const clientNameRaw = row[detected.clientCol];
     if (!clientNameRaw) continue;
-    const clientName = String(clientNameRaw).trim().replace(/\s+/g, ' ');
+    const clientName = sanitizeImportedClientName(clientNameRaw);
     if (!clientName) continue;
     const rowYear = resolveRowImportYear(row, detected, importYear);
     if (rowYear !== importYear) continue;

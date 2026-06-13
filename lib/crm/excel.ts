@@ -70,8 +70,74 @@ export interface DetectedExcelColumns {
   monthCol: number;
   projectCol: number;
   ownerCol: number;
+  headerRowIndex: number;
+  sheetName: string;
 }
 
+export type ExcelImportFormat = 'okr' | 'invoice' | 'legacy-line';
+
+function findInvoiceHeaderRow(rows: unknown[][]): number {
+  for (let i = 0; i < Math.min(rows.length, 30); i += 1) {
+    const row = rows[i];
+    if (!Array.isArray(row)) continue;
+    const lower = row.map((cell) => String(cell).trim().toLowerCase());
+    const clientCol = lower.findIndex((cell) => cell === 'cliente');
+    const importoCol = lower.findIndex((cell) => cell.startsWith('imponib'));
+    if (clientCol >= 0 && importoCol >= 0) return i;
+  }
+  return -1;
+}
+
+function isLegacyLineRevenueSheet(rows: unknown[][]): boolean {
+  const sample = rows.slice(0, Math.min(rows.length, 8));
+  if (sample.length === 0) return false;
+  return sample.every((row) => (
+    Array.isArray(row) &&
+    typeof row[0] === 'string' &&
+    row[0].trim().length > 0 &&
+    typeof row[2] === 'number'
+  ));
+}
+
+function detectColumnsFromInvoiceHeader(headers: unknown[]): DetectedExcelColumns {
+  const lower = headers.map((cell) => String(cell).trim().toLowerCase());
+  return {
+    clientCol: lower.findIndex((cell) => cell === 'cliente'),
+    importoCol: lower.findIndex((cell) => cell.startsWith('imponib')),
+    yearCol: lower.findIndex((cell) => cell === 'anno ft' || cell === 'anno'),
+    productCol: -1,
+    monthCol: lower.findIndex((cell) => cell === 'mese ft' || cell === 'mese'),
+    projectCol: -1,
+    ownerCol: -1,
+    headerRowIndex: 0,
+    sheetName: '',
+  };
+}
+
+function detectLegacyLineColumns(): DetectedExcelColumns {
+  return {
+    clientCol: 0,
+    importoCol: 2,
+    yearCol: -1,
+    productCol: -1,
+    monthCol: -1,
+    projectCol: -1,
+    ownerCol: -1,
+    headerRowIndex: -1,
+    sheetName: '',
+  };
+}
+
+export function detectExcelImportFormat(
+  headers: unknown[],
+  rows: unknown[][],
+): ExcelImportFormat {
+  if (findInvoiceHeaderRow(rows) >= 0) return 'invoice';
+  const detected = detectExcelColumns(headers);
+  if (detected.clientCol >= 0 && detected.importoCol >= 0) return 'okr';
+  if (isLegacyLineRevenueSheet(rows)) return 'legacy-line';
+  return 'okr';
+}
 export function detectExcelColumns(headers: unknown[]): DetectedExcelColumns {
   const yearCol = findExcelColumnIndex(headers, 'anno');
   return {
@@ -82,6 +148,8 @@ export function detectExcelColumns(headers: unknown[]): DetectedExcelColumns {
     monthCol: findExcelColumnIndex(headers, 'mese'),
     projectCol: findExcelColumnIndex(headers, 'codice progetto'),
     ownerCol: findExcelColumnIndex(headers, 'documento owner'),
+    headerRowIndex: 0,
+    sheetName: '',
   };
 }
 
@@ -89,9 +157,17 @@ export function isSupportedImportYear(year: number): boolean {
   return SUPPORTED_IMPORT_YEARS.includes(year as (typeof SUPPORTED_IMPORT_YEARS)[number]);
 }
 
-export function getRevenueFieldForImportYear(year: number): 'rev2025' | 'rev2026' {
-  if (year === PREVIOUS_ANALYSIS_YEAR) return 'rev2025';
-  return 'rev2026';
+export type ClientRevenueField = 'rev2023' | 'rev2024' | 'rev2025' | 'rev2026';
+
+const REVENUE_FIELD_BY_YEAR: Record<number, ClientRevenueField> = {
+  2023: 'rev2023',
+  2024: 'rev2024',
+  2025: 'rev2025',
+  2026: 'rev2026',
+};
+
+export function getRevenueFieldForImportYear(year: number): ClientRevenueField {
+  return REVENUE_FIELD_BY_YEAR[year] ?? 'rev2026';
 }
 
 function parseRowYearValue(raw: unknown): number | null {
@@ -149,19 +225,105 @@ export interface ExcelFileParseResult {
   headers: unknown[];
   rows: unknown[][];
   worksheet: XLSX.WorkSheet;
+  sheetName: string;
+  format: ExcelImportFormat;
+  detected: DetectedExcelColumns;
+  creditNoteCount: number;
 }
 
-export function parseExcelFile(buffer: ArrayBuffer): ExcelFileParseResult {
-  const workbook = XLSX.read(buffer, { type: 'array' });
-  const firstSheetName = workbook.SheetNames[0];
-  const worksheet = workbook.Sheets[firstSheetName];
+function getDataStartRowIndex(format: ExcelImportFormat, detected: DetectedExcelColumns): number {
+  if (format === 'legacy-line') return 0;
+  if (format === 'invoice') return Math.max(detected.headerRowIndex + 1, 1);
+  return 1;
+}
+
+function resolveWorkbookSheet(
+  workbook: XLSX.WorkBook,
+  importYear: number,
+): ExcelFileParseResult {
+  const preferredSheetNames = [
+    'Fatture e NC',
+    'Copia di Fatture e NC',
+    String(importYear),
+    ...workbook.SheetNames,
+  ];
+  const visited = new Set<string>();
+  for (const sheetName of preferredSheetNames) {
+    if (!sheetName || visited.has(sheetName) || !workbook.SheetNames.includes(sheetName)) continue;
+    visited.add(sheetName);
+    const worksheet = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(worksheet, {
+      header: 1,
+      raw: true,
+      defval: '',
+    }) as unknown[][];
+    const format = detectExcelImportFormat(rows[0] || [], rows);
+    if (format === 'invoice') {
+      const headerRowIndex = findInvoiceHeaderRow(rows);
+      const headers = rows[headerRowIndex] || [];
+      const detected = detectColumnsFromInvoiceHeader(headers);
+      detected.headerRowIndex = headerRowIndex;
+      detected.sheetName = sheetName;
+      return {
+        headers,
+        rows,
+        worksheet,
+        sheetName,
+        format,
+        detected,
+        creditNoteCount: 0,
+      };
+    }
+    if (format === 'legacy-line') {
+      const detected = detectLegacyLineColumns();
+      detected.sheetName = sheetName;
+      return {
+        headers: [],
+        rows,
+        worksheet,
+        sheetName,
+        format,
+        detected,
+        creditNoteCount: 0,
+      };
+    }
+    const detected = detectExcelColumns(rows[0] || []);
+    detected.sheetName = sheetName;
+    if (detected.clientCol >= 0 && detected.importoCol >= 0) {
+      return {
+        headers: rows[0] || [],
+        rows,
+        worksheet,
+        sheetName,
+        format: 'okr',
+        detected,
+        creditNoteCount: 0,
+      };
+    }
+  }
+  const fallbackSheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[fallbackSheetName];
   const rows = XLSX.utils.sheet_to_json(worksheet, {
     header: 1,
-    raw: false,
+    raw: true,
     defval: '',
   }) as unknown[][];
-  const headers = rows[0] || [];
-  return { headers, rows, worksheet };
+  const detected = detectExcelColumns(rows[0] || []);
+  detected.sheetName = fallbackSheetName;
+  return {
+    headers: rows[0] || [],
+    rows,
+    worksheet,
+    sheetName: fallbackSheetName,
+    format: 'okr',
+    detected,
+    creditNoteCount: 0,
+  };
+}
+
+export function parseExcelFile(buffer: ArrayBuffer, importYear = ANALYSIS_YEAR): ExcelFileParseResult {
+  const workbook = XLSX.read(buffer, { type: 'array' });
+  return resolveWorkbookSheet(workbook, importYear);
 }
 
 function getExcelCellValue(
@@ -190,9 +352,12 @@ export function aggregateExcelClients(
   revColIndex: number,
   importYear: number,
   detected: DetectedExcelColumns,
-): ParsedExcelClient[] {
+  format: ExcelImportFormat = 'okr',
+): { clients: ParsedExcelClient[]; creditNoteCount: number } {
   const clientMap = new Map<string, ParsedExcelClient>();
-  for (let i = 1; i < rows.length; i += 1) {
+  let creditNoteCount = 0;
+  const startRow = getDataStartRowIndex(format, detected);
+  for (let i = startRow; i < rows.length; i += 1) {
     const row = rows[i];
     if (!row || row.length === 0) continue;
     const rawName = row[clientColIndex];
@@ -204,6 +369,7 @@ export function aggregateExcelClients(
     const revenueRaw = getExcelCellValue(worksheet, rows, i, revColIndex);
     if (revenueRaw === null || revenueRaw === undefined || revenueRaw === '') continue;
     const revenue = parseExcelImporto(revenueRaw);
+    if (revenue < 0) creditNoteCount += 1;
     const key = clientName.toLowerCase();
     if (clientMap.has(key)) {
       const exist = clientMap.get(key)!;
@@ -218,9 +384,9 @@ export function aggregateExcelClients(
       });
     }
   }
-  const result = Array.from(clientMap.values());
-  result.sort((a, b) => b.revenue - a.revenue);
-  return result;
+  const clients = Array.from(clientMap.values());
+  clients.sort((a, b) => b.revenue - a.revenue);
+  return { clients, creditNoteCount };
 }
 
 export function buildOkrRecordsFromExcel(
@@ -285,6 +451,9 @@ export interface ExcelImportParseResult {
   okrRecords: OkrRecord[];
   importYear: number;
   detected: DetectedExcelColumns;
+  format: ExcelImportFormat;
+  sheetName: string;
+  creditNoteCount: number;
 }
 
 export function parseExcelImportBufferWithYear(
@@ -292,37 +461,43 @@ export function parseExcelImportBufferWithYear(
   importYear: number,
   filename?: string,
 ): ExcelImportParseResult {
-  const { headers, rows, worksheet } = parseExcelFile(buffer);
-  const detected = detectExcelColumns(headers);
+  const parsedFile = parseExcelFile(buffer, importYear);
+  const { headers, rows, worksheet, detected, format, sheetName } = parsedFile;
   const resolvedYear = isSupportedImportYear(importYear)
     ? importYear
     : detectExcelImportYear(headers, rows, detected, filename);
-  const parsedClients = aggregateExcelClients(
+  const aggregated = aggregateExcelClients(
     rows,
     worksheet,
     detected.clientCol,
     detected.importoCol,
     resolvedYear,
     detected,
+    format,
   );
-  const okrRecords = buildOkrRecordsFromExcel(
-    rows,
-    worksheet,
-    detected.clientCol,
-    detected.importoCol,
-    detected.productCol,
-    detected.monthCol,
-    detected.projectCol,
-    detected.ownerCol,
-    resolvedYear,
-    detected,
-  );
+  const okrRecords = format === 'okr'
+    ? buildOkrRecordsFromExcel(
+      rows,
+      worksheet,
+      detected.clientCol,
+      detected.importoCol,
+      detected.productCol,
+      detected.monthCol,
+      detected.projectCol,
+      detected.ownerCol,
+      resolvedYear,
+      detected,
+    )
+    : [];
   return {
     headers,
-    parsedClients,
+    parsedClients: aggregated.clients,
     okrRecords,
     importYear: resolvedYear,
     detected,
+    format,
+    sheetName,
+    creditNoteCount: aggregated.creditNoteCount,
   };
 }
 

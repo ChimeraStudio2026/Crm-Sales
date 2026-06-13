@@ -73,6 +73,8 @@ export function mergeClientsWithExcelImport(
         clientOrigin: '',
         relationship: 'Nuovo Cliente',
         manualRelationship: false,
+        rev2023: revField === 'rev2023' ? imported.revenue : 0,
+        rev2024: revField === 'rev2024' ? imported.revenue : 0,
         rev2025: revField === 'rev2025' ? imported.revenue : 0,
         rev2026: revField === 'rev2026' ? imported.revenue : 0,
         action: `${EXCEL_IMPORT_ACTION_PREFIX} (${imported.recordCount} record uniti)`,

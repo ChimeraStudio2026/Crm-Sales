@@ -34,6 +34,8 @@ export interface Client {
   clientOrigin: ClientOrigin | '';
   relationship: Relationship;
   manualRelationship: boolean;
+  rev2023: number;
+  rev2024: number;
   rev2025: number;
   rev2026: number;
   action: string;

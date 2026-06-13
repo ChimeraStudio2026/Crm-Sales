@@ -20,6 +20,8 @@ export function ClientDrawer({ client, isCold, onClose }: ClientDrawerProps) {
   const [owner, setOwner] = useState<Owner>('Jeck');
   const [clientOrigin, setClientOrigin] = useState<Client['clientOrigin']>('');
   const [relationship, setRelationship] = useState<Client['relationship']>('Nuovo Cliente');
+  const [rev2023, setRev2023] = useState(0);
+  const [rev2024, setRev2024] = useState(0);
   const [rev2025, setRev2025] = useState(0);
   const [rev2026, setRev2026] = useState(0);
   const [description, setDescription] = useState('');
@@ -34,6 +36,8 @@ export function ClientDrawer({ client, isCold, onClose }: ClientDrawerProps) {
       setOwner(client.owner);
       setClientOrigin(client.clientOrigin || '');
       setRelationship(client.relationship);
+      setRev2023(client.rev2023);
+      setRev2024(client.rev2024);
       setRev2025(client.rev2025);
       setRev2026(client.rev2026);
       setDescription(client.description);
@@ -54,6 +58,8 @@ export function ClientDrawer({ client, isCold, onClose }: ClientDrawerProps) {
           owner,
           clientOrigin,
           relationship,
+          rev2023,
+          rev2024,
           rev2025,
           rev2026,
           description,
@@ -116,6 +122,14 @@ export function ClientDrawer({ client, isCold, onClose }: ClientDrawerProps) {
                   <select id="form-relationship" className="form-select" value={relationship} onChange={(e) => setRelationship(e.target.value as Client['relationship'])}>
                     {RELATIONSHIPS.map((r) => <option key={r} value={r}>{r}</option>)}
                   </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="form-rev-2023">Fatturato 2023 (€)</label>
+                  <input id="form-rev-2023" type="number" className="form-input" value={rev2023} step={0.01} onChange={(e) => setRev2023(parseFloat(e.target.value) || 0)} />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="form-rev-2024">Fatturato 2024 (€)</label>
+                  <input id="form-rev-2024" type="number" className="form-input" value={rev2024} step={0.01} onChange={(e) => setRev2024(parseFloat(e.target.value) || 0)} />
                 </div>
                 <div className="form-group">
                   <label htmlFor="form-rev-2025">Fatturato 2025 (€)</label>

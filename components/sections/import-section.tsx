@@ -4,7 +4,6 @@ import { useCallback, useState } from 'react';
 import { CheckCircle2, CloudUpload, Eye, X } from 'lucide-react';
 import {
   ANALYSIS_YEAR,
-  PREVIOUS_ANALYSIS_YEAR,
   SUPPORTED_IMPORT_YEARS,
 } from '@/lib/constants/crm';
 import {
@@ -27,10 +26,21 @@ export function ImportSection() {
   const [step, setStep] = useState<'dropzone' | 'preview'>('dropzone');
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const [importMeta, setImportMeta] = useState<Pick<ExcelImportParseResult, 'format' | 'sheetName' | 'creditNoteCount'>>({
+    format: 'okr',
+    sheetName: '',
+    creditNoteCount: 0,
+  });
+
   const applyParseResult = useCallback((result: ExcelImportParseResult) => {
     setParsedClients(result.parsedClients);
     setPendingOkr(result.okrRecords);
     setImportYear(result.importYear);
+    setImportMeta({
+      format: result.format,
+      sheetName: result.sheetName,
+      creditNoteCount: result.creditNoteCount,
+    });
     setStep('preview');
   }, []);
 
@@ -81,7 +91,7 @@ export function ImportSection() {
 
   const totalSum = parsedClients.reduce((sum, client) => sum + client.revenue, 0);
   const revenueField = getRevenueFieldForImportYear(importYear);
-  const revenueLabel = importYear === PREVIOUS_ANALYSIS_YEAR ? 'Fatturato 2025' : 'Fatturato 2026';
+  const revenueLabel = `Fatturato ${importYear}`;
 
   return (
     <>
@@ -110,7 +120,7 @@ export function ImportSection() {
                 />
                 <div className="dropzone-icon"><CloudUpload size={48} /></div>
                 <h3>Trascina il tuo file Excel qui</h3>
-                <p>O clicca per selezionare (.xlsx, .xls o .csv). Supportati import 2025 e 2026.</p>
+                <p>O clicca per selezionare (.xlsx, .xls o .csv). Supportati import 2023–2026.</p>
                 <span className="btn btn-secondary">Seleziona File</span>
               </div>
             )}
@@ -135,7 +145,16 @@ export function ImportSection() {
                     ))}
                   </select>
                   <p className="import-preview-note">
-                    Vengono aggiornati i fatturati dei clienti esistenti e aggiunti solo OKR nuovi e clienti nuovi in bozza.
+                    {importMeta.format === 'invoice' && (
+                      <>Formato fatture rilevato ({importMeta.sheetName}). </>
+                    )}
+                    {importMeta.format === 'legacy-line' && (
+                      <>Formato storico rilevato ({importMeta.sheetName}). </>
+                    )}
+                    Le note di credito (importi negativi) vengono sottratte dal totale cliente.
+                    {importMeta.creditNoteCount > 0 && (
+                      <> {importMeta.creditNoteCount} righe NC in anteprima.</>
+                    )}
                   </p>
                 </div>
                 <div className="import-preview-wrapper">

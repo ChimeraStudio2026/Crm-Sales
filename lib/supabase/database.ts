@@ -26,6 +26,8 @@ interface ClientRow {
   client_origin: string;
   relationship: string;
   manual_relationship: boolean;
+  rev_2023: number;
+  rev_2024: number;
   rev_2025: number;
   rev_2026: number;
   action: string;
@@ -110,6 +112,8 @@ function clientToRow(client: Client): ClientRow {
     client_origin: client.clientOrigin || '',
     relationship: client.relationship || 'Nuovo Cliente',
     manual_relationship: !!client.manualRelationship,
+    rev_2023: Number(client.rev2023) || 0,
+    rev_2024: Number(client.rev2024) || 0,
     rev_2025: Number(client.rev2025) || 0,
     rev_2026: Number(client.rev2026) || 0,
     action: client.action || '',
@@ -134,6 +138,8 @@ function rowToClient(row: ClientRow): Client {
     clientOrigin: isClientOrigin(row.client_origin) ? row.client_origin : '',
     relationship: row.relationship as Client['relationship'],
     manualRelationship: row.manual_relationship,
+    rev2023: Number(row.rev_2023) || 0,
+    rev2024: Number(row.rev_2024) || 0,
     rev2025: Number(row.rev_2025) || 0,
     rev2026: Number(row.rev_2026) || 0,
     action: row.action || '',

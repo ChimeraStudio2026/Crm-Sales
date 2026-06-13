@@ -408,6 +408,61 @@ export async function deleteOkrRecordsForYear(
   if (error) throw error;
 }
 
+export const HISTORICAL_IMPORT_YEARS = [2023, 2024] as const;
+
+export interface CleanHistoricalYearsResult {
+  deletedOkrByYear: Record<number, number>;
+  updatedClients: number;
+  deletedForecastsByYear: Record<number, number>;
+}
+
+export async function cleanHistoricalYearsData(
+  db: SupabaseClient,
+): Promise<CleanHistoricalYearsResult> {
+  const deletedOkrByYear: Record<number, number> = {};
+  const deletedForecastsByYear: Record<number, number> = {};
+
+  for (const year of HISTORICAL_IMPORT_YEARS) {
+    const { count, error: countError } = await db
+      .from('okr_records')
+      .select('id', { count: 'exact', head: true })
+      .eq('year', year);
+    if (countError) throw countError;
+    const { error: deleteError } = await db.from('okr_records').delete().eq('year', year);
+    if (deleteError) throw deleteError;
+    deletedOkrByYear[year] = count ?? 0;
+  }
+
+  const { count: clientsToUpdate, error: clientsCountError } = await db
+    .from('clients')
+    .select('id', { count: 'exact', head: true })
+    .or('rev_2023.neq.0,rev_2024.neq.0');
+  if (clientsCountError) throw clientsCountError;
+
+  const { error: clientsUpdateError } = await db
+    .from('clients')
+    .update({ rev_2023: 0, rev_2024: 0 })
+    .or('rev_2023.neq.0,rev_2024.neq.0');
+  if (clientsUpdateError) throw clientsUpdateError;
+
+  for (const year of HISTORICAL_IMPORT_YEARS) {
+    const { count, error: countError } = await db
+      .from('analysis_forecasts')
+      .select('scope', { count: 'exact', head: true })
+      .eq('year', year);
+    if (countError) throw countError;
+    const { error: deleteError } = await db.from('analysis_forecasts').delete().eq('year', year);
+    if (deleteError) throw deleteError;
+    deletedForecastsByYear[year] = count ?? 0;
+  }
+
+  return {
+    deletedOkrByYear,
+    updatedClients: clientsToUpdate ?? 0,
+    deletedForecastsByYear,
+  };
+}
+
 export async function upsertOkrRecords(
   db: SupabaseClient,
   records: OkrRecord[],

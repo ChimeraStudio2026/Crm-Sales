@@ -100,6 +100,8 @@ import {
   fetchAllOkrRecords,
   fetchOkrRecords,
   deleteOkrRecordsForYear,
+  cleanHistoricalYearsData,
+  HISTORICAL_IMPORT_YEARS,
   getApolloStatus,
   persistAnalysisForecasts,
   persistClientTasks,
@@ -183,6 +185,7 @@ interface CrmContextValue {
   ) => Promise<void>;
   parseExcelBuffer: (buffer: ArrayBuffer, filename?: string) => ExcelImportParseResult;
   resetAllData: () => Promise<void>;
+  cleanHistoricalYears: () => Promise<void>;
   exportJsonBackup: () => void;
   importJsonBackup: (json: string) => Promise<void>;
   enrichClientApollo: (clientId: string) => Promise<void>;
@@ -1235,6 +1238,36 @@ export function CrmProvider({ children }: CrmProviderProps) {
     showToast('Gestionale azzerato.', 'warning');
   }, [db, showToast]);
 
+  const cleanHistoricalYears = useCallback(async () => {
+    if (!db) {
+      showToast('Supabase non configurato.', 'danger');
+      return;
+    }
+    try {
+      const result = await cleanHistoricalYearsData(db);
+      setOkrRecords((prev) => prev.filter((record) => record.year !== 2023 && record.year !== 2024));
+      const nextClients = clientsRef.current.map((client) => ({ ...client, rev2023: 0, rev2024: 0 }));
+      clientsRef.current = nextClients;
+      setClients(nextClients);
+      setForecastsByYear((prev) => {
+        const defaults = createEmptyForecastsByYear();
+        return { ...prev, 2023: defaults[2023], 2024: defaults[2024] };
+      });
+      const okrDeleted = HISTORICAL_IMPORT_YEARS
+        .map((year) => `${year}: ${result.deletedOkrByYear[year] ?? 0}`)
+        .join(', ');
+      showToast(
+        `Dati 2023/2024 rimossi (OKR ${okrDeleted}, clienti aggiornati: ${result.updatedClients}). Reimporta gli Excel storici.`,
+        'success',
+      );
+    } catch (error) {
+      console.error('Historical years cleanup failed:', error);
+      const message = error instanceof Error ? error.message : 'Errore sconosciuto';
+      showToast(`Pulizia 2023/2024 fallita: ${message}`, 'danger');
+      throw error;
+    }
+  }, [db, showToast]);
+
   const exportJsonBackup = useCallback(() => {
     const payload = {
       clients,
@@ -1382,6 +1415,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
     processExcelImport,
     parseExcelBuffer,
     resetAllData,
+    cleanHistoricalYears,
     exportJsonBackup,
     importJsonBackup,
     enrichClientApollo,

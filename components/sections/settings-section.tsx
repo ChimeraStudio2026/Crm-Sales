@@ -20,6 +20,7 @@ export function SettingsSection() {
     exportJsonBackup,
     importJsonBackup,
     resetAllData,
+    cleanHistoricalYears,
     showToast,
   } = useCrm();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -143,6 +144,26 @@ export function SettingsSection() {
                     }
                   }}
                 />
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        'Eliminare tutti i dati 2023 e 2024 da Supabase?\n\n'
+                        + '• OKR 2023/2024\n'
+                        + '• rev_2023 / rev_2024 sui clienti\n'
+                        + '• Forecast analisi 2023/2024\n\n'
+                        + 'Dovrai reimportare gli Excel storici.',
+                      )
+                    ) {
+                      void cleanHistoricalYears();
+                    }
+                  }}
+                >
+                  <Trash2 size={16} />
+                  <span>Pulisci 2023/2024</span>
+                </button>
                 <button
                   type="button"
                   className="btn btn-danger"

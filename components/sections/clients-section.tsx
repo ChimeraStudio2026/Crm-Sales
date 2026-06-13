@@ -28,6 +28,24 @@ import { TopHeader } from '@/components/layout/top-header';
 import { getClientOriginCellClass } from '@/lib/crm/client-origin';
 import type { Client, Relationship, SortState } from '@/lib/types/crm';
 
+const REVENUE_COLUMNS = ['rev2023', 'rev2024', 'rev2025', 'rev2026'] as const;
+
+function isRevenueColumn(columnId: string): columnId is (typeof REVENUE_COLUMNS)[number] {
+  return REVENUE_COLUMNS.includes(columnId as (typeof REVENUE_COLUMNS)[number]);
+}
+
+function buildClientsTableColumnOrder(showRev2023: boolean, showRev2024: boolean): string[] {
+  const order = [...DEFAULT_TABLE_COLUMN_ORDER];
+  const rev2025Index = order.indexOf('rev2025');
+  const historicalColumns: string[] = [];
+  if (showRev2023) historicalColumns.push('rev2023');
+  if (showRev2024) historicalColumns.push('rev2024');
+  if (historicalColumns.length > 0 && rev2025Index >= 0) {
+    order.splice(rev2025Index, 0, ...historicalColumns);
+  }
+  return order;
+}
+
 const RELATIONSHIP_LABELS: Record<Relationship, string> = {
   'Nuovo Cliente': '⭐ Nuovo Cliente',
   Ricorrente: '⭐⭐ Ricorrente',
@@ -63,6 +81,13 @@ export function ClientsSection() {
   const [bulkDrawerOpen, setBulkDrawerOpen] = useState(false);
   const [editClient, setEditClient] = useState<Client | null>(null);
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
+  const [showRev2023, setShowRev2023] = useState(false);
+  const [showRev2024, setShowRev2024] = useState(false);
+
+  const tableColumnOrder = useMemo(
+    () => buildClientsTableColumnOrder(showRev2023, showRev2024),
+    [showRev2023, showRev2024],
+  );
 
   const incompleteCount = useMemo(
     () => clients.filter((c) => isClientInActiveSection(c) && shouldHighlightIncompleteClient(c)).length,
@@ -92,7 +117,7 @@ export function ClientsSection() {
     list = [...list].sort((a, b) => {
       let valA: string | number = a[col] as string | number;
       let valB: string | number = b[col] as string | number;
-      if (col === 'rev2025' || col === 'rev2026') {
+      if (isRevenueColumn(col)) {
         valA = Number(a[col]) || 0;
         valB = Number(b[col]) || 0;
       } else if (typeof valA === 'string') {
@@ -107,7 +132,7 @@ export function ClientsSection() {
   }, [clients, filterIncomplete, filterOwner, filterRelationship, filterType, search, sort]);
 
   const totalInList = clients.filter(isClientInMainList).length;
-  const columnCount = DEFAULT_TABLE_COLUMN_ORDER.length;
+  const columnCount = tableColumnOrder.length;
 
   const handleSort = (column: string) => {
     const columnDef = CRM_TABLE_COLUMN_DEFS[column as keyof typeof CRM_TABLE_COLUMN_DEFS];
@@ -208,6 +233,10 @@ export function ClientsSection() {
         return <td key={columnId} style={{ textAlign: 'right' }}>{formatCurrency(client.rev2026)}</td>;
       case 'rev2025':
         return <td key={columnId} style={{ textAlign: 'right' }}>{formatCurrency(client.rev2025)}</td>;
+      case 'rev2024':
+        return <td key={columnId} style={{ textAlign: 'right' }}>{formatCurrency(client.rev2024)}</td>;
+      case 'rev2023':
+        return <td key={columnId} style={{ textAlign: 'right' }}>{formatCurrency(client.rev2023)}</td>;
       case 'actionDate': {
         const isStale = isActionDateStale(client.actionDate);
         return (
@@ -300,6 +329,22 @@ export function ClientsSection() {
                     <span className="clients-filter-chip-count">{incompleteCount}</span>
                   </button>
                 )}
+                <button
+                  type="button"
+                  className={`clients-filter-chip ${showRev2023 ? 'is-active' : ''}`}
+                  onClick={() => setShowRev2023((prev) => !prev)}
+                  title="Mostra o nascondi colonna Fatturato 2023"
+                >
+                  2023
+                </button>
+                <button
+                  type="button"
+                  className={`clients-filter-chip ${showRev2024 ? 'is-active' : ''}`}
+                  onClick={() => setShowRev2024((prev) => !prev)}
+                  title="Mostra o nascondi colonna Fatturato 2024"
+                >
+                  2024
+                </button>
               </div>
             </div>
             <div className="filter-right">
@@ -328,7 +373,7 @@ export function ClientsSection() {
               <table className="crm-table">
                 <thead>
                   <tr>
-                    {DEFAULT_TABLE_COLUMN_ORDER.map((colId) => {
+                    {tableColumnOrder.map((colId) => {
                       const columnDef = CRM_TABLE_COLUMN_DEFS[colId as keyof typeof CRM_TABLE_COLUMN_DEFS];
                       return (
                         <th
@@ -365,7 +410,7 @@ export function ClientsSection() {
                               toggleExpanded(client.id);
                             }}
                           >
-                            {DEFAULT_TABLE_COLUMN_ORDER.map((colId) => renderCell(client, colId))}
+                            {tableColumnOrder.map((colId) => renderCell(client, colId))}
                           </tr>
                           {isExpanded && (
                             <tr className="client-contacts-detail-row is-visible">

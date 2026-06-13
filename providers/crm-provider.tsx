@@ -1167,17 +1167,19 @@ export function CrmProvider({ children }: CrmProviderProps) {
       nextClients = reconcileImportedClientsToMainList(nextClients);
       nextClients = syncClientsProfileCompletion(nextClients);
       const replaceYearOkr = isRowPerOkrImportFormat(format);
-      const baseOkrRecords = replaceYearOkr
-        ? okrRecords.filter((record) => record.year !== importYear)
-        : okrRecords;
-      const okrMerge = mergeOkrRecordsWithImport(baseOkrRecords, newOkrRecords, nextClients);
       await persistClientsNow(nextClients);
       clientsRef.current = nextClients;
       if (replaceYearOkr) {
+        const linkedOkrRecords = linkOkrRecordsToClients(newOkrRecords, nextClients);
         await deleteOkrRecordsForYear(db, importYear);
-      }
-      if (okrMerge.upserted.length > 0) {
-        await upsertOkrRecords(db, okrMerge.upserted);
+        if (linkedOkrRecords.length > 0) {
+          await upsertOkrRecords(db, linkedOkrRecords);
+        }
+      } else {
+        const okrMerge = mergeOkrRecordsWithImport(okrRecords, newOkrRecords, nextClients);
+        if (okrMerge.upserted.length > 0) {
+          await upsertOkrRecords(db, okrMerge.upserted);
+        }
       }
     const [loadedClients, loadedOkr] = await Promise.all([
       fetchClients(db),
@@ -1194,7 +1196,9 @@ export function CrmProvider({ children }: CrmProviderProps) {
     setOkrRecords(linkedOkr);
     setIsSupabaseConnected(true);
     showToast(
-      `Import ${importYear}: ${clientMerge.addedCount} clienti aggiunti, ${clientMerge.updatedCount} aggiornati, ${clientMerge.skippedCount} invariati. OKR +${okrMerge.addedCount} nuovi, ${okrMerge.skippedCount} già presenti.`,
+      replaceYearOkr
+        ? `Import ${importYear}: ${clientMerge.addedCount} clienti aggiunti, ${clientMerge.updatedCount} aggiornati, ${clientMerge.skippedCount} invariati. ${newOkrRecords.length} OKR salvati.`
+        : `Import ${importYear}: ${clientMerge.addedCount} clienti aggiunti, ${clientMerge.updatedCount} aggiornati, ${clientMerge.skippedCount} invariati. OKR elaborati.`,
       'success',
     );
     } catch (error) {

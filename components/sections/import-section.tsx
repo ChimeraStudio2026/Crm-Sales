@@ -92,6 +92,7 @@ export function ImportSection() {
   };
 
   const totalSum = parsedClients.reduce((sum, client) => sum + client.revenue, 0);
+  const okrTotalSum = pendingOkr.reduce((sum, record) => sum + (Number(record.amount) || 0), 0);
   const revenueField = getRevenueFieldForImportYear(importYear);
   const revenueLabel = `Fatturato ${importYear}`;
 
@@ -209,7 +210,7 @@ export function ImportSection() {
                   <span>
                     Totale {importYear}: <strong>{formatCurrency(totalSum)}</strong>
                     {pendingOkr.length > 0 && (
-                      <> · <strong>{pendingOkr.length}</strong> OKR (1 riga = 1 OKR)</>
+                      <> · <strong>{pendingOkr.length}</strong> OKR · {formatCurrency(okrTotalSum)}</>
                     )}
                   </span>
                   <div style={{ display: 'flex', gap: 12 }}>

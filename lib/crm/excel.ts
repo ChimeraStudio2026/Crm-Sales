@@ -176,19 +176,22 @@ function parseRowYearValue(raw: unknown): number | null {
   return parsed;
 }
 
+export function detectYearFromFilename(filename?: string): number | null {
+  if (!filename) return null;
+  const filenameMatch = filename.match(/\b(202[0-9])\b/);
+  if (!filenameMatch) return null;
+  const year = parseInt(filenameMatch[1], 10);
+  return isSupportedImportYear(year) ? year : null;
+}
+
 export function detectExcelImportYear(
   headers: unknown[],
   rows: unknown[][],
   detected: DetectedExcelColumns,
   filename?: string,
 ): number {
-  if (filename) {
-    const filenameMatch = filename.match(/\b(202[0-9])\b/);
-    if (filenameMatch) {
-      const yearFromFilename = parseInt(filenameMatch[1], 10);
-      if (isSupportedImportYear(yearFromFilename)) return yearFromFilename;
-    }
-  }
+  const yearFromFilename = detectYearFromFilename(filename);
+  if (yearFromFilename !== null) return yearFromFilename;
   if (detected.yearCol >= 0) {
     const yearCounts = new Map<number, number>();
     for (let i = 1; i < rows.length; i += 1) {
@@ -454,6 +457,7 @@ export interface ExcelImportParseResult {
   format: ExcelImportFormat;
   sheetName: string;
   creditNoteCount: number;
+  yearHint: number | null;
 }
 
 export function parseExcelImportBufferWithYear(
@@ -498,6 +502,7 @@ export function parseExcelImportBufferWithYear(
     format,
     sheetName,
     creditNoteCount: aggregated.creditNoteCount,
+    yearHint: detectYearFromFilename(filename),
   };
 }
 
@@ -505,8 +510,6 @@ export function parseExcelImportBuffer(
   buffer: ArrayBuffer,
   filename?: string,
 ): ExcelImportParseResult {
-  const { headers, rows, worksheet } = parseExcelFile(buffer);
-  const detected = detectExcelColumns(headers);
-  const importYear = detectExcelImportYear(headers, rows, detected, filename);
+  const importYear = detectYearFromFilename(filename) ?? ANALYSIS_YEAR;
   return parseExcelImportBufferWithYear(buffer, importYear, filename);
 }

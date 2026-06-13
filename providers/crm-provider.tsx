@@ -92,6 +92,7 @@ import {
   fetchAllAnalysisForecasts,
   fetchClientTasks,
   fetchClients,
+  assertClientsHistoricalRevenueSchema,
   fetchDailyRecall,
   fetchIdeas,
   fetchAllOkrRecords,
@@ -1158,6 +1159,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
       if (!db) {
         throw new Error('Supabase non configurato. Imposta le variabili NEXT_PUBLIC_SUPABASE_* su Vercel o in .env.local.');
       }
+      await assertClientsHistoricalRevenueSchema(db);
       const clientMerge = mergeClientsWithExcelImport(clientsRef.current, parsedClients, importYear);
     let nextClients = recalculateRelationships(clientMerge.merged);
     nextClients = reconcileImportedClientsToMainList(nextClients);
@@ -1187,6 +1189,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
       'success',
     );
     } catch (error) {
+      console.error('Excel import failed:', error);
       const message = error instanceof Error ? error.message : 'Errore sconosciuto';
       showToast(`Import fallito: ${message}`, 'danger');
       throw error;

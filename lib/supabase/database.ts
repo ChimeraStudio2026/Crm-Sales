@@ -208,6 +208,21 @@ export async function persistClients(db: SupabaseClient, allClients: Client[]): 
   if (upsertError) throw upsertError;
 }
 
+export async function assertClientsHistoricalRevenueSchema(db: SupabaseClient): Promise<void> {
+  const { error } = await db.from('clients').select('id, rev_2023, rev_2024').limit(1);
+  if (!error) return;
+  if (
+    error.message.includes('rev_2023') ||
+    error.message.includes('rev_2024') ||
+    error.message.includes('column')
+  ) {
+    throw new Error(
+      'Database non aggiornato per fatturato 2023/2024. Esegui su Supabase: ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS rev_2023 numeric NOT NULL DEFAULT 0, ADD COLUMN IF NOT EXISTS rev_2024 numeric NOT NULL DEFAULT 0;',
+    );
+  }
+  throw error;
+}
+
 export async function deleteClientRecord(
   db: SupabaseClient,
   clientId: string,

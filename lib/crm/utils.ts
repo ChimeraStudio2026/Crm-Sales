@@ -238,6 +238,10 @@ export function reconcileImportedClientsToMainList(clients: Client[]): Client[] 
 export function normalizeClients(clients: Client[]): Client[] {
   return clients.map((client) => {
     const normalized = { ...client };
+    normalized.rev2023 = Number(normalized.rev2023) || 0;
+    normalized.rev2024 = Number(normalized.rev2024) || 0;
+    normalized.rev2025 = Number(normalized.rev2025) || 0;
+    normalized.rev2026 = Number(normalized.rev2026) || 0;
     if (normalized.clientOrigin === undefined) {
       normalized.clientOrigin = '';
     }

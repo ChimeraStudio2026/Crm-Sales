@@ -26,10 +26,11 @@ export function ImportSection() {
   const [step, setStep] = useState<'dropzone' | 'preview'>('dropzone');
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const [importMeta, setImportMeta] = useState<Pick<ExcelImportParseResult, 'format' | 'sheetName' | 'creditNoteCount'>>({
+  const [importMeta, setImportMeta] = useState<Pick<ExcelImportParseResult, 'format' | 'sheetName' | 'creditNoteCount' | 'yearHint'>>({
     format: 'okr',
     sheetName: '',
     creditNoteCount: 0,
+    yearHint: null,
   });
 
   const applyParseResult = useCallback((result: ExcelImportParseResult) => {
@@ -40,6 +41,7 @@ export function ImportSection() {
       format: result.format,
       sheetName: result.sheetName,
       creditNoteCount: result.creditNoteCount,
+      yearHint: result.yearHint,
     });
     setStep('preview');
   }, []);
@@ -149,7 +151,13 @@ export function ImportSection() {
                       <>Formato fatture rilevato ({importMeta.sheetName}). </>
                     )}
                     {importMeta.format === 'legacy-line' && (
-                      <>Formato storico rilevato ({importMeta.sheetName}). </>
+                      <>Formato righe fatturato ({importMeta.sheetName}). </>
+                    )}
+                    {importMeta.format === 'legacy-line' && importMeta.yearHint && importYear !== importMeta.yearHint && (
+                      <> Attenzione: seleziona anno <strong>{importMeta.yearHint}</strong> per questo file.</>
+                    )}
+                    {importMeta.format === 'legacy-line' && importMeta.yearHint && importYear === importMeta.yearHint && (
+                      <> Anno {importMeta.yearHint} rilevato dal nome file.</>
                     )}
                     Le note di credito (importi negativi) vengono sottratte dal totale cliente.
                     {importMeta.creditNoteCount > 0 && (

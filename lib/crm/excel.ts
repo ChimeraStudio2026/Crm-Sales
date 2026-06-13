@@ -127,7 +127,7 @@ function detectLegacyLineColumns(): DetectedExcelColumns {
     yearCol: -1,
     productCol: -1,
     monthCol: -1,
-    projectCol: -1,
+    projectCol: 1,
     ownerCol: -1,
     headerRowIndex: -1,
     sheetName: '',
@@ -401,6 +401,85 @@ export function aggregateExcelClients(
   return { clients, creditNoteCount };
 }
 
+export function createOkrImportRowId(year: number, rowIndex: number): string {
+  return `okr-${year}-r${rowIndex}`;
+}
+
+export interface BuildOkrImportOptions {
+  mergeDuplicates: boolean;
+  useRowIds: boolean;
+}
+
+export function resolveBuildOkrImportOptions(format: ExcelImportFormat): BuildOkrImportOptions {
+  if (format === 'legacy-line' || format === 'invoice') {
+    return { mergeDuplicates: false, useRowIds: true };
+  }
+  return { mergeDuplicates: true, useRowIds: false };
+}
+
+export function buildOkrRecordsFromImport(
+  rows: unknown[][],
+  worksheet: XLSX.WorkSheet,
+  detected: DetectedExcelColumns,
+  format: ExcelImportFormat,
+  importYear: number,
+): OkrRecord[] {
+  const { mergeDuplicates, useRowIds } = resolveBuildOkrImportOptions(format);
+  const startRow = getDataStartRowIndex(format, detected);
+  const recordMap = mergeDuplicates ? new Map<string, OkrRecord>() : null;
+  const records: OkrRecord[] = [];
+  for (let i = startRow; i < rows.length; i += 1) {
+    const row = rows[i];
+    if (!row || row.length === 0) continue;
+    const clientNameRaw = row[detected.clientCol];
+    if (!clientNameRaw) continue;
+    const clientName = String(clientNameRaw).trim().replace(/\s+/g, ' ');
+    if (!clientName) continue;
+    const rowYear = resolveRowImportYear(row, detected, importYear);
+    if (rowYear !== importYear) continue;
+    const amountRaw = getExcelCellValue(worksheet, rows, i, detected.importoCol);
+    if (amountRaw === null || amountRaw === undefined || amountRaw === '') continue;
+    const amount = parseExcelImporto(amountRaw);
+    const productRaw =
+      detected.productCol >= 0 ? getExcelCellValue(worksheet, rows, i, detected.productCol) : '';
+    const monthRaw =
+      detected.monthCol >= 0 ? getExcelCellValue(worksheet, rows, i, detected.monthCol) : '';
+    const projectRaw =
+      detected.projectCol >= 0 ? row[detected.projectCol] : '';
+    const ownerRaw =
+      detected.ownerCol >= 0 ? row[detected.ownerCol] : '';
+    const candidate: OkrRecord = {
+      id: useRowIds ? createOkrImportRowId(importYear, i) : createUniqueId('okr'),
+      clientName,
+      clientId: '',
+      productType: normalizeProductType(String(productRaw || '')),
+      amount,
+      monthLabel: String(monthRaw || ''),
+      monthNumber: parseOkrMonthNumber(monthRaw),
+      quarter: parseQuarterFromMonth(monthRaw),
+      projectCode: String(projectRaw ?? '').trim(),
+      owner: String(ownerRaw || ''),
+      year: rowYear,
+    };
+    if (mergeDuplicates && recordMap) {
+      const mergeKey = getOkrRecordMergeKey(candidate);
+      const existing = recordMap.get(mergeKey);
+      if (!existing) {
+        recordMap.set(mergeKey, candidate);
+        continue;
+      }
+      existing.amount += amount;
+      continue;
+    }
+    records.push(candidate);
+  }
+  if (mergeDuplicates && recordMap) {
+    return Array.from(recordMap.values());
+  }
+  return records;
+}
+
+/** @deprecated Usa buildOkrRecordsFromImport */
 export function buildOkrRecordsFromExcel(
   rows: unknown[][],
   worksheet: XLSX.WorkSheet,
@@ -413,48 +492,16 @@ export function buildOkrRecordsFromExcel(
   importYear: number,
   detected: DetectedExcelColumns,
 ): OkrRecord[] {
-  const recordMap = new Map<string, OkrRecord>();
-  for (let i = 1; i < rows.length; i += 1) {
-    const row = rows[i];
-    if (!row || row.length === 0) continue;
-    const clientNameRaw = row[clientColIndex];
-    if (!clientNameRaw) continue;
-    const clientName = clientNameRaw.toString().trim().replace(/\s+/g, ' ');
-    const rowYear = resolveRowImportYear(row, detected, importYear);
-    if (rowYear !== importYear) continue;
-    const amountRaw = getExcelCellValue(worksheet, rows, i, revColIndex);
-    if (amountRaw === null || amountRaw === undefined || amountRaw === '') continue;
-    const amount = parseExcelImporto(amountRaw);
-    const productRaw =
-      productColIndex >= 0 ? getExcelCellValue(worksheet, rows, i, productColIndex) : '';
-    const monthRaw =
-      monthColIndex >= 0 ? getExcelCellValue(worksheet, rows, i, monthColIndex) : '';
-    const projectRaw =
-      projectColIndex >= 0 ? row[projectColIndex] : '';
-    const ownerRaw =
-      ownerColIndex >= 0 ? row[ownerColIndex] : '';
-    const candidate: OkrRecord = {
-      id: createUniqueId('okr'),
-      clientName,
-      clientId: '',
-      productType: normalizeProductType(String(productRaw || '')),
-      amount,
-      monthLabel: String(monthRaw || ''),
-      monthNumber: parseOkrMonthNumber(monthRaw),
-      quarter: parseQuarterFromMonth(monthRaw),
-      projectCode: String(projectRaw || ''),
-      owner: String(ownerRaw || ''),
-      year: rowYear,
-    };
-    const mergeKey = getOkrRecordMergeKey(candidate);
-    const existing = recordMap.get(mergeKey);
-    if (!existing) {
-      recordMap.set(mergeKey, candidate);
-      continue;
-    }
-    existing.amount += amount;
-  }
-  return Array.from(recordMap.values());
+  const scopedDetected: DetectedExcelColumns = {
+    ...detected,
+    clientCol: clientColIndex,
+    importoCol: revColIndex,
+    productCol: productColIndex,
+    monthCol: monthColIndex,
+    projectCol: projectColIndex,
+    ownerCol: ownerColIndex,
+  };
+  return buildOkrRecordsFromImport(rows, worksheet, scopedDetected, 'okr', importYear);
 }
 
 export interface ExcelImportParseResult {
@@ -488,20 +535,13 @@ export function parseExcelImportBufferWithYear(
     detected,
     format,
   );
-  const okrRecords = format === 'okr'
-    ? buildOkrRecordsFromExcel(
-      rows,
-      worksheet,
-      detected.clientCol,
-      detected.importoCol,
-      detected.productCol,
-      detected.monthCol,
-      detected.projectCol,
-      detected.ownerCol,
-      resolvedYear,
-      detected,
-    )
-    : [];
+  const okrRecords = buildOkrRecordsFromImport(
+    rows,
+    worksheet,
+    detected,
+    format,
+    resolvedYear,
+  );
   return {
     headers,
     parsedClients: aggregated.clients,

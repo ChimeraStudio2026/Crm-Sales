@@ -128,9 +128,10 @@ export function mergeOkrRecordsWithImport(
   importedRecords.forEach((importedRecord) => {
     const incoming = linkOkrClientId(importedRecord, clients);
     const mergeKey = getOkrRecordMergeKey(incoming);
-    const existingIndex = merged.findIndex(
-      (record) => getOkrRecordMergeKey(record) === mergeKey,
-    );
+    let existingIndex = merged.findIndex((record) => record.id === incoming.id);
+    if (existingIndex === -1) {
+      existingIndex = merged.findIndex((record) => getOkrRecordMergeKey(record) === mergeKey);
+    }
     if (existingIndex === -1) {
       merged.push(incoming);
       trackUpsert(incoming);
@@ -138,14 +139,27 @@ export function mergeOkrRecordsWithImport(
       return;
     }
     const existingRecord = merged[existingIndex];
-    if (!existingRecord.clientId && incoming.clientId) {
-      const relinkedRecord: OkrRecord = {
+    const amountChanged = hasExcelRevenueDifference(existingRecord.amount, incoming.amount);
+    const clientIdChanged = !existingRecord.clientId && Boolean(incoming.clientId);
+    const metadataChanged =
+      existingRecord.monthLabel !== incoming.monthLabel ||
+      existingRecord.projectCode !== incoming.projectCode ||
+      existingRecord.productType !== incoming.productType;
+    if (amountChanged || clientIdChanged || metadataChanged) {
+      merged[existingIndex] = {
         ...existingRecord,
-        clientId: incoming.clientId,
+        amount: incoming.amount,
+        clientId: incoming.clientId || existingRecord.clientId,
+        monthLabel: incoming.monthLabel || existingRecord.monthLabel,
+        monthNumber: incoming.monthNumber || existingRecord.monthNumber,
+        quarter: incoming.quarter || existingRecord.quarter,
+        projectCode: incoming.projectCode || existingRecord.projectCode,
+        productType: incoming.productType || existingRecord.productType,
+        owner: incoming.owner || existingRecord.owner,
       };
-      merged[existingIndex] = relinkedRecord;
-      trackUpsert(relinkedRecord);
+      trackUpsert(merged[existingIndex]);
       updatedCount += 1;
+      return;
     }
     skippedCount += 1;
   });

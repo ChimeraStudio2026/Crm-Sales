@@ -58,6 +58,7 @@ export function computeOkrTimelineSnapshot(
   const matched = records.filter((record) => {
     if (record.year !== year) return false;
     const monthNumber = resolveMonthNumber(record);
+    if (monthNumber === 0) return true;
     return monthNumber > 0 && monthNumber <= throughMonth;
   });
   return {

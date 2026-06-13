@@ -206,7 +206,12 @@ export function ImportSection() {
                   </table>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 20 }}>
-                  <span>Totale {importYear}: <strong>{formatCurrency(totalSum)}</strong></span>
+                  <span>
+                    Totale {importYear}: <strong>{formatCurrency(totalSum)}</strong>
+                    {pendingOkr.length > 0 && (
+                      <> · <strong>{pendingOkr.length}</strong> OKR (1 riga = 1 OKR)</>
+                    )}
+                  </span>
                   <div style={{ display: 'flex', gap: 12 }}>
                     <button type="button" className="btn btn-secondary" onClick={() => setStep('dropzone')}>Annulla</button>
                     <button type="button" className="btn btn-success" disabled={isProcessing} onClick={() => void handleCommit()}>

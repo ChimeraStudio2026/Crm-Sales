@@ -1,12 +1,13 @@
 import type { OkrRecord } from '@/lib/types/crm';
 import { parseOkrMonthNumber } from '@/lib/analysis/index';
+import { ANALYSIS_YEARS, ANALYSIS_YEAR, PREVIOUS_ANALYSIS_YEAR } from '@/lib/constants/crm';
+
+export const OKR_COMPARISON_YEARS = ANALYSIS_YEARS;
 
 export const OKR_TIMELINE_MONTH_LABELS = [
   'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu',
   'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic',
 ] as const;
-
-export const OKR_COMPARISON_YEARS = [2025, 2026] as const;
 
 export const OKR_TIMELINE_MAX_DAY = 365;
 
@@ -114,6 +115,20 @@ export function getOkrClientNames(
     names.add(record.clientName.trim());
   });
   return Array.from(names).sort((left, right) => left.localeCompare(right, 'it'));
+}
+
+export function getOkrComparisonYearRangeLabel(): string {
+  const years = OKR_COMPARISON_YEARS;
+  return `${years[0]}–${years[years.length - 1]}`;
+}
+
+export function getOkrComparisonDeltaSnapshots(
+  snapshots: OkrTimelineSnapshot[],
+): { base: OkrTimelineSnapshot; target: OkrTimelineSnapshot } | null {
+  const base = snapshots.find((snapshot) => snapshot.year === PREVIOUS_ANALYSIS_YEAR);
+  const target = snapshots.find((snapshot) => snapshot.year === ANALYSIS_YEAR);
+  if (!base || !target) return null;
+  return { base, target };
 }
 
 export function getTimelineMonthLabel(monthNumber: number): string {

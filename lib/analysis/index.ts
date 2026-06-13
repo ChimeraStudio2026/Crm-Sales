@@ -1,4 +1,5 @@
-import type { AnalysisForecasts, Client, OkrRecord } from '@/lib/types/crm';
+import type { AnalysisForecasts, AnalysisForecastsByYear, Client, OkrRecord } from '@/lib/types/crm';
+import { ANALYSIS_YEARS } from '@/lib/constants/crm';
 
 export const ANALYSIS_SCOPES = [
   { id: 'total', label: 'Totale Anno', isQuarter: false, alwaysOpen: true },
@@ -33,6 +34,13 @@ export function createDefaultForecasts(): AnalysisForecasts {
     });
   });
   return forecasts;
+}
+
+export function createEmptyForecastsByYear(): AnalysisForecastsByYear {
+  return ANALYSIS_YEARS.reduce<AnalysisForecastsByYear>((acc, year) => {
+    acc[year] = createDefaultForecasts();
+    return acc;
+  }, {});
 }
 
 export function normalizeProductType(raw: string): string {

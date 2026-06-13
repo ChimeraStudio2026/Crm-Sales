@@ -2,7 +2,12 @@ import type { ClientOrigin, ClientType, IdeaCategory, Owner, Relationship } from
 
 export const ANALYSIS_YEAR = 2026;
 export const PREVIOUS_ANALYSIS_YEAR = ANALYSIS_YEAR - 1;
-export const SUPPORTED_IMPORT_YEARS = [2023, 2024, PREVIOUS_ANALYSIS_YEAR, ANALYSIS_YEAR] as const;
+export const ANALYSIS_YEARS = [2023, 2024, 2025, 2026] as const;
+export const SUPPORTED_IMPORT_YEARS = [...ANALYSIS_YEARS] as const;
+
+export function isAnalysisYear(year: number): boolean {
+  return ANALYSIS_YEARS.includes(year as (typeof ANALYSIS_YEARS)[number]);
+}
 export const COLD_CLIENT_REV_THRESHOLD = 1;
 export const TOP_20_REV_THRESHOLD = 30000;
 export const RECURRENT_REV_THRESHOLD = 10000;
@@ -153,6 +158,6 @@ export const PAGE_META: Record<string, { title: string; subtitle: string }> = {
   '/tasks': { title: 'Task', subtitle: 'Gestione task con deadline, owner, subtask e viste Righe, Kanban e Clienti.' },
   '/recall': { title: 'Random Recall', subtitle: '5 clienti al giorno da ricontattare, scelti a caso per rapporto.' },
   '/cold': { title: 'Clienti Freddi', subtitle: 'Prospect con cui non hai mai lavorato. I clienti importati da OKR restano in Lista Clienti.' },
-  '/import': { title: 'Importazione Dati', subtitle: 'Carica fatturati 2025 o 2026 da foglio di calcolo.' },
+  '/import': { title: 'Importazione Dati', subtitle: 'Carica fatturati 2023–2026 da foglio di calcolo.' },
   '/settings': { title: 'Impostazioni', subtitle: 'Manutenzione database e regole.' },
 };

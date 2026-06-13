@@ -14,8 +14,11 @@ import {
   getMonthlyAmountAtMonth,
   getMonthlyCountAtMonth,
   getOkrClientNames,
+  getOkrComparisonDeltaSnapshots,
+  getOkrComparisonYearRangeLabel,
   getTimelineMonthLabel,
 } from '@/lib/analysis/okr-timeline';
+import { ANALYSIS_YEAR, PREVIOUS_ANALYSIS_YEAR } from '@/lib/constants/crm';
 import { filterOkrByClientYearMonth } from '@/lib/crm/client-sold-products';
 import { OkrDetailDrawer } from '@/components/analysis/okr-detail-drawer';
 import { formatCurrency } from '@/lib/crm/utils';
@@ -60,8 +63,16 @@ export function OkrClientComparisonPanel() {
     [clientRecords, dayOfYear],
   );
 
+  const deltaSnapshots = useMemo(
+    () => getOkrComparisonDeltaSnapshots(snapshots),
+    [snapshots],
+  );
+
   const sliderPercent = ((dayOfYear - 1) / (OKR_TIMELINE_MAX_DAY - 1)) * 100;
-  const dateLabel = formatTimelineDateLabel(dayOfYear, 2026);
+  const dateLabel = formatTimelineDateLabel(dayOfYear, ANALYSIS_YEAR);
+  const yearRangeLabel = getOkrComparisonYearRangeLabel();
+  const baseMonthlySeries = monthlySeries.find((series) => series.year === PREVIOUS_ANALYSIS_YEAR);
+  const targetMonthlySeries = monthlySeries.find((series) => series.year === ANALYSIS_YEAR);
   const activeMonth = snapshots[0]?.throughMonth ?? 1;
   const activeMonthLabel = getTimelineMonthLabel(activeMonth);
   const showSuggestions = isSearchFocused && !selectedClient && filteredClients.length > 0;
@@ -107,14 +118,14 @@ export function OkrClientComparisonPanel() {
         <span>Confronto OKR Clienti</span>
         <span className="analysis-accordion-meta">
           <Users size={14} />
-          Per cliente · 2025 vs 2026
+          Per cliente · {yearRangeLabel}
         </span>
       </button>
       {isOpen && (
         <div className="analysis-accordion-body okr-comparison-body">
           <p className="okr-comparison-intro">
             Cerca un cliente e scorri la barra per confrontare quanto ti ha fatturato mese per mese
-            tra {OKR_COMPARISON_YEARS[0]} e {OKR_COMPARISON_YEARS[1]} alla stessa data dell&apos;anno.
+            tra {OKR_COMPARISON_YEARS[0]} e {OKR_COMPARISON_YEARS[OKR_COMPARISON_YEARS.length - 1]} alla stessa data dell&apos;anno.
           </p>
           <div className="okr-client-picker">
             <label htmlFor="okr-client-search" className="okr-comparison-scrubber-label">
@@ -155,7 +166,7 @@ export function OkrClientComparisonPanel() {
               )}
             </div>
             {clientNames.length === 0 && (
-              <p className="okr-client-empty">Nessun cliente con OKR importati per 2025 o 2026.</p>
+              <p className="okr-client-empty">Nessun cliente con OKR importati per {yearRangeLabel}.</p>
             )}
           </div>
           {!selectedClient ? (
@@ -230,16 +241,23 @@ export function OkrClientComparisonPanel() {
                     </span>
                   </div>
                 ))}
+                {deltaSnapshots && (
                 <div className="okr-comparison-stat-card okr-comparison-stat-delta">
-                  <span className="okr-comparison-stat-year">Delta cumulato</span>
-                  <strong className={`okr-comparison-stat-value ${snapshots[1].amount - snapshots[0].amount >= 0 ? 'analysis-kpi-positive' : 'analysis-kpi-negative'}`}>
-                    {formatCurrency(snapshots[1].amount - snapshots[0].amount)}
+                  <span className="okr-comparison-stat-year">Delta cumulato {deltaSnapshots.target.year} vs {deltaSnapshots.base.year}</span>
+                  <strong className={`okr-comparison-stat-value ${deltaSnapshots.target.amount - deltaSnapshots.base.amount >= 0 ? 'analysis-kpi-positive' : 'analysis-kpi-negative'}`}>
+                    {formatCurrency(deltaSnapshots.target.amount - deltaSnapshots.base.amount)}
                   </strong>
                   <span className="okr-comparison-stat-meta">
                     Mese {activeMonthLabel}:{' '}
-                    {formatCurrency(getMonthlyAmountAtMonth(monthlySeries[1], activeMonth) - getMonthlyAmountAtMonth(monthlySeries[0], activeMonth))}
+                    {baseMonthlySeries && targetMonthlySeries
+                      ? formatCurrency(
+                          getMonthlyAmountAtMonth(targetMonthlySeries, activeMonth)
+                          - getMonthlyAmountAtMonth(baseMonthlySeries, activeMonth),
+                        )
+                      : formatCurrency(0)}
                   </span>
                 </div>
+                )}
               </div>
               <div className="okr-comparison-chart">
                 <div className="okr-comparison-chart-axis-y" aria-hidden="true">

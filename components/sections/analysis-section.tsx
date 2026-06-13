@@ -14,7 +14,7 @@ import {
   formatPct,
   formatPctPlain,
 } from '@/lib/analysis/index';
-import { ANALYSIS_YEAR, PREVIOUS_ANALYSIS_YEAR } from '@/lib/constants/crm';
+import { ANALYSIS_YEARS } from '@/lib/constants/crm';
 import { formatCurrency } from '@/lib/crm/utils';
 import { TopHeader } from '@/components/layout/top-header';
 import { OkrYearComparisonPanel } from '@/components/analysis/okr-year-comparison-panel';
@@ -209,7 +209,7 @@ function ScopeContent({
   );
 }
 
-const ANALYSIS_YEAR_OPTIONS = [PREVIOUS_ANALYSIS_YEAR, ANALYSIS_YEAR] as const;
+const ANALYSIS_YEAR_OPTIONS = ANALYSIS_YEARS;
 
 export function AnalysisSection() {
   const { okrRecords, analysisYear, setAnalysisYear, analysisExpanded, toggleAnalysisScope } = useCrm();

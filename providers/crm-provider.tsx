@@ -28,10 +28,10 @@ import {
   ANALYSIS_YEAR,
   COLD_CLIENT_REV_THRESHOLD,
   DEFAULT_ACTION_DATE,
-  PREVIOUS_ANALYSIS_YEAR,
+  isAnalysisYear,
   resolveOwnerFromEmail,
 } from '@/lib/constants/crm';
-import { createDefaultForecasts } from '@/lib/analysis/index';
+import { createDefaultForecasts, createEmptyForecastsByYear } from '@/lib/analysis/index';
 import type {
   MailCampaign,
   MailCampaignContact,
@@ -239,10 +239,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
   const [clientTasks, setClientTasks] = useState<ClientTask[]>([]);
   const [okrRecords, setOkrRecords] = useState<OkrRecord[]>([]);
   const [analysisYear, setAnalysisYear] = useState<number>(ANALYSIS_YEAR);
-  const [forecastsByYear, setForecastsByYear] = useState<AnalysisForecastsByYear>(() => ({
-    [PREVIOUS_ANALYSIS_YEAR]: createDefaultForecasts(),
-    [ANALYSIS_YEAR]: createDefaultForecasts(),
-  }));
+  const [forecastsByYear, setForecastsByYear] = useState<AnalysisForecastsByYear>(() => createEmptyForecastsByYear());
   const analysisForecasts = useMemo(
     () => forecastsByYear[analysisYear] ?? createDefaultForecasts(),
     [analysisYear, forecastsByYear],
@@ -1075,7 +1072,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
   }, [analysisYear, db, persistAnalysisNow, showToast]);
 
   const handleSetAnalysisYear = useCallback((year: number) => {
-    if (year !== PREVIOUS_ANALYSIS_YEAR && year !== ANALYSIS_YEAR) return;
+    if (!isAnalysisYear(year)) return;
     setAnalysisYear(year);
   }, []);
 
@@ -1216,10 +1213,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
     setMailCampaignSteps([]);
     setMailCampaignContacts([]);
     setMailCampaignSendTracking([]);
-    setForecastsByYear({
-      [PREVIOUS_ANALYSIS_YEAR]: createDefaultForecasts(),
-      [ANALYSIS_YEAR]: createDefaultForecasts(),
-    });
+    setForecastsByYear(createEmptyForecastsByYear());
     setAnalysisYear(ANALYSIS_YEAR);
     setDailyRecallItems([]);
     showToast('Gestionale azzerato.', 'warning');
@@ -1271,7 +1265,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
       setForecastsByYear(data.analysisForecastsByYear);
     } else if (data.analysisForecasts) {
       setForecastsByYear({
-        [PREVIOUS_ANALYSIS_YEAR]: createDefaultForecasts(),
+        ...createEmptyForecastsByYear(),
         [ANALYSIS_YEAR]: data.analysisForecasts,
       });
     }

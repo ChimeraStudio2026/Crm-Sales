@@ -12,9 +12,9 @@ import type {
   TaskAttachment,
   TaskSubtask,
 } from '@/lib/types/crm';
-import { ANALYSIS_YEAR, PREVIOUS_ANALYSIS_YEAR, isOwner } from '@/lib/constants/crm';
+import { ANALYSIS_YEAR, isOwner } from '@/lib/constants/crm';
+import { createDefaultForecasts, createEmptyForecastsByYear, parseOkrMonthNumber } from '@/lib/analysis/index';
 import { isClientOrigin } from '@/lib/crm/client-origin';
-import { createDefaultForecasts, parseOkrMonthNumber } from '@/lib/analysis/index';
 import { resolveClientProductOffers } from '@/lib/crm/product-offers';
 import { parseFunctionInvokeError } from '@/lib/supabase/function-errors';
 
@@ -98,13 +98,33 @@ function normalizeTaskAttachments(value: unknown): TaskAttachment[] {
     }));
 }
 
-function clientToRow(client: Client): ClientRow {
+export const HISTORICAL_REVENUE_MIGRATION_SQL = `ALTER TABLE public.clients
+  ADD COLUMN IF NOT EXISTS rev_2023 numeric NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS rev_2024 numeric NOT NULL DEFAULT 0;`;
+
+export const SUPABASE_SQL_EDITOR_URL =
+  'https://supabase.com/dashboard/project/ftkqrtzovyezlhlabmpn/sql/new';
+
+let historicalRevenueSchemaCache: boolean | null = null;
+
+export async function isHistoricalRevenueSchemaAvailable(db: SupabaseClient): Promise<boolean> {
+  if (historicalRevenueSchemaCache !== null) return historicalRevenueSchemaCache;
+  const { error } = await db.from('clients').select('rev_2023, rev_2024').limit(1);
+  historicalRevenueSchemaCache = !error;
+  return historicalRevenueSchemaCache;
+}
+
+export function resetHistoricalRevenueSchemaCache(): void {
+  historicalRevenueSchemaCache = null;
+}
+
+function clientToRow(client: Client, includeHistoricalRevenue: boolean): Record<string, unknown> {
   const normalizedContacts = normalizeContactsArray(
     client.contacts,
     client.email,
     client.description,
   );
-  return {
+  const row: Record<string, unknown> = {
     id: client.id,
     name: client.name,
     type: client.type || 'Cliente Diretto',
@@ -112,8 +132,6 @@ function clientToRow(client: Client): ClientRow {
     client_origin: client.clientOrigin || '',
     relationship: client.relationship || 'Nuovo Cliente',
     manual_relationship: !!client.manualRelationship,
-    rev_2023: Number(client.rev2023) || 0,
-    rev_2024: Number(client.rev2024) || 0,
     rev_2025: Number(client.rev2025) || 0,
     rev_2026: Number(client.rev2026) || 0,
     action: client.action || '',
@@ -125,6 +143,11 @@ function clientToRow(client: Client): ClientRow {
     needs_profile_completion: !!client.needsProfileCompletion,
     is_cold_client: !!client.isColdClient,
   };
+  if (includeHistoricalRevenue) {
+    row.rev_2023 = Number(client.rev2023) || 0;
+    row.rev_2024 = Number(client.rev2024) || 0;
+  }
+  return row;
 }
 
 function rowToClient(row: ClientRow): Client {
@@ -203,24 +226,18 @@ export async function fetchIdeas(db: SupabaseClient): Promise<Idea[]> {
 
 export async function persistClients(db: SupabaseClient, allClients: Client[]): Promise<void> {
   if (allClients.length === 0) return;
-  const rows = allClients.map(clientToRow);
+  const includeHistoricalRevenue = await isHistoricalRevenueSchemaAvailable(db);
+  const rows = allClients.map((client) => clientToRow(client, includeHistoricalRevenue));
   const { error: upsertError } = await db.from('clients').upsert(rows, { onConflict: 'id' });
   if (upsertError) throw upsertError;
 }
 
 export async function assertClientsHistoricalRevenueSchema(db: SupabaseClient): Promise<void> {
-  const { error } = await db.from('clients').select('id, rev_2023, rev_2024').limit(1);
-  if (!error) return;
-  if (
-    error.message.includes('rev_2023') ||
-    error.message.includes('rev_2024') ||
-    error.message.includes('column')
-  ) {
-    throw new Error(
-      'Database non aggiornato per fatturato 2023/2024. Esegui su Supabase: ALTER TABLE public.clients ADD COLUMN IF NOT EXISTS rev_2023 numeric NOT NULL DEFAULT 0, ADD COLUMN IF NOT EXISTS rev_2024 numeric NOT NULL DEFAULT 0;',
-    );
-  }
-  throw error;
+  const available = await isHistoricalRevenueSchemaAvailable(db);
+  if (available) return;
+  throw new Error(
+    `Database non aggiornato per fatturato 2023/2024. Apri SQL Editor Supabase ed esegui:\n${HISTORICAL_REVENUE_MIGRATION_SQL}`,
+  );
 }
 
 export async function deleteClientRecord(
@@ -433,10 +450,7 @@ export async function fetchAllAnalysisForecasts(
 ): Promise<AnalysisForecastsByYear> {
   const { data, error } = await db.from('analysis_forecasts').select('*');
   if (error) throw error;
-  const byYear: AnalysisForecastsByYear = {
-    [PREVIOUS_ANALYSIS_YEAR]: createDefaultForecasts(),
-    [ANALYSIS_YEAR]: createDefaultForecasts(),
-  };
+  const byYear: AnalysisForecastsByYear = createEmptyForecastsByYear();
   (data || []).forEach((row) => {
     const year = Number(row.year) || ANALYSIS_YEAR;
     if (!byYear[year]) {

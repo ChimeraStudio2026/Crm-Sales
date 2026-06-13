@@ -7,7 +7,8 @@
     "build": "npm run generate:pwa-icons && next build",
     "start": "next start",
     "lint": "next lint",
-    "generate:pwa-icons": "node scripts/generate-pwa-icons.mjs"
+    "generate:pwa-icons": "node scripts/generate-pwa-icons.mjs",
+    "db:migrate:historical": "node scripts/apply-historical-revenue.mjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.81",

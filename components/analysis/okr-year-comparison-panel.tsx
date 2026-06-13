@@ -10,7 +10,10 @@ import {
   computeOkrTimelineSnapshot,
   formatTimelineDateLabel,
   getDefaultTimelineDayOfYear,
+  getOkrComparisonDeltaSnapshots,
+  getOkrComparisonYearRangeLabel,
 } from '@/lib/analysis/okr-timeline';
+import { ANALYSIS_YEAR } from '@/lib/constants/crm';
 import { formatCurrency } from '@/lib/crm/utils';
 import { useCrm } from '@/providers/crm-provider';
 
@@ -29,8 +32,14 @@ export function OkrYearComparisonPanel() {
     [dayOfYear, okrRecords],
   );
 
+  const deltaSnapshots = useMemo(
+    () => getOkrComparisonDeltaSnapshots(snapshots),
+    [snapshots],
+  );
+
   const sliderPercent = ((dayOfYear - 1) / (OKR_TIMELINE_MAX_DAY - 1)) * 100;
-  const dateLabel = formatTimelineDateLabel(dayOfYear, 2026);
+  const dateLabel = formatTimelineDateLabel(dayOfYear, ANALYSIS_YEAR);
+  const yearRangeLabel = getOkrComparisonYearRangeLabel();
 
   return (
     <div className={`analysis-accordion okr-comparison-accordion${isOpen ? ' is-open' : ''}`}>
@@ -41,7 +50,7 @@ export function OkrYearComparisonPanel() {
         aria-expanded={isOpen}
       >
         <ChevronRight size={18} className="analysis-accordion-icon" />
-        <span>Confronto OKR 2025 vs 2026</span>
+        <span>Confronto OKR {yearRangeLabel}</span>
         <span className="analysis-accordion-meta">
           <GitCompareArrows size={14} />
           Timeline cumulativa
@@ -51,7 +60,7 @@ export function OkrYearComparisonPanel() {
         <div className="analysis-accordion-body okr-comparison-body">
           <p className="okr-comparison-intro">
             Scorri la barra per confrontare quanti OKR avevi accumulato alla stessa data dell&apos;anno
-            (es. 15 marzo) tra {OKR_COMPARISON_YEARS[0]} e {OKR_COMPARISON_YEARS[1]}.
+            (es. 15 marzo) tra {OKR_COMPARISON_YEARS[0]} e {OKR_COMPARISON_YEARS[OKR_COMPARISON_YEARS.length - 1]}.
           </p>
           <div className="okr-comparison-scrubber-wrap">
             <div className="okr-comparison-scrubber-head">
@@ -86,16 +95,18 @@ export function OkrYearComparisonPanel() {
                 </span>
               </div>
             ))}
+            {deltaSnapshots && (
             <div className="okr-comparison-stat-card okr-comparison-stat-delta">
-              <span className="okr-comparison-stat-year">Delta</span>
-              <strong className={`okr-comparison-stat-value ${snapshots[1].amount - snapshots[0].amount >= 0 ? 'analysis-kpi-positive' : 'analysis-kpi-negative'}`}>
-                {formatCurrency(snapshots[1].amount - snapshots[0].amount)}
+              <span className="okr-comparison-stat-year">Delta {deltaSnapshots.target.year} vs {deltaSnapshots.base.year}</span>
+              <strong className={`okr-comparison-stat-value ${deltaSnapshots.target.amount - deltaSnapshots.base.amount >= 0 ? 'analysis-kpi-positive' : 'analysis-kpi-negative'}`}>
+                {formatCurrency(deltaSnapshots.target.amount - deltaSnapshots.base.amount)}
               </strong>
               <span className="okr-comparison-stat-meta">
-                {snapshots[1].count - snapshots[0].count >= 0 ? '+' : ''}
-                {snapshots[1].count - snapshots[0].count} OKR
+                {deltaSnapshots.target.count - deltaSnapshots.base.count >= 0 ? '+' : ''}
+                {deltaSnapshots.target.count - deltaSnapshots.base.count} OKR
               </span>
             </div>
+            )}
           </div>
           <div className="okr-comparison-chart">
             <div className="okr-comparison-chart-axis-y" aria-hidden="true">

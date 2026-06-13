@@ -11,39 +11,45 @@ import { getOkrRecordMergeKey } from '@/lib/crm/import-merge';
 
 export function parseExcelImporto(value: unknown): number {
   if (value === undefined || value === null || value === '') return 0;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
   let str = String(value).trim().replace(/[\u00A0\s]/g, '').replace(/[€$£]/g, '');
   if (!str) return 0;
-  if (/^-?\d+$/.test(str)) return parseInt(str, 10);
+  let negative = false;
+  if (str.startsWith('(') && str.endsWith(')')) {
+    negative = true;
+    str = str.slice(1, -1);
+  } else if (str.startsWith('-')) {
+    negative = true;
+    str = str.slice(1);
+  }
   const hasComma = str.includes(',');
   const hasDot = str.includes('.');
   if (hasComma && hasDot) {
-    const commaPos = str.lastIndexOf(',');
-    str = str.substring(0, commaPos).replace(/\./g, '');
-    const parsed = parseInt(str, 10);
-    return Number.isNaN(parsed) ? 0 : parsed;
-  }
-  if (hasComma) {
-    const commaPos = str.indexOf(',');
-    const afterComma = str.substring(commaPos + 1);
-    const beforeComma = str.substring(0, commaPos);
-    if (/^\d{1,2}$/.test(afterComma)) {
-      const parsed = parseInt(beforeComma, 10);
-      return Number.isNaN(parsed) ? 0 : parsed;
+    const lastComma = str.lastIndexOf(',');
+    const lastDot = str.lastIndexOf('.');
+    if (lastComma > lastDot) {
+      str = str.replace(/\./g, '').replace(',', '.');
+    } else {
+      str = str.replace(/,/g, '');
     }
-    const parsed = parseInt(str.replace(/,/g, ''), 10);
-    return Number.isNaN(parsed) ? 0 : parsed;
-  }
-  if (hasDot) {
+  } else if (hasComma) {
+    const parts = str.split(',');
+    if (parts.length === 2 && parts[1].length <= 2) {
+      str = `${parts[0]}.${parts[1]}`;
+    } else {
+      str = str.replace(/,/g, '');
+    }
+  } else if (hasDot) {
     const parts = str.split('.');
-    if (parts.length === 2 && parts[1].length <= 2 && parts[0].length <= 3) {
-      const parsed = parseInt(parts[0], 10);
-      return Number.isNaN(parsed) ? 0 : parsed;
+    if (parts.length > 2) {
+      str = str.replace(/\./g, '');
+    } else if (parts.length === 2 && parts[1].length === 3) {
+      str = parts.join('');
     }
-    const parsed = parseInt(str.replace(/\./g, ''), 10);
-    return Number.isNaN(parsed) ? 0 : parsed;
   }
-  const parsed = parseInt(str, 10);
-  return Number.isNaN(parsed) ? 0 : parsed;
+  const parsed = Number.parseFloat(str);
+  if (!Number.isFinite(parsed)) return 0;
+  return negative ? -parsed : parsed;
 }
 
 function normalizeExcelHeader(header: unknown): string {
@@ -338,6 +344,9 @@ function getExcelCellValue(
   const address = XLSX.utils.encode_cell({ r: rowIndex, c: Number(colIndex) });
   const cell = worksheet[address];
   if (cell) {
+    if (cell.t === 'n' && typeof cell.v === 'number') {
+      return cell.v;
+    }
     if (cell.w) return cell.w;
     if (cell.v !== undefined && cell.v !== null) return cell.v;
   }

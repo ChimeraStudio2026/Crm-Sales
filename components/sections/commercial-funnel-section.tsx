@@ -1,10 +1,11 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { GitBranch, Plus } from 'lucide-react';
 import { buildFunnelCampaignDashboardRow } from '@/lib/commercial-funnel/campaigns';
+import { CampaignNameCell } from '@/components/mail-campaigns/campaign-name-cell';
+import { CampaignTableActions } from '@/components/mail-campaigns/campaign-table-actions';
 import { MAIL_CAMPAIGN_STATUS_LABELS } from '@/lib/constants/mail-campaigns';
 import { useCrm } from '@/providers/crm-provider';
 import { TopHeader } from '@/components/layout/top-header';
@@ -12,7 +13,12 @@ import type { MailCampaignStatus } from '@/lib/types/mail-campaigns';
 
 export function CommercialFunnelSection() {
   const router = useRouter();
-  const { mailCampaigns, commercialFunnelEntries, saveMailCampaign } = useCrm();
+  const {
+    mailCampaigns,
+    commercialFunnelEntries,
+    saveMailCampaign,
+    deleteMailCampaignById,
+  } = useCrm();
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -44,6 +50,27 @@ export function CommercialFunnelSection() {
     setStartDate('');
     setEndDate('');
     router.push(`/funnel/${campaignId}`);
+  };
+
+  const handleRenameCampaign = async (campaignId: string, name: string): Promise<void> => {
+    const campaign = mailCampaigns.find((item) => item.id === campaignId);
+    if (!campaign) return;
+    await saveMailCampaign({
+      id: campaign.id,
+      name,
+      description: campaign.description,
+      status: campaign.status,
+      startDate: campaign.startDate,
+      endDate: campaign.endDate,
+      createdAt: campaign.createdAt,
+    });
+  };
+
+  const handleDeleteCampaign = async (campaignId: string, campaignName: string): Promise<void> => {
+    if (!window.confirm(`Eliminare la campagna "${campaignName}"?\n\nVerranno rimossi anche clienti e dati del funnel collegati.`)) {
+      return;
+    }
+    await deleteMailCampaignById(campaignId);
   };
 
   return (
@@ -89,7 +116,9 @@ export function CommercialFunnelSection() {
                 ) : (
                   rows.map(({ campaign, totalClients, activeCount, lostCount, redSemaforoCount }) => (
                     <tr key={campaign.id}>
-                      <td><strong>{campaign.name}</strong></td>
+                      <td>
+                        <CampaignNameCell campaign={campaign} onSaveName={handleRenameCampaign} />
+                      </td>
                       <td>
                         <span className={`mail-campaign-status mail-campaign-status-${campaign.status.toLowerCase()}`}>
                           {MAIL_CAMPAIGN_STATUS_LABELS[campaign.status]}
@@ -114,9 +143,11 @@ export function CommercialFunnelSection() {
                         </span>
                       </td>
                       <td>
-                        <Link href={`/funnel/${campaign.id}`} className="btn btn-secondary btn-sm">
-                          Gestisci campagna
-                        </Link>
+                        <CampaignTableActions
+                          manageHref={`/funnel/${campaign.id}`}
+                          manageLabel="Gestisci campagna"
+                          onDelete={() => void handleDeleteCampaign(campaign.id, campaign.name)}
+                        />
                       </td>
                     </tr>
                   ))

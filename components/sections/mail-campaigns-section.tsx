@@ -1,10 +1,11 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
 import { Mail, PlusCircle } from 'lucide-react';
 import { MAIL_CAMPAIGN_STATUS_LABELS } from '@/lib/constants/mail-campaigns';
 import { buildCampaignDashboardRow } from '@/lib/mail-campaigns/index';
+import { CampaignNameCell } from '@/components/mail-campaigns/campaign-name-cell';
+import { CampaignTableActions } from '@/components/mail-campaigns/campaign-table-actions';
 import { useCrm } from '@/providers/crm-provider';
 import { TopHeader } from '@/components/layout/top-header';
 import type { MailCampaignStatus } from '@/lib/types/mail-campaigns';
@@ -16,6 +17,7 @@ export function MailCampaignsSection() {
     mailCampaignContacts,
     mailCampaignSendTracking,
     saveMailCampaign,
+    deleteMailCampaignById,
   } = useCrm();
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
@@ -50,6 +52,27 @@ export function MailCampaignsSection() {
     setStartDate('');
     setEndDate('');
     window.location.href = `/campaigns/${campaignId}`;
+  };
+
+  const handleRenameCampaign = async (campaignId: string, name: string): Promise<void> => {
+    const campaign = mailCampaigns.find((item) => item.id === campaignId);
+    if (!campaign) return;
+    await saveMailCampaign({
+      id: campaign.id,
+      name,
+      description: campaign.description,
+      status: campaign.status,
+      startDate: campaign.startDate,
+      endDate: campaign.endDate,
+      createdAt: campaign.createdAt,
+    });
+  };
+
+  const handleDeleteCampaign = async (campaignId: string, campaignName: string): Promise<void> => {
+    if (!window.confirm(`Eliminare la campagna "${campaignName}"?\n\nVerranno rimossi anche contatti e tracciamento mail collegati.`)) {
+      return;
+    }
+    await deleteMailCampaignById(campaignId);
   };
 
   return (
@@ -91,7 +114,9 @@ export function MailCampaignsSection() {
                 ) : (
                   rows.map(({ campaign, totalContacts, mailsSent, mailsTotal, conversionRate }) => (
                     <tr key={campaign.id}>
-                      <td><strong>{campaign.name}</strong></td>
+                      <td>
+                        <CampaignNameCell campaign={campaign} onSaveName={handleRenameCampaign} />
+                      </td>
                       <td>
                         <span className={`mail-campaign-status mail-campaign-status-${campaign.status.toLowerCase()}`}>
                           {MAIL_CAMPAIGN_STATUS_LABELS[campaign.status]}
@@ -102,9 +127,11 @@ export function MailCampaignsSection() {
                       <td className="analysis-num">{mailsSent} / {mailsTotal}</td>
                       <td className="analysis-num">{conversionRate}%</td>
                       <td>
-                        <Link href={`/campaigns/${campaign.id}`} className="btn btn-secondary btn-sm">
-                          Gestisci Campagna
-                        </Link>
+                        <CampaignTableActions
+                          manageHref={`/campaigns/${campaign.id}`}
+                          manageLabel="Gestisci Campagna"
+                          onDelete={() => void handleDeleteCampaign(campaign.id, campaign.name)}
+                        />
                       </td>
                     </tr>
                   ))

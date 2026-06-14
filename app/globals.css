@@ -3885,6 +3885,13 @@ body.drawer-open {
     padding-top: 4px;
 }
 
+.rolling-revenue-source {
+    margin: 0 0 14px;
+    color: var(--text-secondary);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+}
+
 .rolling-revenue-chart {
     display: grid;
     grid-template-columns: 72px minmax(0, 1fr);

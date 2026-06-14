@@ -261,7 +261,7 @@ function resolveOkrDatePartsFromRow(
     const dateRaw = getExcelCellValue(worksheet, rows, rowIndex, detected.dateCol);
     const parsedDate = parseExcelOkrDateParts(dateRaw);
     if (parsedDate) {
-      return { ...parsedDate, year: importYear };
+      return parsedDate;
     }
   }
   if (detected.monthCol >= 0) {

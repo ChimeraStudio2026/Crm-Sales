@@ -27,8 +27,26 @@ export interface OkrMonthlySeries {
 }
 
 function resolveMonthNumber(record: OkrRecord): number {
+  return resolveOkrRecordMonthNumber(record);
+}
+
+/** Mese OKR: monthNumber, monthLabel, oppure ultimo mese del trimestre. */
+export function resolveOkrRecordMonthNumber(record: OkrRecord): number {
   if (record.monthNumber && record.monthNumber > 0) return record.monthNumber;
-  return parseOkrMonthNumber(record.monthLabel);
+  const fromLabel = parseOkrMonthNumber(record.monthLabel);
+  if (fromLabel > 0) return fromLabel;
+  if (record.quarter >= 1 && record.quarter <= 4) return record.quarter * 3;
+  return 0;
+}
+
+export function resolveOkrRecordCalendarPeriod(
+  record: OkrRecord,
+): { year: number; month: number } | null {
+  const month = resolveOkrRecordMonthNumber(record);
+  if (month < 1 || month > 12) return null;
+  const year = Number(record.year);
+  if (!Number.isFinite(year) || year < 2000) return null;
+  return { year, month };
 }
 
 export function getTimelineDateParts(year: number, dayOfYear: number): {

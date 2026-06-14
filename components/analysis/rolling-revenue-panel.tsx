@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { ChevronRight, TrendingUp } from 'lucide-react';
 import {
-  buildRollingTwelveMonthRevenue,
+  buildRollingTwelveMonthRevenueWithStats,
   formatRollingMonthLabel,
   formatRollingMonthShortLabel,
 } from '@/lib/analysis/rolling-revenue';
@@ -29,10 +29,12 @@ export function RollingRevenuePanel() {
   const { okrRecords } = useCrm();
   const [isOpen, setIsOpen] = useState(false);
 
-  const rollingPoints = useMemo(
-    () => buildRollingTwelveMonthRevenue(okrRecords),
+  const rollingResult = useMemo(
+    () => buildRollingTwelveMonthRevenueWithStats(okrRecords),
     [okrRecords],
   );
+
+  const { points: rollingPoints, totalOkrCount, usedOkrCount, skippedOkrCount, skippedOkrAmount } = rollingResult;
 
   const maxRollingAmount = useMemo(
     () => Math.max(...rollingPoints.map((point) => point.rollingAmount), 1),
@@ -67,9 +69,20 @@ export function RollingRevenuePanel() {
       </button>
       {isOpen && (
         <div className="analysis-accordion-body rolling-revenue-body">
+          <p className="rolling-revenue-source">
+            Fonte: <strong>{totalOkrCount} OKR</strong> caricati nel gestionale (tabella analisi / import Excel).
+            {' '}Usati nel grafico: <strong>{usedOkrCount}</strong> con mese valido
+            {skippedOkrCount > 0 && (
+              <>
+                {' '}· esclusi <strong>{skippedOkrCount}</strong> senza mese ({formatCurrency(skippedOkrAmount)})
+              </>
+            )}
+            .
+          </p>
           {rollingPoints.length === 0 ? (
             <p className="analysis-empty-hint">
-              Non ci sono abbastanza mesi con OKR datati per calcolare l&apos;anno mobile.
+              Servono almeno 12 mesi di calendario con OKR datati (2023–2026).
+              Verifica che l&apos;import Excel abbia colonna data o mese compilata.
             </p>
           ) : (
             <div className="rolling-revenue-chart">

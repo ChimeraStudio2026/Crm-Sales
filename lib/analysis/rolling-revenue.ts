@@ -1,6 +1,6 @@
 import type { OkrRecord } from '@/lib/types/crm';
-import { parseOkrMonthNumber } from '@/lib/analysis/index';
-import { OKR_TIMELINE_MONTH_LABELS } from '@/lib/analysis/okr-timeline';
+import { ANALYSIS_YEARS } from '@/lib/constants/crm';
+import { OKR_TIMELINE_MONTH_LABELS, resolveOkrRecordCalendarPeriod } from '@/lib/analysis/okr-timeline';
 
 const ROLLING_WINDOW_MONTHS = 12;
 
@@ -21,9 +21,12 @@ export interface RollingRevenuePoint {
   windowStartMonth: number;
 }
 
-function resolveMonthNumber(record: OkrRecord): number {
-  if (record.monthNumber && record.monthNumber > 0) return record.monthNumber;
-  return parseOkrMonthNumber(record.monthLabel);
+export interface RollingRevenueBuildResult {
+  points: RollingRevenuePoint[];
+  totalOkrCount: number;
+  usedOkrCount: number;
+  skippedOkrCount: number;
+  skippedOkrAmount: number;
 }
 
 function buildMonthKey(year: number, month: number): string {
@@ -35,15 +38,19 @@ function shiftMonth(year: number, month: number, deltaMonths: number): { year: n
   return { year: date.getFullYear(), month: date.getMonth() + 1 };
 }
 
+function isAnalysisYearValue(year: number): boolean {
+  return ANALYSIS_YEARS.includes(year as (typeof ANALYSIS_YEARS)[number]);
+}
+
 export function aggregateOkrMonthlyRevenue(records: OkrRecord[]): MonthlyRevenuePoint[] {
   const map = new Map<string, MonthlyRevenuePoint>();
   records.forEach((record) => {
-    const monthNumber = resolveMonthNumber(record);
-    if (monthNumber < 1 || monthNumber > 12) return;
-    const key = buildMonthKey(record.year, monthNumber);
+    const period = resolveOkrRecordCalendarPeriod(record);
+    if (!period || !isAnalysisYearValue(period.year)) return;
+    const key = buildMonthKey(period.year, period.month);
     const existing = map.get(key) ?? {
-      year: record.year,
-      month: monthNumber,
+      year: period.year,
+      month: period.month,
       amount: 0,
       count: 0,
     };
@@ -60,11 +67,11 @@ export function aggregateOkrMonthlyRevenue(records: OkrRecord[]): MonthlyRevenue
 export function fillContinuousMonthlyTimeline(points: MonthlyRevenuePoint[]): MonthlyRevenuePoint[] {
   if (points.length === 0) return [];
   const map = new Map(points.map((point) => [buildMonthKey(point.year, point.month), point]));
-  const first = points[0];
+  const minYear = Math.min(...points.map((point) => point.year));
   const last = points[points.length - 1];
   const filled: MonthlyRevenuePoint[] = [];
-  let year = first.year;
-  let month = first.month;
+  let year = minYear;
+  let month = 1;
   while (year < last.year || (year === last.year && month <= last.month)) {
     const key = buildMonthKey(year, month);
     filled.push(map.get(key) ?? { year, month, amount: 0, count: 0 });
@@ -75,10 +82,32 @@ export function fillContinuousMonthlyTimeline(points: MonthlyRevenuePoint[]): Mo
   return filled;
 }
 
-export function buildRollingTwelveMonthRevenue(records: OkrRecord[]): RollingRevenuePoint[] {
-  const timeline = fillContinuousMonthlyTimeline(aggregateOkrMonthlyRevenue(records));
-  if (timeline.length < ROLLING_WINDOW_MONTHS) return [];
-  return timeline
+export function buildRollingTwelveMonthRevenueWithStats(records: OkrRecord[]): RollingRevenueBuildResult {
+  const eligibleRecords = records.filter((record) => isAnalysisYearValue(Number(record.year)));
+  let usedOkrCount = 0;
+  let skippedOkrCount = 0;
+  let skippedOkrAmount = 0;
+  eligibleRecords.forEach((record) => {
+    const period = resolveOkrRecordCalendarPeriod(record);
+    const amount = Number(record.amount) || 0;
+    if (!period) {
+      skippedOkrCount += 1;
+      skippedOkrAmount += amount;
+      return;
+    }
+    usedOkrCount += 1;
+  });
+  const timeline = fillContinuousMonthlyTimeline(aggregateOkrMonthlyRevenue(eligibleRecords));
+  if (timeline.length < ROLLING_WINDOW_MONTHS) {
+    return {
+      points: [],
+      totalOkrCount: eligibleRecords.length,
+      usedOkrCount,
+      skippedOkrCount,
+      skippedOkrAmount,
+    };
+  }
+  const points = timeline
     .map((point, index) => {
       if (index < ROLLING_WINDOW_MONTHS - 1) return null;
       const window = timeline.slice(index - ROLLING_WINDOW_MONTHS + 1, index + 1);
@@ -95,6 +124,17 @@ export function buildRollingTwelveMonthRevenue(records: OkrRecord[]): RollingRev
       };
     })
     .filter((point): point is RollingRevenuePoint => point !== null);
+  return {
+    points,
+    totalOkrCount: eligibleRecords.length,
+    usedOkrCount,
+    skippedOkrCount,
+    skippedOkrAmount,
+  };
+}
+
+export function buildRollingTwelveMonthRevenue(records: OkrRecord[]): RollingRevenuePoint[] {
+  return buildRollingTwelveMonthRevenueWithStats(records).points;
 }
 
 export function formatRollingMonthShortLabel(year: number, month: number): string {

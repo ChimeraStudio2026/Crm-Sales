@@ -14,6 +14,7 @@ import { useCrm } from '@/providers/crm-provider';
 import type { OkrRecord } from '@/lib/types/crm';
 
 const CHART_HEIGHT_PX = 240;
+const CHART_LABEL_HEIGHT_PX = 28;
 const Y_AXIS_TICKS = 5;
 
 function formatAxisValue(value: number): string {
@@ -161,12 +162,15 @@ export function RollingRevenuePanel() {
               <div className="rolling-revenue-chart-scroll">
                 <div
                   className="rolling-revenue-bars"
-                  style={{ height: `${CHART_HEIGHT_PX}px` }}
                   role="img"
                   aria-label="Grafico a barre del fatturato anno mobile per mese"
                 >
                   {rollingPoints.map((point) => {
-                    const barHeight = Math.max(4, Math.round((point.rollingAmount / maxRollingAmount) * 100));
+                    const trackHeight = CHART_HEIGHT_PX - CHART_LABEL_HEIGHT_PX;
+                    const barHeightPx = Math.max(
+                      2,
+                      Math.round((point.rollingAmount / maxRollingAmount) * trackHeight),
+                    );
                     const label = formatRollingMonthShortLabel(point.year, point.month);
                     return (
                       <div
@@ -177,7 +181,7 @@ export function RollingRevenuePanel() {
                         <div className="rolling-revenue-bar-track">
                           <div
                             className="rolling-revenue-bar"
-                            style={{ height: `${barHeight}%` }}
+                            style={{ height: `${barHeightPx}px` }}
                           />
                         </div>
                         <span className="rolling-revenue-bar-label">{label}</span>

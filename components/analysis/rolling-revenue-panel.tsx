@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronRight, TrendingUp } from 'lucide-react';
 import {
   buildRollingTwelveMonthRevenueWithStats,
@@ -8,7 +8,10 @@ import {
   formatRollingMonthShortLabel,
 } from '@/lib/analysis/rolling-revenue';
 import { formatCurrency } from '@/lib/crm/utils';
+import { createBrowserSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
+import { fetchAllOkrRecords } from '@/lib/supabase/database';
 import { useCrm } from '@/providers/crm-provider';
+import type { OkrRecord } from '@/lib/types/crm';
 
 const CHART_HEIGHT_PX = 240;
 const Y_AXIS_TICKS = 5;
@@ -26,12 +29,59 @@ function buildAxisTicks(maxValue: number, tickCount: number): number[] {
 }
 
 export function RollingRevenuePanel() {
-  const { okrRecords } = useCrm();
+  const { okrRecords, isLoading: isCrmLoading } = useCrm();
   const [isOpen, setIsOpen] = useState(false);
+  const [supabaseOkrRecords, setSupabaseOkrRecords] = useState<OkrRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadSource, setLoadSource] = useState<'supabase' | 'local'>('local');
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const loadOkrFromSupabase = useCallback(async (): Promise<void> => {
+    setIsLoading(true);
+    setLoadError(null);
+    const db = createBrowserSupabaseClient();
+    if (!isSupabaseConfigured() || !db) {
+      setSupabaseOkrRecords(okrRecords);
+      setLoadSource('local');
+      setLoadError('Supabase non configurato in .env.local');
+      setIsLoading(false);
+      return;
+    }
+    const { data: { session }, error: sessionError } = await db.auth.getSession();
+    if (sessionError || !session) {
+      setSupabaseOkrRecords(okrRecords);
+      setLoadSource('local');
+      setLoadError('Sessione Supabase non attiva nel gestionale. Rieffettua il login.');
+      setIsLoading(false);
+      return;
+    }
+    try {
+      const records = await fetchAllOkrRecords(db);
+      setSupabaseOkrRecords(records);
+      setLoadSource('supabase');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Errore lettura okr_records';
+      setLoadError(message);
+      setSupabaseOkrRecords(okrRecords);
+      setLoadSource('local');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [okrRecords]);
+
+  useEffect(() => {
+    if (isCrmLoading) return;
+    void loadOkrFromSupabase();
+  }, [isCrmLoading, loadOkrFromSupabase, okrRecords.length]);
+
+  useEffect(() => {
+    if (!isOpen || isCrmLoading) return;
+    void loadOkrFromSupabase();
+  }, [isOpen, isCrmLoading, loadOkrFromSupabase]);
 
   const rollingResult = useMemo(
-    () => buildRollingTwelveMonthRevenueWithStats(okrRecords),
-    [okrRecords],
+    () => buildRollingTwelveMonthRevenueWithStats(supabaseOkrRecords),
+    [supabaseOkrRecords],
   );
 
   const { points: rollingPoints, totalOkrCount, usedOkrCount, skippedOkrCount, skippedOkrAmount } = rollingResult;
@@ -62,16 +112,24 @@ export function RollingRevenuePanel() {
         <span>Fatturato Anno Mobile</span>
         <span className="analysis-accordion-meta">
           <TrendingUp size={14} />
-          {latestPoint
-            ? `${formatCurrency(latestPoint.rollingAmount)} · ${formatRollingMonthLabel(latestPoint.year, latestPoint.month)}`
-            : 'Servono almeno 12 mesi di OKR'}
+          {isLoading
+            ? 'Caricamento OKR...'
+            : latestPoint
+              ? `${formatCurrency(latestPoint.rollingAmount)} · ${formatRollingMonthLabel(latestPoint.year, latestPoint.month)}`
+              : 'Servono almeno 12 mesi di OKR'}
         </span>
       </button>
       {isOpen && (
         <div className="analysis-accordion-body rolling-revenue-body">
           <p className="rolling-revenue-source">
-            Fonte: <strong>{totalOkrCount} OKR</strong> caricati nel gestionale (tabella analisi / import Excel).
-            {' '}Usati nel grafico: <strong>{usedOkrCount}</strong> con mese valido
+            Fonte:{' '}
+            {loadSource === 'supabase' ? (
+              <strong>Supabase · okr_records</strong>
+            ) : (
+              <strong>cache locale gestionale</strong>
+            )}
+            {' '}· <strong>{totalOkrCount} OKR</strong> letti
+            {' '}· usati nel grafico: <strong>{usedOkrCount}</strong> con mese valido
             {skippedOkrCount > 0 && (
               <>
                 {' '}· esclusi <strong>{skippedOkrCount}</strong> senza mese ({formatCurrency(skippedOkrAmount)})
@@ -79,10 +137,19 @@ export function RollingRevenuePanel() {
             )}
             .
           </p>
-          {rollingPoints.length === 0 ? (
+          {loadError && (
+            <p className="analysis-empty-hint rolling-revenue-error">
+              {loadError}
+            </p>
+          )}
+          {isLoading ? (
+            <p className="analysis-empty-hint">Caricamento OKR da Supabase...</p>
+          ) : rollingPoints.length === 0 ? (
             <p className="analysis-empty-hint">
               Servono almeno 12 mesi di calendario con OKR datati (2023–2026).
-              Verifica che l&apos;import Excel abbia colonna data o mese compilata.
+              {totalOkrCount === 0
+                ? ' Nessun OKR in Supabase: importa gli Excel storici.'
+                : ' Verifica che l\'import Excel abbia colonna data o mese compilata.'}
             </p>
           ) : (
             <div className="rolling-revenue-chart">

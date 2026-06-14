@@ -3892,6 +3892,11 @@ body.drawer-open {
     line-height: 1.5;
 }
 
+.rolling-revenue-error {
+    color: var(--danger);
+    margin-bottom: 10px;
+}
+
 .rolling-revenue-chart {
     display: grid;
     grid-template-columns: 72px minmax(0, 1fr);

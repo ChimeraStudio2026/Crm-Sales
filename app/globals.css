@@ -6199,6 +6199,25 @@ body:has(.drawer.open) .jonny-chat-root {
     background: #ef4444;
 }
 
+.funnel-semaforo-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 2.5rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.funnel-semaforo-count .funnel-semaforo {
+    width: 10px;
+    height: 10px;
+}
+
+.funnel-semaforo-count.has-red {
+    color: #ef4444;
+}
+
 .funnel-row.is-lost {
     background: rgba(239, 68, 68, 0.04);
 }

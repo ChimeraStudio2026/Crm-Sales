@@ -75,18 +75,19 @@ export function CommercialFunnelSection() {
                   <th>Clienti</th>
                   <th>Attivi</th>
                   <th>Persi</th>
+                  <th>Semafori rossi</th>
                   <th>Azioni</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="mail-campaigns-empty">
+                    <td colSpan={8} className="mail-campaigns-empty">
                       Nessuna campagna. Creane una con + per iniziare il funnel commerciale.
                     </td>
                   </tr>
                 ) : (
-                  rows.map(({ campaign, totalClients, activeCount, lostCount }) => (
+                  rows.map(({ campaign, totalClients, activeCount, lostCount, redSemaforoCount }) => (
                     <tr key={campaign.id}>
                       <td><strong>{campaign.name}</strong></td>
                       <td>
@@ -98,6 +99,20 @@ export function CommercialFunnelSection() {
                       <td className="analysis-num">{totalClients}</td>
                       <td className="analysis-num">{activeCount}</td>
                       <td className="analysis-num">{lostCount}</td>
+                      <td className="analysis-num">
+                        <span
+                          className={`funnel-semaforo-count${redSemaforoCount > 0 ? ' has-red' : ''}`}
+                          title={redSemaforoCount > 0
+                            ? `${redSemaforoCount} clienti fuori tempo sulla prossima azione`
+                            : 'Nessun cliente fuori tempo'}
+                        >
+                          <span
+                            className={`funnel-semaforo ${redSemaforoCount > 0 ? 'funnel-semaforo-red' : 'funnel-semaforo-green'}`}
+                            aria-hidden
+                          />
+                          <span>{redSemaforoCount}</span>
+                        </span>
+                      </td>
                       <td>
                         <Link href={`/funnel/${campaign.id}`} className="btn btn-secondary btn-sm">
                           Gestisci campagna

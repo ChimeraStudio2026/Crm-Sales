@@ -1,12 +1,13 @@
 import type { MailCampaign } from '@/lib/types/mail-campaigns';
 import type { CommercialFunnelEntry } from '@/lib/types/commercial-funnel';
-import { isFunnelTerminalLost } from '@/lib/commercial-funnel/index';
+import { isFunnelTerminalLost, resolveFunnelSemaforo } from '@/lib/commercial-funnel/index';
 
 export interface FunnelCampaignDashboardRow {
   campaign: MailCampaign;
   totalClients: number;
   activeCount: number;
   lostCount: number;
+  redSemaforoCount: number;
 }
 
 export function getFunnelEntriesForCampaign(
@@ -23,6 +24,10 @@ export function getFunnelEntriesForClient(
   return entries.filter((entry) => entry.clientId === clientId);
 }
 
+export function countRedFunnelSemafori(entries: CommercialFunnelEntry[]): number {
+  return entries.filter((entry) => resolveFunnelSemaforo(entry.actions) === 'red').length;
+}
+
 export function buildFunnelCampaignDashboardRow(
   campaign: MailCampaign,
   entries: CommercialFunnelEntry[],
@@ -34,5 +39,6 @@ export function buildFunnelCampaignDashboardRow(
     totalClients: campaignEntries.length,
     activeCount: campaignEntries.length - lostCount,
     lostCount,
+    redSemaforoCount: countRedFunnelSemafori(campaignEntries),
   };
 }

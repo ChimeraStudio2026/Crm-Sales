@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, useMemo, useState } from 'react';
-import { ChevronRight, Plus, Trash2 } from 'lucide-react';
+import { ChevronRight, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { FunnelActionNoteBlock } from '@/components/commercial-funnel/funnel-action-note-block';
 import { FunnelClientPicker } from '@/components/commercial-funnel/funnel-client-picker';
 import { FunnelPersoModal } from '@/components/commercial-funnel/funnel-perso-modal';
@@ -117,6 +117,23 @@ export function FunnelClientsTable({
     });
   };
 
+  const getPersoSlotIndex = (entry: CommercialFunnelEntry): number => (
+    entry.actions.findIndex((action) => action.type === 'Perso')
+  );
+
+  const handleReactivate = async (
+    entry: CommercialFunnelEntry,
+    newActionType: FunnelActionType,
+  ): Promise<void> => {
+    const persoSlotIndex = getPersoSlotIndex(entry);
+    if (persoSlotIndex < 0) return;
+    await updateFunnelAction(entry.id, persoSlotIndex, newActionType);
+  };
+
+  const reactivatableActionTypes = FUNNEL_ACTION_TYPES.filter(
+    (type) => type !== 'Perso' && type !== 'Convertito',
+  );
+
   return (
     <>
       {showAddButton && (
@@ -195,7 +212,7 @@ export function FunnelClientsTable({
                               <select
                                 className="table-cell-select funnel-action-select"
                                 value={action.type}
-                                disabled={isLocked}
+                                disabled={isLocked && action.type !== 'Perso'}
                                 onChange={(e) => void handleActionChange(entry, slotIndex, e.target.value)}
                               >
                                 <option value="">—</option>
@@ -214,14 +231,45 @@ export function FunnelClientsTable({
                         <td className="funnel-col-actions">
                           <div className="table-row-actions">
                             {isLost && (
-                              <button
-                                type="button"
-                                className="btn-table-action"
-                                title="Motivo perdita"
-                                onClick={() => openPersoReason(entry, clientName)}
-                              >
-                                Motivo
-                              </button>
+                              <>
+                                <select
+                                  className="table-cell-select funnel-reactivate-select"
+                                  defaultValue=""
+                                  title="Riattiva cliente: scegli nuova azione"
+                                  onChange={(event) => {
+                                    const value = event.target.value as FunnelActionType;
+                                    if (!value) return;
+                                    void handleReactivate(entry, value);
+                                    event.target.value = '';
+                                  }}
+                                >
+                                  <option value="">Riattiva</option>
+                                  {reactivatableActionTypes.map((type) => (
+                                    <option key={type} value={type}>{type}</option>
+                                  ))}
+                                </select>
+                                <button
+                                  type="button"
+                                  className="btn-table-action"
+                                  title="Riporta a nessuna azione (rimuovi Perso)"
+                                  onClick={() => {
+                                    const persoSlotIndex = getPersoSlotIndex(entry);
+                                    if (persoSlotIndex >= 0) {
+                                      void updateFunnelAction(entry.id, persoSlotIndex, '');
+                                    }
+                                  }}
+                                >
+                                  <RotateCcw size={14} />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn-table-action"
+                                  title="Motivo perdita"
+                                  onClick={() => openPersoReason(entry, clientName)}
+                                >
+                                  Motivo
+                                </button>
+                              </>
                             )}
                             <button
                               type="button"
@@ -275,7 +323,7 @@ export function FunnelClientsTable({
                                       action={action}
                                       clientId={entry.clientId}
                                       defaultAssignee={client.owner}
-                                      isLocked={isLocked}
+                                      isLocked={isLocked && action.type !== 'Perso'}
                                     />
                                   ))}
                                 </div>

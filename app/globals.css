@@ -6288,7 +6288,13 @@ body:has(.drawer.open) .jonny-chat-root {
 }
 
 .funnel-col-actions {
-    width: 90px;
+    min-width: 180px;
+}
+
+.funnel-reactivate-select {
+    max-width: 110px;
+    font-size: 0.75rem;
+    padding: 4px 6px;
 }
 
 .funnel-client-toggle {

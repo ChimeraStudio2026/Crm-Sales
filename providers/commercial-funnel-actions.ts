@@ -93,11 +93,16 @@ export function createCommercialFunnelActions(
       deps.showToast('Cliente convertito e spostato in Lista Clienti.', 'success');
       return;
     }
+    const isLeavingPerso = entry.actions[slotIndex]?.type === 'Perso' && actionType !== 'Perso';
     const nextEntry: CommercialFunnelEntry = {
       ...entry,
       actions: nextActions,
+      lostReason: isLeavingPerso ? '' : entry.lostReason,
     };
     await applyEntries(state.map((item) => (item.id === entryId ? nextEntry : item)));
+    if (isLeavingPerso && actionType) {
+      deps.showToast('Cliente riattivato nel funnel.', 'success');
+    }
   };
 
   const updateFunnelLostReason = async (entryId: string, lostReason: string): Promise<void> => {

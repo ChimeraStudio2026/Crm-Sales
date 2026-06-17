@@ -82,12 +82,20 @@ export async function clearCommercialFunnelData(db: SupabaseClient): Promise<voi
 }
 
 interface FunnelBrandSearchRow {
-  entry_id: string;
+  id: string;
   client_id: string;
-  client_name: string;
   campaign_id: string;
-  campaign_name: string;
   client_source: string | null;
+  clients: { name: string } | { name: string }[] | null;
+  mail_campaigns: { name: string } | { name: string }[] | null;
+}
+
+function resolveJoinedName(
+  relation: { name: string } | { name: string }[] | null | undefined,
+): string {
+  if (!relation) return '';
+  if (Array.isArray(relation)) return relation[0]?.name || '';
+  return relation.name;
 }
 
 export async function searchCommercialFunnelByBrand(
@@ -96,16 +104,24 @@ export async function searchCommercialFunnelByBrand(
 ): Promise<FunnelBrandSearchResult[]> {
   const query = searchQuery.trim();
   if (query.length < 2) return [];
-  const { data, error } = await db.rpc('search_commercial_funnel_by_brand', {
-    search_query: query,
-  });
+  const { data, error } = await db
+    .from('commercial_funnel_entries')
+    .select(`
+      id,
+      client_id,
+      campaign_id,
+      client_source,
+      clients!inner ( name ),
+      mail_campaigns!inner ( name )
+    `)
+    .ilike('clients.name', `%${query}%`);
   if (error) throw error;
   return (data || []).map((row: FunnelBrandSearchRow) => ({
-    entryId: row.entry_id,
+    entryId: row.id,
     clientId: row.client_id,
-    clientName: row.client_name,
+    clientName: resolveJoinedName(row.clients),
     campaignId: row.campaign_id,
-    campaignName: row.campaign_name,
+    campaignName: resolveJoinedName(row.mail_campaigns),
     clientSource: normalizeClientSource(row.client_source),
   }));
 }

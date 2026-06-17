@@ -1,5 +1,6 @@
 import type { MailCampaign } from '@/lib/types/mail-campaigns';
-import type { CommercialFunnelEntry } from '@/lib/types/commercial-funnel';
+import type { Client } from '@/lib/types/crm';
+import type { CommercialFunnelEntry, FunnelBrandSearchResult } from '@/lib/types/commercial-funnel';
 import { isFunnelTerminalLost, resolveFunnelSemaforo } from '@/lib/commercial-funnel/index';
 
 export interface FunnelCampaignDashboardRow {
@@ -41,4 +42,34 @@ export function buildFunnelCampaignDashboardRow(
     lostCount,
     redSemaforoCount: countRedFunnelSemafori(campaignEntries),
   };
+}
+
+export function searchFunnelEntriesByBrandName(
+  query: string,
+  entries: CommercialFunnelEntry[],
+  clients: Client[],
+  campaigns: MailCampaign[],
+): FunnelBrandSearchResult[] {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (normalizedQuery.length < 2) return [];
+  const clientIds = new Set(
+    clients
+      .filter((client) => client.name.toLowerCase().includes(normalizedQuery))
+      .map((client) => client.id),
+  );
+  return entries
+    .filter((entry) => clientIds.has(entry.clientId))
+    .map((entry) => {
+      const client = clients.find((item) => item.id === entry.clientId);
+      const campaign = campaigns.find((item) => item.id === entry.campaignId);
+      return {
+        entryId: entry.id,
+        clientId: entry.clientId,
+        clientName: client?.name || entry.clientId,
+        campaignId: entry.campaignId,
+        campaignName: campaign?.name || entry.campaignId,
+        clientSource: entry.clientSource,
+      };
+    })
+    .sort((a, b) => a.clientName.localeCompare(b.clientName, 'it'));
 }

@@ -1,24 +1,20 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { GitBranch, Plus, Search } from 'lucide-react';
-import { buildFunnelCampaignDashboardRow } from '@/lib/commercial-funnel/campaigns';
+import { buildFunnelCampaignDashboardRow, searchFunnelEntriesByBrandName } from '@/lib/commercial-funnel/campaigns';
 import { resolveFunnelSemaforo, resolveFunnelStatus } from '@/lib/commercial-funnel/index';
 import { formatActionDateDisplay } from '@/lib/crm/utils';
 import { CampaignNameCell } from '@/components/mail-campaigns/campaign-name-cell';
 import { CampaignTableActions } from '@/components/mail-campaigns/campaign-table-actions';
 import { MAIL_CAMPAIGN_STATUS_LABELS } from '@/lib/constants/mail-campaigns';
-import { createBrowserSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
-import { searchCommercialFunnelByBrand } from '@/lib/supabase/commercial-funnel-database';
 import { useCrm } from '@/providers/crm-provider';
 import { TopHeader } from '@/components/layout/top-header';
-import type { FunnelBrandSearchResult } from '@/lib/types/commercial-funnel';
 import type { MailCampaignStatus } from '@/lib/types/mail-campaigns';
 
 const BRAND_SEARCH_MIN_LENGTH = 2;
-const BRAND_SEARCH_DEBOUNCE_MS = 300;
 
 export function CommercialFunnelSection() {
   const router = useRouter();
@@ -36,9 +32,6 @@ export function CommercialFunnelSection() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [brandSearch, setBrandSearch] = useState('');
-  const [brandSearchResults, setBrandSearchResults] = useState<FunnelBrandSearchResult[]>([]);
-  const [isSearchingBrand, setIsSearchingBrand] = useState(false);
-  const [brandSearchError, setBrandSearchError] = useState('');
 
   const rows = useMemo(
     () => mailCampaigns.map((campaign) => buildFunnelCampaignDashboardRow(
@@ -48,6 +41,16 @@ export function CommercialFunnelSection() {
     [mailCampaigns, commercialFunnelEntries],
   );
 
+  const brandSearchResults = useMemo(
+    () => searchFunnelEntriesByBrandName(
+      brandSearch,
+      commercialFunnelEntries,
+      clients,
+      mailCampaigns,
+    ),
+    [brandSearch, clients, commercialFunnelEntries, mailCampaigns],
+  );
+
   const filteredRows = useMemo(() => {
     const query = brandSearch.trim().toLowerCase();
     if (query.length < BRAND_SEARCH_MIN_LENGTH) return rows;
@@ -55,65 +58,6 @@ export function CommercialFunnelSection() {
     if (matchingCampaignIds.size === 0) return [];
     return rows.filter((row) => matchingCampaignIds.has(row.campaign.id));
   }, [brandSearch, brandSearchResults, rows]);
-
-  useEffect(() => {
-    const query = brandSearch.trim();
-    if (query.length < BRAND_SEARCH_MIN_LENGTH) {
-      setBrandSearchResults([]);
-      setBrandSearchError('');
-      setIsSearchingBrand(false);
-      return;
-    }
-    let isCancelled = false;
-    const timer = window.setTimeout(() => {
-      void (async () => {
-        setIsSearchingBrand(true);
-        setBrandSearchError('');
-        try {
-          if (isSupabaseConfigured()) {
-            const db = createBrowserSupabaseClient();
-            if (!db) throw new Error('Supabase non disponibile');
-            const results = await searchCommercialFunnelByBrand(db, query);
-            if (!isCancelled) setBrandSearchResults(results);
-            return;
-          }
-          const normalizedQuery = query.toLowerCase();
-          const clientIds = new Set(
-            clients
-              .filter((client) => client.name.toLowerCase().includes(normalizedQuery))
-              .map((client) => client.id),
-          );
-          const fallbackResults = commercialFunnelEntries
-            .filter((entry) => clientIds.has(entry.clientId))
-            .map((entry) => {
-              const client = clients.find((item) => item.id === entry.clientId);
-              const campaign = mailCampaigns.find((item) => item.id === entry.campaignId);
-              return {
-                entryId: entry.id,
-                clientId: entry.clientId,
-                clientName: client?.name || entry.clientId,
-                campaignId: entry.campaignId,
-                campaignName: campaign?.name || entry.campaignId,
-                clientSource: entry.clientSource,
-              };
-            })
-            .sort((a, b) => a.clientName.localeCompare(b.clientName, 'it'));
-          if (!isCancelled) setBrandSearchResults(fallbackResults);
-        } catch (error) {
-          if (!isCancelled) {
-            setBrandSearchResults([]);
-            setBrandSearchError(error instanceof Error ? error.message : 'Errore nella ricerca brand');
-          }
-        } finally {
-          if (!isCancelled) setIsSearchingBrand(false);
-        }
-      })();
-    }, BRAND_SEARCH_DEBOUNCE_MS);
-    return () => {
-      isCancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [brandSearch, clients, commercialFunnelEntries, mailCampaigns]);
 
   const handleCreate = async (event: React.FormEvent): Promise<void> => {
     event.preventDefault();
@@ -187,11 +131,7 @@ export function CommercialFunnelSection() {
           </div>
           {isBrandSearchActive && (
             <div className="funnel-brand-search-panel glass-card">
-              {isSearchingBrand ? (
-                <p className="funnel-brand-search-message">Ricerca in corso...</p>
-              ) : brandSearchError ? (
-                <p className="funnel-brand-search-message funnel-brand-search-error">{brandSearchError}</p>
-              ) : brandSearchResults.length === 0 ? (
+              {brandSearchResults.length === 0 ? (
                 <p className="funnel-brand-search-message">Nessun brand trovato nel funnel.</p>
               ) : (
                 <table className="analysis-table funnel-brand-search-table">

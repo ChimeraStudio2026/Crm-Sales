@@ -6244,6 +6244,49 @@ body:has(.drawer.open) .jonny-chat-root {
     font-size: 1.05rem;
 }
 
+.funnel-filter-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.funnel-brand-search-box {
+    min-width: 260px;
+    max-width: 360px;
+}
+
+.funnel-brand-search-panel {
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    overflow-x: auto;
+}
+
+.funnel-brand-search-table {
+    width: 100%;
+    min-width: 640px;
+}
+
+.funnel-brand-search-message {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.funnel-brand-search-error {
+    color: var(--danger, #dc2626);
+}
+
+.funnel-brand-search-link {
+    font-size: 0.875rem;
+    color: var(--accent-primary);
+    text-decoration: none;
+}
+
+.funnel-brand-search-link:hover {
+    text-decoration: underline;
+}
+
 .commercial-funnel-table-wrap {
     overflow: hidden;
 }

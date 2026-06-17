@@ -1,6 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { normalizeFunnelActions } from '@/lib/commercial-funnel/index';
-import type { CommercialFunnelEntry, FunnelClientSource } from '@/lib/types/commercial-funnel';
+import type {
+  CommercialFunnelEntry,
+  FunnelBrandSearchResult,
+  FunnelClientSource,
+} from '@/lib/types/commercial-funnel';
 
 interface CommercialFunnelEntryRow {
   id: string;
@@ -75,4 +79,33 @@ export async function deleteCommercialFunnelEntriesByCampaign(
 
 export async function clearCommercialFunnelData(db: SupabaseClient): Promise<void> {
   await db.from('commercial_funnel_entries').delete().neq('id', '');
+}
+
+interface FunnelBrandSearchRow {
+  entry_id: string;
+  client_id: string;
+  client_name: string;
+  campaign_id: string;
+  campaign_name: string;
+  client_source: string | null;
+}
+
+export async function searchCommercialFunnelByBrand(
+  db: SupabaseClient,
+  searchQuery: string,
+): Promise<FunnelBrandSearchResult[]> {
+  const query = searchQuery.trim();
+  if (query.length < 2) return [];
+  const { data, error } = await db.rpc('search_commercial_funnel_by_brand', {
+    search_query: query,
+  });
+  if (error) throw error;
+  return (data || []).map((row: FunnelBrandSearchRow) => ({
+    entryId: row.entry_id,
+    clientId: row.client_id,
+    clientName: row.client_name,
+    campaignId: row.campaign_id,
+    campaignName: row.campaign_name,
+    clientSource: normalizeClientSource(row.client_source),
+  }));
 }

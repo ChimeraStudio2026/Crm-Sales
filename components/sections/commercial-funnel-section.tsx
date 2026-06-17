@@ -1,19 +1,29 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { GitBranch, Plus } from 'lucide-react';
+import { GitBranch, Plus, Search } from 'lucide-react';
 import { buildFunnelCampaignDashboardRow } from '@/lib/commercial-funnel/campaigns';
+import { resolveFunnelSemaforo, resolveFunnelStatus } from '@/lib/commercial-funnel/index';
+import { formatActionDateDisplay } from '@/lib/crm/utils';
 import { CampaignNameCell } from '@/components/mail-campaigns/campaign-name-cell';
 import { CampaignTableActions } from '@/components/mail-campaigns/campaign-table-actions';
 import { MAIL_CAMPAIGN_STATUS_LABELS } from '@/lib/constants/mail-campaigns';
+import { createBrowserSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
+import { searchCommercialFunnelByBrand } from '@/lib/supabase/commercial-funnel-database';
 import { useCrm } from '@/providers/crm-provider';
 import { TopHeader } from '@/components/layout/top-header';
+import type { FunnelBrandSearchResult } from '@/lib/types/commercial-funnel';
 import type { MailCampaignStatus } from '@/lib/types/mail-campaigns';
+
+const BRAND_SEARCH_MIN_LENGTH = 2;
+const BRAND_SEARCH_DEBOUNCE_MS = 300;
 
 export function CommercialFunnelSection() {
   const router = useRouter();
   const {
+    clients,
     mailCampaigns,
     commercialFunnelEntries,
     saveMailCampaign,
@@ -25,6 +35,10 @@ export function CommercialFunnelSection() {
   const [status, setStatus] = useState<MailCampaignStatus>('Bozza');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [brandSearch, setBrandSearch] = useState('');
+  const [brandSearchResults, setBrandSearchResults] = useState<FunnelBrandSearchResult[]>([]);
+  const [isSearchingBrand, setIsSearchingBrand] = useState(false);
+  const [brandSearchError, setBrandSearchError] = useState('');
 
   const rows = useMemo(
     () => mailCampaigns.map((campaign) => buildFunnelCampaignDashboardRow(
@@ -33,6 +47,73 @@ export function CommercialFunnelSection() {
     )),
     [mailCampaigns, commercialFunnelEntries],
   );
+
+  const filteredRows = useMemo(() => {
+    const query = brandSearch.trim().toLowerCase();
+    if (query.length < BRAND_SEARCH_MIN_LENGTH) return rows;
+    const matchingCampaignIds = new Set(brandSearchResults.map((result) => result.campaignId));
+    if (matchingCampaignIds.size === 0) return [];
+    return rows.filter((row) => matchingCampaignIds.has(row.campaign.id));
+  }, [brandSearch, brandSearchResults, rows]);
+
+  useEffect(() => {
+    const query = brandSearch.trim();
+    if (query.length < BRAND_SEARCH_MIN_LENGTH) {
+      setBrandSearchResults([]);
+      setBrandSearchError('');
+      setIsSearchingBrand(false);
+      return;
+    }
+    let isCancelled = false;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        setIsSearchingBrand(true);
+        setBrandSearchError('');
+        try {
+          if (isSupabaseConfigured()) {
+            const db = createBrowserSupabaseClient();
+            if (!db) throw new Error('Supabase non disponibile');
+            const results = await searchCommercialFunnelByBrand(db, query);
+            if (!isCancelled) setBrandSearchResults(results);
+            return;
+          }
+          const normalizedQuery = query.toLowerCase();
+          const clientIds = new Set(
+            clients
+              .filter((client) => client.name.toLowerCase().includes(normalizedQuery))
+              .map((client) => client.id),
+          );
+          const fallbackResults = commercialFunnelEntries
+            .filter((entry) => clientIds.has(entry.clientId))
+            .map((entry) => {
+              const client = clients.find((item) => item.id === entry.clientId);
+              const campaign = mailCampaigns.find((item) => item.id === entry.campaignId);
+              return {
+                entryId: entry.id,
+                clientId: entry.clientId,
+                clientName: client?.name || entry.clientId,
+                campaignId: entry.campaignId,
+                campaignName: campaign?.name || entry.campaignId,
+                clientSource: entry.clientSource,
+              };
+            })
+            .sort((a, b) => a.clientName.localeCompare(b.clientName, 'it'));
+          if (!isCancelled) setBrandSearchResults(fallbackResults);
+        } catch (error) {
+          if (!isCancelled) {
+            setBrandSearchResults([]);
+            setBrandSearchError(error instanceof Error ? error.message : 'Errore nella ricerca brand');
+          }
+        } finally {
+          if (!isCancelled) setIsSearchingBrand(false);
+        }
+      })();
+    }, BRAND_SEARCH_DEBOUNCE_MS);
+    return () => {
+      isCancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [brandSearch, clients, commercialFunnelEntries, mailCampaigns]);
 
   const handleCreate = async (event: React.FormEvent): Promise<void> => {
     event.preventDefault();
@@ -73,17 +154,29 @@ export function CommercialFunnelSection() {
     await deleteMailCampaignById(campaignId);
   };
 
+  const isBrandSearchActive = brandSearch.trim().length >= BRAND_SEARCH_MIN_LENGTH;
+  const displayRows = isBrandSearchActive ? filteredRows : rows;
+
   return (
     <>
       <TopHeader />
       <div className="content-body">
         <section className="app-section active">
           <div className="table-filter-bar">
-            <div className="filter-left">
+            <div className="filter-left funnel-filter-left">
               <h3 className="commercial-funnel-title">
                 <GitBranch size={20} />
                 Funnel Commerciale
               </h3>
+              <div className="search-box funnel-brand-search-box">
+                <Search size={18} />
+                <input
+                  className="search-input"
+                  placeholder="Cerca brand nel funnel..."
+                  value={brandSearch}
+                  onChange={(event) => setBrandSearch(event.target.value)}
+                />
+              </div>
             </div>
             <div className="filter-right">
               <button type="button" className="btn btn-primary" onClick={() => setShowForm(true)}>
@@ -92,6 +185,58 @@ export function CommercialFunnelSection() {
               </button>
             </div>
           </div>
+          {isBrandSearchActive && (
+            <div className="funnel-brand-search-panel glass-card">
+              {isSearchingBrand ? (
+                <p className="funnel-brand-search-message">Ricerca in corso...</p>
+              ) : brandSearchError ? (
+                <p className="funnel-brand-search-message funnel-brand-search-error">{brandSearchError}</p>
+              ) : brandSearchResults.length === 0 ? (
+                <p className="funnel-brand-search-message">Nessun brand trovato nel funnel.</p>
+              ) : (
+                <table className="analysis-table funnel-brand-search-table">
+                  <thead>
+                    <tr>
+                      <th>Brand</th>
+                      <th>Campagna</th>
+                      <th>Ultima azione</th>
+                      <th>Semaforo</th>
+                      <th> </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {brandSearchResults.map((result) => {
+                      const entry = commercialFunnelEntries.find((item) => item.id === result.entryId);
+                      const status = entry ? resolveFunnelStatus(entry.actions) : null;
+                      const semaforo = entry ? resolveFunnelSemaforo(entry.actions) : 'green';
+                      return (
+                        <tr key={result.entryId}>
+                          <td>{result.clientName}</td>
+                          <td>{result.campaignName}</td>
+                          <td>
+                            {status?.label || '—'}
+                            {status?.date ? ` (${formatActionDateDisplay(status.date)})` : ''}
+                          </td>
+                          <td>
+                            <span
+                              className={`funnel-semaforo funnel-semaforo-${semaforo}`}
+                              title={semaforo === 'red' ? 'Fuori tempo' : 'In tempo'}
+                              aria-label={semaforo === 'red' ? 'Semaforo rosso' : 'Semaforo verde'}
+                            />
+                          </td>
+                          <td>
+                            <Link href={`/funnel/${result.campaignId}`} className="funnel-brand-search-link">
+                              Apri campagna
+                            </Link>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
           <div className="mail-campaigns-table-wrap glass-card">
             <table className="analysis-table mail-campaigns-table">
               <thead>
@@ -107,14 +252,16 @@ export function CommercialFunnelSection() {
                 </tr>
               </thead>
               <tbody>
-                {rows.length === 0 ? (
+                {displayRows.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="mail-campaigns-empty">
-                      Nessuna campagna. Creane una con + per iniziare il funnel commerciale.
+                      {isBrandSearchActive
+                        ? 'Nessuna campagna contiene il brand cercato.'
+                        : 'Nessuna campagna. Creane una con + per iniziare il funnel commerciale.'}
                     </td>
                   </tr>
                 ) : (
-                  rows.map(({ campaign, totalClients, activeCount, lostCount, redSemaforoCount }) => (
+                  displayRows.map(({ campaign, totalClients, activeCount, lostCount, redSemaforoCount }) => (
                     <tr key={campaign.id}>
                       <td>
                         <CampaignNameCell campaign={campaign} onSaveName={handleRenameCampaign} />

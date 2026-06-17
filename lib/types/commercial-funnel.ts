@@ -39,3 +39,12 @@ export interface FunnelRowStatus {
   label: string;
   date: string;
 }
+
+export interface FunnelBrandSearchResult {
+  entryId: string;
+  clientId: string;
+  clientName: string;
+  campaignId: string;
+  campaignName: string;
+  clientSource: FunnelClientSource;
+}

@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { ChevronRight, Download, Paperclip, Plus, PlusCircle, Search, Trash2 } from 'lucide-react';
 import { createUniqueId, getTodayString } from '@/lib/crm/utils';
+import { isIdeaTaskInTodaySection, isIdeaTaskOverdue, sortIdeasForTodaySection } from '@/lib/tasks/index';
 import { useCrm } from '@/providers/crm-provider';
 import { TaskFormDrawer } from '@/components/tasks/task-form-drawer';
 import { TopHeader } from '@/components/layout/top-header';
@@ -89,12 +90,19 @@ export function IdeasSection() {
 
   const todayString = getTodayString();
   const todayTasks = useMemo(
-    () => filteredTasks.filter((task) => task.dueDate === todayString),
+    () => sortIdeasForTodaySection(
+      filteredTasks.filter((task) => isIdeaTaskInTodaySection(task, todayString)),
+      todayString,
+    ),
     [filteredTasks, todayString],
   );
   const otherTasks = useMemo(
-    () => filteredTasks.filter((task) => task.dueDate !== todayString),
+    () => filteredTasks.filter((task) => !isIdeaTaskInTodaySection(task, todayString)),
     [filteredTasks, todayString],
+  );
+  const todayOverdueCount = useMemo(
+    () => todayTasks.filter((task) => isIdeaTaskOverdue(task, todayString)).length,
+    [todayString, todayTasks],
   );
 
   const clientGroupedTasks = useMemo(() => {
@@ -266,7 +274,7 @@ export function IdeasSection() {
   const renderTaskDeadline = (task: Idea) => (
     <input
       type="date"
-      className="task-deadline-input"
+      className={`task-deadline-input${isIdeaTaskOverdue(task, todayString) ? ' is-overdue' : ''}`}
       value={task.dueDate || ''}
       onChange={(event) => void updateTaskDeadline(task, event.target.value)}
       aria-label="Deadline task"
@@ -565,7 +573,13 @@ export function IdeasSection() {
             )
           ) : viewMode === 'list' ? (
             renderTasksAsanaList([
-              { title: 'Today', tasks: todayTasks },
+              {
+                title: 'Today',
+                tasks: todayTasks,
+                subtitle: todayOverdueCount > 0
+                  ? `${todayOverdueCount} scadut${todayOverdueCount === 1 ? 'a' : 'e'}`
+                  : undefined,
+              },
               { title: 'Altre task', tasks: otherTasks },
             ])
           ) : (

@@ -1,5 +1,6 @@
 import { OWNERS } from '@/lib/constants/crm';
-import type { ClientTask } from '@/lib/types/crm';
+import { getTodayString } from '@/lib/crm/utils';
+import type { ClientTask, Idea } from '@/lib/types/crm';
 
 export const TASK_TYPES = [
   { id: 'call', label: 'Call', icon: 'phone' },
@@ -30,6 +31,29 @@ export function isTaskOverdue(task: ClientTask): boolean {
   const due = new Date(`${task.dueDate}T00:00:00`);
   if (Number.isNaN(due.getTime())) return false;
   return due < today;
+}
+
+export function isIdeaTaskOverdue(task: Idea, todayString = getTodayString()): boolean {
+  if (task.status === 'Fatto' || !task.dueDate) return false;
+  return task.dueDate < todayString;
+}
+
+export function isIdeaTaskInTodaySection(task: Idea, todayString = getTodayString()): boolean {
+  if (!task.dueDate) return false;
+  if (task.dueDate === todayString) return true;
+  return isIdeaTaskOverdue(task, todayString);
+}
+
+export function sortIdeasForTodaySection(tasks: Idea[], todayString = getTodayString()): Idea[] {
+  return [...tasks].sort((a, b) => {
+    const aOverdue = isIdeaTaskOverdue(a, todayString);
+    const bOverdue = isIdeaTaskOverdue(b, todayString);
+    if (aOverdue !== bOverdue) return aOverdue ? -1 : 1;
+    if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+    if (a.dueDate) return -1;
+    if (b.dueDate) return 1;
+    return a.name.localeCompare(b.name, 'it');
+  });
 }
 
 export function filterTasks(tasks: ClientTask[], filterId: string): ClientTask[] {

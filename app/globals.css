@@ -2435,6 +2435,11 @@ body.drawer-open {
     background: var(--bg-card);
 }
 
+.task-deadline-input.is-overdue {
+    color: var(--danger, #dc2626);
+    border-color: rgba(220, 38, 38, 0.45);
+}
+
 .task-status-da-fare {
     color: #b91c1c;
     background: #fee2e2;

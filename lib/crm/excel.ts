@@ -16,9 +16,16 @@ function sanitizeImportedClientName(rawName: unknown): string {
   return resolveCanonicalClientBrandName(cleanedName);
 }
 
+/**
+ * Parses revenue amounts from Excel in Italian/European format.
+ * Dot = thousands separator, comma = decimals. OKR imports use whole euros (cents ignored).
+ */
 export function parseExcelImporto(value: unknown): number {
   if (value === undefined || value === null || value === '') return 0;
-  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) return 0;
+    return Math.round(value);
+  }
   let str = String(value).trim().replace(/[\u00A0\s]/g, '').replace(/[€$£]/g, '');
   if (!str) return 0;
   let negative = false;
@@ -29,32 +36,47 @@ export function parseExcelImporto(value: unknown): number {
     negative = true;
     str = str.slice(1);
   }
+  if (/^\d+$/.test(str)) {
+    const parsedInteger = Number.parseInt(str, 10);
+    return negative ? -parsedInteger : parsedInteger;
+  }
   const hasComma = str.includes(',');
   const hasDot = str.includes('.');
+  let parsed = 0;
   if (hasComma && hasDot) {
-    const lastComma = str.lastIndexOf(',');
-    const lastDot = str.lastIndexOf('.');
-    if (lastComma > lastDot) {
-      str = str.replace(/\./g, '').replace(',', '.');
-    } else {
-      str = str.replace(/,/g, '');
-    }
+    const commaPos = str.lastIndexOf(',');
+    const integerPart = str.slice(0, commaPos).replace(/\./g, '');
+    parsed = Number.parseInt(integerPart, 10);
   } else if (hasComma) {
-    const parts = str.split(',');
-    if (parts.length === 2 && parts[1].length <= 2) {
-      str = `${parts[0]}.${parts[1]}`;
+    const commaPos = str.indexOf(',');
+    const afterComma = str.slice(commaPos + 1);
+    const beforeComma = str.slice(0, commaPos);
+    if (/^\d{1,2}$/.test(afterComma)) {
+      parsed = Number.parseInt(beforeComma.replace(/\./g, ''), 10);
     } else {
-      str = str.replace(/,/g, '');
+      parsed = Number.parseInt(str.replace(/,/g, ''), 10);
     }
   } else if (hasDot) {
     const parts = str.split('.');
     if (parts.length > 2) {
-      str = str.replace(/\./g, '');
+      const lastPart = parts[parts.length - 1];
+      if (/^\d{1,2}$/.test(lastPart)) {
+        parsed = Number.parseInt(parts.slice(0, -1).join(''), 10);
+      } else {
+        parsed = Number.parseInt(str.replace(/\./g, ''), 10);
+      }
+    } else if (parts.length === 2 && parts[1].length <= 2) {
+      parsed = Number.parseInt(parts[0], 10);
+    } else if (parts.length === 2 && parts[1].length === 3 && parts[0].length <= 3) {
+      parsed = Number.parseInt(parts.join(''), 10);
     } else if (parts.length === 2 && parts[1].length === 3) {
-      str = parts.join('');
+      parsed = Number.parseInt(parts[0], 10);
+    } else {
+      parsed = Number.parseInt(str.replace(/\./g, ''), 10);
     }
+  } else {
+    parsed = Number.parseInt(str, 10);
   }
-  const parsed = Number.parseFloat(str);
   if (!Number.isFinite(parsed)) return 0;
   return negative ? -parsed : parsed;
 }

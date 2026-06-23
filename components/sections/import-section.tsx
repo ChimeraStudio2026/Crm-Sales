@@ -26,11 +26,12 @@ export function ImportSection() {
   const [step, setStep] = useState<'dropzone' | 'preview'>('dropzone');
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const [importMeta, setImportMeta] = useState<Pick<ExcelImportParseResult, 'format' | 'sheetName' | 'creditNoteCount' | 'yearHint'>>({
+  const [importMeta, setImportMeta] = useState<Pick<ExcelImportParseResult, 'format' | 'sheetName' | 'creditNoteCount' | 'yearHint' | 'replaceYearOkr'>>({
     format: 'okr',
     sheetName: '',
     creditNoteCount: 0,
     yearHint: null,
+    replaceYearOkr: false,
   });
 
   const applyParseResult = useCallback((result: ExcelImportParseResult) => {
@@ -42,6 +43,7 @@ export function ImportSection() {
       sheetName: result.sheetName,
       creditNoteCount: result.creditNoteCount,
       yearHint: result.yearHint,
+      replaceYearOkr: result.replaceYearOkr,
     });
     setStep('preview');
   }, []);
@@ -79,7 +81,7 @@ export function ImportSection() {
   const handleCommit = async () => {
     setIsProcessing(true);
     try {
-      await processExcelImport(parsedClients, pendingOkr, importYear, importMeta.format);
+      await processExcelImport(parsedClients, pendingOkr, importYear, importMeta.format, importMeta.replaceYearOkr);
       setStep('dropzone');
       setParsedClients([]);
       setPendingOkr([]);
@@ -161,8 +163,11 @@ export function ImportSection() {
                       <> Anno {importMeta.yearHint} rilevato dal nome file.</>
                     )}
                     Le note di credito (importi negativi) vengono sottratte dal totale cliente.
+                    {importMeta.replaceYearOkr && (
+                      <> Gli OKR {importYear} già presenti verranno sostituiti dal file. </>
+                    )}
                     {importMeta.creditNoteCount > 0 && (
-                      <> {importMeta.creditNoteCount} righe NC in anteprima.</>
+                      <>{importMeta.creditNoteCount} righe NC in anteprima.</>
                     )}
                   </p>
                 </div>

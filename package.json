@@ -9,7 +9,9 @@
     "lint": "next lint",
     "generate:pwa-icons": "node scripts/generate-pwa-icons.mjs",
     "db:migrate:historical": "node scripts/apply-historical-revenue.mjs",
-    "db:clean:historical": "node scripts/clean-historical-years.mjs"
+    "db:clean:historical": "node scripts/clean-historical-years.mjs",
+    "db:fix:okr-2026": "node scripts/fix-okr-2026-import-amounts.mjs",
+    "db:fix:okr-2026:sql": "node scripts/apply-okr-2026-fix.mjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.81",

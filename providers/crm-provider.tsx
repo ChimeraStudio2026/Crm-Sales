@@ -182,6 +182,7 @@ interface CrmContextValue {
     okrRecords: OkrRecord[],
     importYear: number,
     format?: ExcelImportFormat,
+    replaceYearOkr?: boolean,
   ) => Promise<void>;
   parseExcelBuffer: (buffer: ArrayBuffer, filename?: string) => ExcelImportParseResult;
   resetAllData: () => Promise<void>;
@@ -1160,6 +1161,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
     newOkrRecords: OkrRecord[],
     importYear: number,
     format: ExcelImportFormat = 'okr',
+    replaceYearOkr = false,
   ) => {
     try {
       if (!db) {
@@ -1170,10 +1172,10 @@ export function CrmProvider({ children }: CrmProviderProps) {
       let nextClients = recalculateRelationships(clientMerge.merged);
       nextClients = reconcileImportedClientsToMainList(nextClients);
       nextClients = syncClientsProfileCompletion(nextClients);
-      const replaceYearOkr = isRowPerOkrImportFormat(format);
+      const shouldReplaceYearOkr = replaceYearOkr || isRowPerOkrImportFormat(format);
       await persistClientsNow(nextClients);
       clientsRef.current = nextClients;
-      if (replaceYearOkr) {
+      if (shouldReplaceYearOkr) {
         const linkedOkrRecords = linkOkrRecordsToClients(newOkrRecords, nextClients);
         await deleteOkrRecordsForYear(db, importYear);
         if (linkedOkrRecords.length > 0) {
@@ -1200,7 +1202,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
     setOkrRecords(linkedOkr);
     setIsSupabaseConnected(true);
     showToast(
-      replaceYearOkr
+      shouldReplaceYearOkr
         ? `Import ${importYear}: ${clientMerge.addedCount} clienti aggiunti, ${clientMerge.updatedCount} aggiornati, ${clientMerge.skippedCount} invariati. ${newOkrRecords.length} OKR salvati.`
         : `Import ${importYear}: ${clientMerge.addedCount} clienti aggiunti, ${clientMerge.updatedCount} aggiornati, ${clientMerge.skippedCount} invariati. OKR elaborati.`,
       'success',

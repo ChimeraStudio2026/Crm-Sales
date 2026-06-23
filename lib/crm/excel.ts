@@ -112,6 +112,24 @@ export interface DetectedExcelColumns {
 
 export type ExcelImportFormat = 'okr' | 'invoice' | 'legacy-line';
 
+export function isOkrYearExportFormat(
+  detected: DetectedExcelColumns,
+  filename?: string,
+): boolean {
+  if (detected.clientCol < 0 || detected.importoCol < 0 || detected.monthCol < 0) return false;
+  if (detected.yearCol >= 0) return false;
+  if (filename && /\bokr\b/i.test(filename)) return true;
+  return detected.projectCol >= 0 && detected.productCol >= 0;
+}
+
+export function shouldReplaceYearOkrOnImport(
+  format: ExcelImportFormat,
+  detected: DetectedExcelColumns,
+  filename?: string,
+): boolean {
+  return isRowPerOkrImportFormat(format) || isOkrYearExportFormat(detected, filename);
+}
+
 function findInvoiceHeaderRow(rows: unknown[][]): number {
   for (let i = 0; i < Math.min(rows.length, 30); i += 1) {
     const row = rows[i];
@@ -131,7 +149,7 @@ function isLegacyLineRevenueSheet(rows: unknown[][]): boolean {
     Array.isArray(row) &&
     typeof row[0] === 'string' &&
     row[0].trim().length > 0 &&
-    typeof row[2] === 'number'
+    (typeof row[2] === 'number' || (typeof row[2] === 'string' && String(row[2]).trim() !== ''))
   ));
 }
 
@@ -469,7 +487,7 @@ function resolveWorkbookSheet(
 }
 
 export function parseExcelFile(buffer: ArrayBuffer, importYear = ANALYSIS_YEAR): ExcelFileParseResult {
-  const workbook = XLSX.read(buffer, { type: 'array' });
+  const workbook = XLSX.read(buffer, { type: 'array', raw: true });
   return resolveWorkbookSheet(workbook, importYear);
 }
 
@@ -547,9 +565,16 @@ export interface BuildOkrImportOptions {
   useRowIds: boolean;
 }
 
-export function resolveBuildOkrImportOptions(format: ExcelImportFormat): BuildOkrImportOptions {
+export function resolveBuildOkrImportOptions(
+  format: ExcelImportFormat,
+  detected?: DetectedExcelColumns,
+  filename?: string,
+): BuildOkrImportOptions {
   if (format === 'legacy-line' || format === 'invoice') {
     return { mergeDuplicates: false, useRowIds: true };
+  }
+  if (detected && isOkrYearExportFormat(detected, filename)) {
+    return { mergeDuplicates: true, useRowIds: true };
   }
   return { mergeDuplicates: true, useRowIds: false };
 }
@@ -560,8 +585,9 @@ export function buildOkrRecordsFromImport(
   detected: DetectedExcelColumns,
   format: ExcelImportFormat,
   importYear: number,
+  filename?: string,
 ): OkrRecord[] {
-  const { mergeDuplicates, useRowIds } = resolveBuildOkrImportOptions(format);
+  const { mergeDuplicates, useRowIds } = resolveBuildOkrImportOptions(format, detected, filename);
   const startRow = getDataStartRowIndex(format, detected);
   const recordMap = mergeDuplicates ? new Map<string, OkrRecord>() : null;
   const records: OkrRecord[] = [];
@@ -652,6 +678,7 @@ export interface ExcelImportParseResult {
   sheetName: string;
   creditNoteCount: number;
   yearHint: number | null;
+  replaceYearOkr: boolean;
 }
 
 export function parseExcelImportBufferWithYear(
@@ -679,6 +706,7 @@ export function parseExcelImportBufferWithYear(
     detected,
     format,
     resolvedYear,
+    filename,
   );
   return {
     headers,
@@ -690,6 +718,7 @@ export function parseExcelImportBufferWithYear(
     sheetName,
     creditNoteCount: aggregated.creditNoteCount,
     yearHint: detectYearFromFilename(filename),
+    replaceYearOkr: shouldReplaceYearOkrOnImport(format, detected, filename),
   };
 }
 

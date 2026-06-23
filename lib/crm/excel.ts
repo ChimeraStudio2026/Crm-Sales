@@ -186,6 +186,7 @@ export function detectExcelImportFormat(
 }
 export function detectExcelColumns(headers: unknown[]): DetectedExcelColumns {
   const yearCol = findExcelColumnIndex(headers, 'anno');
+  const documentOwnerCol = findExcelColumnIndex(headers, 'documento owner');
   return {
     clientCol: findExcelColumnIndex(headers, 'cliente'),
     importoCol: findExcelColumnIndex(headers, 'importo'),
@@ -194,7 +195,7 @@ export function detectExcelColumns(headers: unknown[]): DetectedExcelColumns {
     monthCol: findExcelColumnIndex(headers, 'mese'),
     dateCol: findExcelColumnIndex(headers, 'data'),
     projectCol: findExcelColumnIndex(headers, 'codice progetto'),
-    ownerCol: findExcelColumnIndex(headers, 'documento owner'),
+    ownerCol: documentOwnerCol >= 0 ? documentOwnerCol : findExcelColumnIndex(headers, 'owner'),
     headerRowIndex: 0,
     sheetName: '',
   };
@@ -481,10 +482,9 @@ function getExcelCellValue(
   const address = XLSX.utils.encode_cell({ r: rowIndex, c: Number(colIndex) });
   const cell = worksheet[address];
   if (cell) {
-    if (cell.t === 'n' && typeof cell.v === 'number') {
-      return cell.v;
-    }
+    // Prefer formatted text: SheetJS often misreads EU CSV amounts (4100,00 -> v=410000).
     if (cell.w) return cell.w;
+    if (cell.t === 'n' && typeof cell.v === 'number') return cell.v;
     if (cell.v !== undefined && cell.v !== null) return cell.v;
   }
   const row = rows[rowIndex];

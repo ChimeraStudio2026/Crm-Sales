@@ -17,6 +17,7 @@ export interface OkrTimelineSnapshot {
   amount: number;
   throughMonth: number;
   throughDay: number;
+  usesSourceUpdatedAt: boolean;
 }
 
 export interface OkrMonthlySeries {
@@ -24,6 +25,27 @@ export interface OkrMonthlySeries {
   monthlyAmounts: number[];
   monthlyCounts: number[];
   maxAmount: number;
+}
+
+export interface OkrMonthlyDayChange {
+  monthNumber: number;
+  monthLabel: string;
+  previousCount: number;
+  currentCount: number;
+  countDelta: number;
+  previousAmount: number;
+  currentAmount: number;
+  amountDelta: number;
+}
+
+export interface OkrDailyChangeSummary {
+  year: number;
+  dayOfYear: number;
+  countDelta: number;
+  amountDelta: number;
+  addedCount: number;
+  removedCount: number;
+  monthlyChanges: OkrMonthlyDayChange[];
 }
 
 function resolveMonthNumber(record: OkrRecord): number {
@@ -61,6 +83,38 @@ export function getTimelineDateParts(year: number, dayOfYear: number): {
   };
 }
 
+export function getTimelineDayEndDate(year: number, dayOfYear: number): Date {
+  const { throughMonth, throughDay } = getTimelineDateParts(year, dayOfYear);
+  return new Date(year, throughMonth - 1, throughDay, 23, 59, 59, 999);
+}
+
+export function hasOkrSourceUpdatedTimeline(
+  records: OkrRecord[],
+  year: number,
+): boolean {
+  return records.some((record) => record.year === year && Boolean(record.sourceUpdatedAt));
+}
+
+export function filterOkrRecordsAtTimelineDay(
+  records: OkrRecord[],
+  year: number,
+  dayOfYear: number,
+): OkrRecord[] {
+  const { throughMonth } = getTimelineDateParts(year, dayOfYear);
+  const endDate = getTimelineDayEndDate(year, dayOfYear);
+  const useSourceUpdated = hasOkrSourceUpdatedTimeline(records, year);
+  return records.filter((record) => {
+    if (record.year !== year) return false;
+    if (useSourceUpdated) {
+      if (!record.sourceUpdatedAt) return true;
+      return new Date(record.sourceUpdatedAt).getTime() <= endDate.getTime();
+    }
+    const monthNumber = resolveMonthNumber(record);
+    if (monthNumber === 0) return true;
+    return monthNumber > 0 && monthNumber <= throughMonth;
+  });
+}
+
 export function formatTimelineDateLabel(dayOfYear: number, year = 2026): string {
   const { throughMonth, throughDay } = getTimelineDateParts(year, dayOfYear);
   const monthName = new Date(year, throughMonth - 1, 1).toLocaleDateString('it-IT', { month: 'long' });
@@ -73,25 +127,28 @@ export function computeOkrTimelineSnapshot(
   dayOfYear: number,
 ): OkrTimelineSnapshot {
   const { throughMonth, throughDay } = getTimelineDateParts(year, dayOfYear);
-  const matched = records.filter((record) => {
-    if (record.year !== year) return false;
-    const monthNumber = resolveMonthNumber(record);
-    if (monthNumber === 0) return true;
-    return monthNumber > 0 && monthNumber <= throughMonth;
-  });
+  const matched = filterOkrRecordsAtTimelineDay(records, year, dayOfYear);
   return {
     year,
     count: matched.length,
     amount: matched.reduce((sum, record) => sum + (Number(record.amount) || 0), 0),
     throughMonth,
     throughDay,
+    usesSourceUpdatedAt: hasOkrSourceUpdatedTimeline(records, year),
   };
 }
 
-export function buildOkrMonthlySeries(records: OkrRecord[], year: number): OkrMonthlySeries {
+export function buildOkrMonthlySeries(
+  records: OkrRecord[],
+  year: number,
+  dayOfYear?: number,
+): OkrMonthlySeries {
+  const scopedRecords = dayOfYear !== undefined
+    ? filterOkrRecordsAtTimelineDay(records, year, dayOfYear)
+    : records.filter((record) => record.year === year);
   const monthlyAmounts = Array.from({ length: 12 }, () => 0);
   const monthlyCounts = Array.from({ length: 12 }, () => 0);
-  records.forEach((record) => {
+  scopedRecords.forEach((record) => {
     if (record.year !== year) return;
     const monthNumber = resolveMonthNumber(record);
     if (monthNumber < 1 || monthNumber > 12) return;
@@ -104,6 +161,74 @@ export function buildOkrMonthlySeries(records: OkrRecord[], year: number): OkrMo
     monthlyAmounts,
     monthlyCounts,
     maxAmount: Math.max(...monthlyAmounts, 1),
+  };
+}
+
+function buildMonthlyDayChanges(
+  previousRecords: OkrRecord[],
+  currentRecords: OkrRecord[],
+): OkrMonthlyDayChange[] {
+  const previousByMonth = Array.from({ length: 12 }, () => ({ count: 0, amount: 0 }));
+  const currentByMonth = Array.from({ length: 12 }, () => ({ count: 0, amount: 0 }));
+  previousRecords.forEach((record) => {
+    const monthNumber = resolveMonthNumber(record);
+    if (monthNumber < 1 || monthNumber > 12) return;
+    const index = monthNumber - 1;
+    previousByMonth[index].count += 1;
+    previousByMonth[index].amount += Number(record.amount) || 0;
+  });
+  currentRecords.forEach((record) => {
+    const monthNumber = resolveMonthNumber(record);
+    if (monthNumber < 1 || monthNumber > 12) return;
+    const index = monthNumber - 1;
+    currentByMonth[index].count += 1;
+    currentByMonth[index].amount += Number(record.amount) || 0;
+  });
+  return Array.from({ length: 12 }, (_, index) => {
+    const monthNumber = index + 1;
+    const previousCount = previousByMonth[index].count;
+    const currentCount = currentByMonth[index].count;
+    const previousAmount = previousByMonth[index].amount;
+    const currentAmount = currentByMonth[index].amount;
+    return {
+      monthNumber,
+      monthLabel: getTimelineMonthLabel(monthNumber),
+      previousCount,
+      currentCount,
+      countDelta: currentCount - previousCount,
+      previousAmount,
+      currentAmount,
+      amountDelta: currentAmount - previousAmount,
+    };
+  }).filter((change) => (
+    change.countDelta !== 0
+    || change.amountDelta !== 0
+    || change.currentCount > 0
+  ));
+}
+
+export function computeOkrDailyChangeSummary(
+  records: OkrRecord[],
+  year: number,
+  dayOfYear: number,
+): OkrDailyChangeSummary | null {
+  if (dayOfYear <= 1) return null;
+  const previousRecords = filterOkrRecordsAtTimelineDay(records, year, dayOfYear - 1);
+  const currentRecords = filterOkrRecordsAtTimelineDay(records, year, dayOfYear);
+  const previousIds = new Set(previousRecords.map((record) => record.id));
+  const currentIds = new Set(currentRecords.map((record) => record.id));
+  const addedCount = currentRecords.filter((record) => !previousIds.has(record.id)).length;
+  const removedCount = previousRecords.filter((record) => !currentIds.has(record.id)).length;
+  const previousAmount = previousRecords.reduce((sum, record) => sum + (Number(record.amount) || 0), 0);
+  const currentAmount = currentRecords.reduce((sum, record) => sum + (Number(record.amount) || 0), 0);
+  return {
+    year,
+    dayOfYear,
+    countDelta: currentRecords.length - previousRecords.length,
+    amountDelta: currentAmount - previousAmount,
+    addedCount,
+    removedCount,
+    monthlyChanges: buildMonthlyDayChanges(previousRecords, currentRecords),
   };
 }
 
@@ -163,4 +288,9 @@ export function getMonthlyAmountAtMonth(series: OkrMonthlySeries, monthNumber: n
 export function getMonthlyCountAtMonth(series: OkrMonthlySeries, monthNumber: number): number {
   if (monthNumber < 1 || monthNumber > 12) return 0;
   return series.monthlyCounts[monthNumber - 1] || 0;
+}
+
+export function formatOkrCountDelta(delta: number): string {
+  if (delta === 0) return '0 OKR';
+  return `${delta > 0 ? '+' : ''}${delta} OKR`;
 }

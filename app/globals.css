@@ -4135,6 +4135,79 @@ body.drawer-open {
     background: var(--bg-hover);
 }
 
+.okr-daily-change-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-card);
+}
+
+.okr-daily-change-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.okr-daily-change-total {
+    font-size: 0.95rem;
+}
+
+.okr-daily-change-meta {
+    margin: 0;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+}
+
+.okr-daily-change-months {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+}
+
+.okr-daily-change-month {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-hover);
+    opacity: 0.72;
+}
+
+.okr-daily-change-month.has-change {
+    opacity: 1;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+}
+
+.okr-daily-change-month-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.okr-daily-change-month-count {
+    font-size: 0.88rem;
+    color: var(--text-primary);
+}
+
+.okr-daily-change-month-delta {
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.okr-daily-change-month-amount {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+}
+
 .okr-comparison-chart {
     display: grid;
     grid-template-columns: 52px 1fr;

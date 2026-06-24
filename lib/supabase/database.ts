@@ -366,19 +366,24 @@ export async function persistClientTasks(
 export async function fetchAllOkrRecords(db: SupabaseClient): Promise<OkrRecord[]> {
   const { data, error } = await db.from('okr_records').select('*').order('year', { ascending: false });
   if (error) throw error;
-  return (data || []).map((row) => ({
-    id: row.id,
-    clientName: row.client_name,
-    clientId: row.client_id || '',
-    productType: row.product_type,
+  return (data || []).map((row) => mapOkrRecordRow(row));
+}
+
+function mapOkrRecordRow(row: Record<string, unknown>): OkrRecord {
+  return {
+    id: String(row.id),
+    clientName: String(row.client_name),
+    clientId: String(row.client_id || ''),
+    productType: String(row.product_type),
     amount: Number(row.amount) || 0,
-    monthLabel: row.month_label || '',
-    monthNumber: Number(row.month_number) || parseOkrMonthNumber(row.month_label),
+    monthLabel: String(row.month_label || ''),
+    monthNumber: Number(row.month_number) || parseOkrMonthNumber(String(row.month_label || '')),
     quarter: Number(row.quarter) || 0,
-    projectCode: row.project_code || '',
-    owner: row.owner || '',
+    projectCode: String(row.project_code || ''),
+    owner: String(row.owner || ''),
     year: Number(row.year) || ANALYSIS_YEAR,
-  }));
+    sourceUpdatedAt: row.source_updated_at ? String(row.source_updated_at) : undefined,
+  };
 }
 
 export async function fetchOkrRecords(
@@ -387,19 +392,7 @@ export async function fetchOkrRecords(
 ): Promise<OkrRecord[]> {
   const { data, error } = await db.from('okr_records').select('*').eq('year', year);
   if (error) throw error;
-  return (data || []).map((row) => ({
-    id: row.id,
-    clientName: row.client_name,
-    clientId: row.client_id || '',
-    productType: row.product_type,
-    amount: Number(row.amount) || 0,
-    monthLabel: row.month_label || '',
-    monthNumber: Number(row.month_number) || parseOkrMonthNumber(row.month_label),
-    quarter: Number(row.quarter) || 0,
-    projectCode: row.project_code || '',
-    owner: row.owner || '',
-    year: Number(row.year) || ANALYSIS_YEAR,
-  }));
+  return (data || []).map((row) => mapOkrRecordRow(row));
 }
 
 export async function deleteOkrRecordsForYear(
@@ -485,6 +478,7 @@ export async function upsertOkrRecords(
     project_code: record.projectCode || '',
     owner: record.owner || '',
     year: Number(record.year) || ANALYSIS_YEAR,
+    source_updated_at: record.sourceUpdatedAt || null,
   }));
   const chunkSize = 200;
   for (let offset = 0; offset < rows.length; offset += chunkSize) {

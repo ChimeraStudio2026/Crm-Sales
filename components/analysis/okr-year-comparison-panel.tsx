@@ -7,7 +7,9 @@ import {
   OKR_TIMELINE_MAX_DAY,
   OKR_TIMELINE_MONTH_LABELS,
   buildOkrMonthlySeries,
+  computeOkrDailyChangeSummary,
   computeOkrTimelineSnapshot,
+  formatOkrCountDelta,
   formatTimelineDateLabel,
   getDefaultTimelineDayOfYear,
   getOkrComparisonDeltaSnapshots,
@@ -23,14 +25,22 @@ export function OkrYearComparisonPanel() {
   const [dayOfYear, setDayOfYear] = useState<number>(getDefaultTimelineDayOfYear);
 
   const monthlySeries = useMemo(
-    () => OKR_COMPARISON_YEARS.map((year) => buildOkrMonthlySeries(okrRecords, year)),
-    [okrRecords],
+    () => OKR_COMPARISON_YEARS.map((year) => buildOkrMonthlySeries(okrRecords, year, dayOfYear)),
+    [dayOfYear, okrRecords],
   );
 
   const snapshots = useMemo(
     () => OKR_COMPARISON_YEARS.map((year) => computeOkrTimelineSnapshot(okrRecords, year, dayOfYear)),
     [dayOfYear, okrRecords],
   );
+
+  const dailyChange = useMemo(
+    () => computeOkrDailyChangeSummary(okrRecords, ANALYSIS_YEAR, dayOfYear),
+    [dayOfYear, okrRecords],
+  );
+
+  const usesSourceUpdatedAt = snapshots.some((snapshot) => snapshot.usesSourceUpdatedAt);
+  const activeMonthlyChanges = dailyChange?.monthlyChanges.filter((change) => change.countDelta !== 0) ?? [];
 
   const deltaSnapshots = useMemo(
     () => getOkrComparisonDeltaSnapshots(snapshots),
@@ -59,8 +69,19 @@ export function OkrYearComparisonPanel() {
       {isOpen && (
         <div className="analysis-accordion-body okr-comparison-body">
           <p className="okr-comparison-intro">
-            Scorri la barra per confrontare quanti OKR avevi accumulato alla stessa data dell&apos;anno
-            (es. 15 marzo) tra {OKR_COMPARISON_YEARS[0]} e {OKR_COMPARISON_YEARS[OKR_COMPARISON_YEARS.length - 1]}.
+            {usesSourceUpdatedAt ? (
+              <>
+                Scorri la barra per vedere quanti OKR c&apos;erano in ogni mese alla data selezionata,
+                in base alla colonna <strong>Updated At</strong> dell&apos;import Excel.
+                Sotto trovi le variazioni rispetto al giorno precedente.
+              </>
+            ) : (
+              <>
+                Scorri la barra per confrontare quanti OKR avevi accumulato alla stessa data dell&apos;anno
+                (es. 15 marzo) tra {OKR_COMPARISON_YEARS[0]} e {OKR_COMPARISON_YEARS[OKR_COMPARISON_YEARS.length - 1]}.
+                Re-importa il file OKR per attivare il confronto giorno per giorno con Updated At.
+              </>
+            )}
           </p>
           <div className="okr-comparison-scrubber-wrap">
             <div className="okr-comparison-scrubber-head">
@@ -91,7 +112,10 @@ export function OkrYearComparisonPanel() {
                 <span className="okr-comparison-stat-year">{snapshot.year}</span>
                 <strong className="okr-comparison-stat-value">{formatCurrency(snapshot.amount)}</strong>
                 <span className="okr-comparison-stat-meta">
-                  {snapshot.count} OKR · fino a {snapshot.throughDay}/{snapshot.throughMonth.toString().padStart(2, '0')}
+                  {snapshot.count} OKR
+                  {snapshot.usesSourceUpdatedAt
+                    ? ` · al ${snapshot.throughDay}/${snapshot.throughMonth.toString().padStart(2, '0')}`
+                    : ` · fino a ${snapshot.throughDay}/${snapshot.throughMonth.toString().padStart(2, '0')}`}
                 </span>
               </div>
             ))}
@@ -108,6 +132,47 @@ export function OkrYearComparisonPanel() {
             </div>
             )}
           </div>
+          {usesSourceUpdatedAt && dailyChange && (
+            <div className="okr-daily-change-panel">
+              <div className="okr-daily-change-head">
+                <span className="okr-comparison-scrubber-label">Variazione vs giorno precedente · {ANALYSIS_YEAR}</span>
+                <strong className={`okr-daily-change-total ${dailyChange.countDelta >= 0 ? 'analysis-kpi-positive' : 'analysis-kpi-negative'}`}>
+                  {formatOkrCountDelta(dailyChange.countDelta)}
+                  {' · '}
+                  {formatCurrency(dailyChange.amountDelta)}
+                </strong>
+              </div>
+              <p className="okr-daily-change-meta">
+                {dailyChange.addedCount > 0 && `+${dailyChange.addedCount} aggiunti`}
+                {dailyChange.addedCount > 0 && dailyChange.removedCount > 0 && ' · '}
+                {dailyChange.removedCount > 0 && `-${dailyChange.removedCount} rimossi`}
+                {dailyChange.addedCount === 0 && dailyChange.removedCount === 0 && 'Nessuna modifica rispetto al giorno precedente'}
+              </p>
+              {activeMonthlyChanges.length > 0 && (
+                <div className="okr-daily-change-months">
+                  {dailyChange.monthlyChanges.map((change) => (
+                    <div
+                      key={change.monthNumber}
+                      className={`okr-daily-change-month${change.countDelta !== 0 ? ' has-change' : ''}`}
+                    >
+                      <span className="okr-daily-change-month-label">{change.monthLabel}</span>
+                      <strong className="okr-daily-change-month-count">
+                        {change.currentCount} OKR
+                      </strong>
+                      {change.countDelta !== 0 && (
+                        <span className={`okr-daily-change-month-delta ${change.countDelta >= 0 ? 'analysis-kpi-positive' : 'analysis-kpi-negative'}`}>
+                          {formatOkrCountDelta(change.countDelta)}
+                        </span>
+                      )}
+                      <span className="okr-daily-change-month-amount">
+                        {formatCurrency(change.currentAmount)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <div className="okr-comparison-chart">
             <div className="okr-comparison-chart-axis-y" aria-hidden="true">
               {OKR_COMPARISON_YEARS.map((year) => (
@@ -127,7 +192,10 @@ export function OkrYearComparisonPanel() {
                     <div className="okr-comparison-row-track">
                       {series.monthlyAmounts.map((amount, monthIndex) => {
                         const monthNumber = monthIndex + 1;
-                        const isIncluded = monthNumber <= snapshot.throughMonth;
+                        const count = series.monthlyCounts[monthIndex];
+                        const isIncluded = usesSourceUpdatedAt
+                          ? count > 0
+                          : monthNumber <= snapshot.throughMonth;
                         const barHeight = Math.max(8, Math.round((amount / series.maxAmount) * 100));
                         return (
                           <div

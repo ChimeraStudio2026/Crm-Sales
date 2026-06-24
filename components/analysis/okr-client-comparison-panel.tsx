@@ -54,8 +54,8 @@ export function OkrClientComparisonPanel() {
   );
 
   const monthlySeries = useMemo(
-    () => OKR_COMPARISON_YEARS.map((year) => buildOkrMonthlySeries(clientRecords, year)),
-    [clientRecords],
+    () => OKR_COMPARISON_YEARS.map((year) => buildOkrMonthlySeries(clientRecords, year, dayOfYear)),
+    [clientRecords, dayOfYear],
   );
 
   const snapshots = useMemo(
@@ -75,6 +75,7 @@ export function OkrClientComparisonPanel() {
   const targetMonthlySeries = monthlySeries.find((series) => series.year === ANALYSIS_YEAR);
   const activeMonth = snapshots[0]?.throughMonth ?? 1;
   const activeMonthLabel = getTimelineMonthLabel(activeMonth);
+  const usesSourceUpdatedAt = snapshots.some((snapshot) => snapshot.usesSourceUpdatedAt);
   const showSuggestions = isSearchFocused && !selectedClient && filteredClients.length > 0;
 
   const detailRecords = useMemo(() => {
@@ -279,7 +280,10 @@ export function OkrClientComparisonPanel() {
                         <div className="okr-comparison-row-track">
                           {series.monthlyAmounts.map((amount, monthIndex) => {
                             const monthNumber = monthIndex + 1;
-                            const isIncluded = monthNumber <= snapshot.throughMonth;
+                            const count = series.monthlyCounts[monthIndex];
+                            const isIncluded = usesSourceUpdatedAt
+                              ? count > 0
+                              : monthNumber <= snapshot.throughMonth;
                             const isActiveMonth = monthNumber === activeMonth;
                             const barHeight = Math.max(8, Math.round((amount / chartMax) * 100));
                             return (

@@ -97,6 +97,30 @@ function findExcelColumnIndex(headers: unknown[], targetName: string): number {
   );
 }
 
+function findExcelUpdatedAtColumn(headers: unknown[]): number {
+  return headers.findIndex((header) => {
+    if (isExcludedExcelColumn(String(header))) return false;
+    const normalized = normalizeExcelHeader(header);
+    return normalized === 'updated at'
+      || normalized === 'updated_at'
+      || normalized.startsWith('updated')
+      || normalized.includes('uptadet');
+  });
+}
+
+export function parseExcelDateTime(value: unknown): string {
+  if (value === undefined || value === null || value === '') return '';
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString();
+  if (typeof value === 'number' && Number.isFinite(value) && value >= 30000 && value <= 60000) {
+    return parseExcelSerialDate(value).toISOString();
+  }
+  const text = String(value).trim();
+  if (!text) return '';
+  const parsed = new Date(text);
+  if (Number.isNaN(parsed.getTime())) return '';
+  return parsed.toISOString();
+}
+
 export interface DetectedExcelColumns {
   clientCol: number;
   importoCol: number;
@@ -106,6 +130,7 @@ export interface DetectedExcelColumns {
   dateCol: number;
   projectCol: number;
   ownerCol: number;
+  updatedAtCol: number;
   headerRowIndex: number;
   sheetName: string;
 }
@@ -172,6 +197,7 @@ function detectColumnsFromInvoiceHeader(headers: unknown[]): DetectedExcelColumn
     dateCol,
     projectCol: -1,
     ownerCol: -1,
+    updatedAtCol: -1,
     headerRowIndex: 0,
     sheetName: '',
   };
@@ -187,6 +213,7 @@ function detectLegacyLineColumns(): DetectedExcelColumns {
     dateCol: 1,
     projectCol: -1,
     ownerCol: -1,
+    updatedAtCol: -1,
     headerRowIndex: -1,
     sheetName: '',
   };
@@ -214,6 +241,7 @@ export function detectExcelColumns(headers: unknown[]): DetectedExcelColumns {
     dateCol: findExcelColumnIndex(headers, 'data'),
     projectCol: findExcelColumnIndex(headers, 'codice progetto'),
     ownerCol: documentOwnerCol >= 0 ? documentOwnerCol : findExcelColumnIndex(headers, 'owner'),
+    updatedAtCol: findExcelUpdatedAtColumn(headers),
     headerRowIndex: 0,
     sheetName: '',
   };
@@ -610,6 +638,10 @@ export function buildOkrRecordsFromImport(
       detected.projectCol >= 0 ? row[detected.projectCol] : '';
     const ownerRaw =
       detected.ownerCol >= 0 ? row[detected.ownerCol] : '';
+    const updatedAtRaw = detected.updatedAtCol >= 0
+      ? getExcelCellValue(worksheet, rows, i, detected.updatedAtCol)
+      : '';
+    const sourceUpdatedAt = parseExcelDateTime(updatedAtRaw);
     const recordYear = dateParts?.year ?? rowYear;
     if (recordYear !== importYear) continue;
     const candidate: OkrRecord = {
@@ -624,6 +656,7 @@ export function buildOkrRecordsFromImport(
       projectCode: String(projectRaw ?? '').trim(),
       owner: String(ownerRaw || ''),
       year: recordYear,
+      sourceUpdatedAt: sourceUpdatedAt || undefined,
     };
     if (mergeDuplicates && recordMap) {
       const mergeKey = getOkrRecordMergeKey(candidate);
@@ -633,6 +666,12 @@ export function buildOkrRecordsFromImport(
         continue;
       }
       existing.amount += amount;
+      if (
+        candidate.sourceUpdatedAt
+        && (!existing.sourceUpdatedAt || candidate.sourceUpdatedAt > existing.sourceUpdatedAt)
+      ) {
+        existing.sourceUpdatedAt = candidate.sourceUpdatedAt;
+      }
       continue;
     }
     records.push(candidate);

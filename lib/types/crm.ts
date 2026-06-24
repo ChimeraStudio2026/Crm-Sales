@@ -90,6 +90,7 @@ export interface OkrRecord {
   owner: string;
   year: number;
   monthNumber?: number;
+  sourceUpdatedAt?: string;
 }
 
 export interface AnalysisForecastScope {

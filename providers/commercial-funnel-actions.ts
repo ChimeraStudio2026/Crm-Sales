@@ -135,6 +135,29 @@ export function createCommercialFunnelActions(
     deps.showToast('Cliente rimosso dalla campagna.', 'info');
   };
 
+  const moveFunnelEntryToCampaign = async (
+    entryId: string,
+    targetCampaignId: string,
+  ): Promise<void> => {
+    const state = getEntries();
+    const entry = state.find((item) => item.id === entryId);
+    if (!entry) return;
+    if (entry.campaignId === targetCampaignId) {
+      deps.showToast('Il cliente è già in questa campagna.', 'info');
+      return;
+    }
+    const targetHasClient = state.some(
+      (item) => item.campaignId === targetCampaignId && item.clientId === entry.clientId,
+    );
+    if (targetHasClient) {
+      deps.showToast('Questo cliente è già presente nella campagna di destinazione.', 'warning');
+      return;
+    }
+    const nextEntry: CommercialFunnelEntry = { ...entry, campaignId: targetCampaignId };
+    await applyEntries(state.map((item) => (item.id === entryId ? nextEntry : item)));
+    deps.showToast('Cliente spostato nella nuova campagna.', 'success');
+  };
+
   const removeFunnelEntriesByCampaign = async (campaignId: string): Promise<void> => {
     const state = getEntries();
     if (deps.db) await deleteCommercialFunnelEntriesByCampaign(deps.db, campaignId);
@@ -168,5 +191,6 @@ export function createCommercialFunnelActions(
     addTaskToFunnelAction,
     removeFunnelEntry,
     removeFunnelEntriesByCampaign,
+    moveFunnelEntryToCampaign,
   };
 }

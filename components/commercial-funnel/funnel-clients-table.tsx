@@ -37,10 +37,12 @@ export function FunnelClientsTable({
 }: FunnelClientsTableProps) {
   const {
     clients,
+    mailCampaigns,
     addClientsToFunnel,
     updateFunnelAction,
     updateFunnelLostReason,
     removeFunnelEntry,
+    moveFunnelEntryToCampaign,
   } = useCrm();
   const [showPicker, setShowPicker] = useState(false);
   const [expandedEntries, setExpandedEntries] = useState<Set<string>>(new Set());
@@ -132,6 +134,13 @@ export function FunnelClientsTable({
 
   const reactivatableActionTypes = FUNNEL_ACTION_TYPES.filter(
     (type) => type !== 'Perso' && type !== 'Convertito',
+  );
+
+  const otherCampaigns = useMemo(
+    () => mailCampaigns
+      .filter((campaign) => campaign.id !== campaignId)
+      .sort((a, b) => a.name.localeCompare(b.name, 'it')),
+    [campaignId, mailCampaigns],
   );
 
   return (
@@ -270,6 +279,26 @@ export function FunnelClientsTable({
                                   Motivo
                                 </button>
                               </>
+                            )}
+                            {otherCampaigns.length > 0 && (
+                              <select
+                                className="table-cell-select funnel-move-campaign-select"
+                                defaultValue=""
+                                title="Sposta in altra campagna"
+                                onChange={(event) => {
+                                  const targetCampaignId = event.target.value;
+                                  if (!targetCampaignId) return;
+                                  void moveFunnelEntryToCampaign(entry.id, targetCampaignId);
+                                  event.target.value = '';
+                                }}
+                              >
+                                <option value="">Sposta campagna</option>
+                                {otherCampaigns.map((campaign) => (
+                                  <option key={campaign.id} value={campaign.id}>
+                                    {campaign.name}
+                                  </option>
+                                ))}
+                              </select>
                             )}
                             <button
                               type="button"

@@ -224,6 +224,7 @@ interface CrmContextValue {
   updateFunnelActionNote: (entryId: string, slotIndex: number, note: string) => Promise<void>;
   addTaskToFunnelAction: (entryId: string, slotIndex: number, taskId: string) => Promise<void>;
   removeFunnelEntry: (entryId: string) => Promise<void>;
+  moveFunnelEntryToCampaign: (entryId: string, targetCampaignId: string) => Promise<void>;
 }
 
 const CrmContext = createContext<CrmContextValue | null>(null);
@@ -1455,6 +1456,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
     updateFunnelActionNote: commercialFunnelActions.updateFunnelActionNote,
     addTaskToFunnelAction: commercialFunnelActions.addTaskToFunnelAction,
     removeFunnelEntry: commercialFunnelActions.removeFunnelEntry,
+    moveFunnelEntryToCampaign: commercialFunnelActions.moveFunnelEntryToCampaign,
   };
 
   return <CrmContext.Provider value={value}>{children}</CrmContext.Provider>;

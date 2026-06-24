@@ -6345,6 +6345,12 @@ body:has(.drawer.open) .jonny-chat-root {
     padding: 4px 6px;
 }
 
+.funnel-move-campaign-select {
+    max-width: 140px;
+    font-size: 0.75rem;
+    padding: 4px 6px;
+}
+
 .funnel-client-toggle {
     display: inline-flex;
     align-items: center;

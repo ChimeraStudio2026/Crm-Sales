@@ -12,7 +12,7 @@ La **API key resta solo su Supabase** (Edge Function). Non va in `.env.local`, V
 
 ## 2. Aggiungi il secret su Supabase
 
-1. Apri il [dashboard Supabase](https://supabase.com/dashboard/project/tdlsyjnzqmnubghszlht/functions/secrets) del progetto CRM.
+1. Apri il [dashboard Supabase](https://supabase.com/dashboard/project/ftkqrtzovyezlhlabmpn/functions/secrets) del progetto CRM.
 2. **Edge Functions → Secrets**.
 3. Aggiungi:
    - **Name:** `APOLLO_API_KEY`
@@ -25,7 +25,7 @@ La function `apollo-enrich` deve essere deployata sul progetto Supabase.
 Con Supabase CLI (dalla root del repo):
 
 ```bash
-supabase link --project-ref tdlsyjnzqmnubghszlht
+supabase link --project-ref ftkqrtzovyezlhlabmpn
 supabase secrets set APOLLO_API_KEY=la-tua-chiave-apollo
 supabase functions deploy apollo-enrich
 ```

@@ -10,6 +10,6 @@ const migrationPath = join(
 const sql = readFileSync(migrationPath, 'utf8').trim();
 
 console.log('Esegui questo SQL nel Supabase SQL Editor:');
-console.log('https://supabase.com/dashboard/project/tdlsyjnzqmnubghszlht/sql/new\n');
+console.log('https://supabase.com/dashboard/project/ftkqrtzovyezlhlabmpn/sql/new\n');
 console.log(sql);
 console.log('\nDopo l\'esecuzione, ricarica il CRM e re-importa il file Excel.');

@@ -105,7 +105,7 @@ export const HISTORICAL_REVENUE_MIGRATION_SQL = `ALTER TABLE public.clients
   ADD COLUMN IF NOT EXISTS rev_2024 numeric NOT NULL DEFAULT 0;`;
 
 export const SUPABASE_SQL_EDITOR_URL =
-  'https://supabase.com/dashboard/project/ftkqrtzovyezlhlabmpn/sql/new';
+  'https://supabase.com/dashboard/project/tdlsyjnzqmnubghszlht/sql/new';
 
 let historicalRevenueSchemaCache: boolean | null = null;
 

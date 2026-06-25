@@ -25,6 +25,7 @@ export function CommercialFunnelSection() {
     mailCampaigns,
     commercialFunnelEntries,
     saveMailCampaign,
+    updateMailCampaignOwner,
     deleteMailCampaignById,
   } = useCrm();
   const [showForm, setShowForm] = useState(false);
@@ -98,18 +99,7 @@ export function CommercialFunnelSection() {
   };
 
   const handleOwnerChange = async (campaignId: string, nextOwner: Owner | ''): Promise<void> => {
-    const campaign = mailCampaigns.find((item) => item.id === campaignId);
-    if (!campaign) return;
-    await saveMailCampaign({
-      id: campaign.id,
-      name: campaign.name,
-      description: campaign.description,
-      status: campaign.status,
-      startDate: campaign.startDate,
-      endDate: campaign.endDate,
-      owner: nextOwner,
-      createdAt: campaign.createdAt,
-    });
+    await updateMailCampaignOwner(campaignId, nextOwner);
   };
 
   const handleDeleteCampaign = async (campaignId: string, campaignName: string): Promise<void> => {

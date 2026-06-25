@@ -8,7 +8,7 @@ import { ThemeModeSetting } from '@/components/settings/theme-mode-setting';
 import { PwaInstallSetting } from '@/components/settings/pwa-install-setting';
 import { TopHeader } from '@/components/layout/top-header';
 
-const APOLLO_SECRETS_URL = 'https://supabase.com/dashboard/project/ftkqrtzovyezlhlabmpn/functions/secrets';
+const APOLLO_SECRETS_URL = 'https://supabase.com/dashboard/project/tdlsyjnzqmnubghszlht/functions/secrets';
 const APOLLO_DOCS_URL = 'https://docs.apollo.io/';
 
 export function SettingsSection() {

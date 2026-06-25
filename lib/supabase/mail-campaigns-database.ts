@@ -1,10 +1,57 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import {
+  embedCampaignOwnerInDescription,
+  resolveCampaignOwner,
+} from '@/lib/mail-campaigns/campaign-owner';
 import type {
   MailCampaign,
   MailCampaignContact,
   MailCampaignSendTracking,
   MailCampaignStep,
 } from '@/lib/types/mail-campaigns';
+
+let mailCampaignOwnerColumnAvailable: boolean | null = null;
+
+function isMissingOwnerColumnError(error: { message?: string; code?: string }): boolean {
+  const message = (error.message || '').toLowerCase();
+  return message.includes('owner') && (
+    message.includes('does not exist')
+    || message.includes('could not find')
+    || error.code === 'PGRST204'
+  );
+}
+
+export function isMailCampaignOwnerColumnAvailable(): boolean {
+  return mailCampaignOwnerColumnAvailable !== false;
+}
+
+export async function probeMailCampaignOwnerColumn(db: SupabaseClient): Promise<boolean> {
+  const { error } = await db.from('mail_campaigns').select('owner').limit(1);
+  mailCampaignOwnerColumnAvailable = !error;
+  return mailCampaignOwnerColumnAvailable;
+}
+
+function buildMailCampaignRows(
+  campaigns: MailCampaign[],
+  includeOwnerColumn: boolean,
+): Record<string, unknown>[] {
+  return campaigns.map((campaign) => {
+    const description = includeOwnerColumn
+      ? campaign.description || ''
+      : embedCampaignOwnerInDescription(campaign.description || '', campaign.owner || '');
+    const row: Record<string, unknown> = {
+      id: campaign.id,
+      name: campaign.name,
+      description,
+      status: campaign.status,
+      start_date: campaign.startDate || null,
+      end_date: campaign.endDate || null,
+      updated_at: new Date().toISOString(),
+    };
+    if (includeOwnerColumn) row.owner = campaign.owner || '';
+    return row;
+  });
+}
 
 interface MailCampaignRow {
   id: string;
@@ -45,14 +92,18 @@ interface MailCampaignSendTrackingRow {
 }
 
 function rowToCampaign(row: MailCampaignRow): MailCampaign {
+  const resolved = resolveCampaignOwner(
+    mailCampaignOwnerColumnAvailable !== false ? row.owner : null,
+    row.description || '',
+  );
   return {
     id: row.id,
     name: row.name,
-    description: row.description || '',
+    description: resolved.description,
     status: row.status as MailCampaign['status'],
     startDate: row.start_date || '',
     endDate: row.end_date || '',
-    owner: row.owner || '',
+    owner: resolved.owner,
     createdAt: row.created_at || '',
   };
 }
@@ -100,6 +151,7 @@ export interface MailCampaignDataBundle {
 export async function fetchMailCampaignData(
   db: SupabaseClient,
 ): Promise<MailCampaignDataBundle> {
+  await probeMailCampaignOwnerColumn(db);
   const [campaignsRes, stepsRes, contactsRes, trackingRes] = await Promise.all([
     db.from('mail_campaigns').select('*').order('created_at', { ascending: false }),
     db.from('mail_campaign_steps').select('*').order('order_number'),
@@ -123,18 +175,22 @@ export async function persistMailCampaigns(
   campaigns: MailCampaign[],
 ): Promise<void> {
   if (campaigns.length === 0) return;
-  const rows = campaigns.map((campaign) => ({
-    id: campaign.id,
-    name: campaign.name,
-    description: campaign.description || '',
-    status: campaign.status,
-    start_date: campaign.startDate || null,
-    end_date: campaign.endDate || null,
-    owner: campaign.owner || '',
-    updated_at: new Date().toISOString(),
-  }));
-  const { error } = await db.from('mail_campaigns').upsert(rows, { onConflict: 'id' });
-  if (error) throw error;
+  const includeOwnerColumn = mailCampaignOwnerColumnAvailable !== false;
+  let rows = buildMailCampaignRows(campaigns, includeOwnerColumn);
+  let result = await db.from('mail_campaigns').upsert(rows, { onConflict: 'id' });
+  if (result.error && includeOwnerColumn && isMissingOwnerColumnError(result.error)) {
+    mailCampaignOwnerColumnAvailable = false;
+    rows = buildMailCampaignRows(campaigns, false);
+    result = await db.from('mail_campaigns').upsert(rows, { onConflict: 'id' });
+  }
+  if (result.error) throw result.error;
+}
+
+export async function persistSingleMailCampaign(
+  db: SupabaseClient,
+  campaign: MailCampaign,
+): Promise<void> {
+  await persistMailCampaigns(db, [campaign]);
 }
 
 export async function deleteMailCampaignContact(

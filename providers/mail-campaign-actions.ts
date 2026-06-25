@@ -18,6 +18,7 @@ import {
   persistMailCampaigns,
   persistMailCampaignSteps,
   persistMailCampaignTracking,
+  persistSingleMailCampaign,
 } from '@/lib/supabase/mail-campaigns-database';
 
 interface MailCampaignStateSlice {
@@ -101,16 +102,38 @@ export function createMailCampaignActions(
   deps: MailCampaignPersistDeps,
   getState: () => MailCampaignStateSlice,
 ) {
-  const applyState = async (next: MailCampaignStateSlice): Promise<void> => {
+  const applyState = async (next: MailCampaignStateSlice): Promise<boolean> => {
     deps.setMailCampaigns(next.mailCampaigns);
     deps.setMailCampaignSteps(next.mailCampaignSteps);
     deps.setMailCampaignContacts(next.mailCampaignContacts);
     deps.setMailCampaignSendTracking(next.mailCampaignSendTracking);
     try {
       await persistMailCampaignBundle(deps, next);
+      return true;
     } catch (error) {
       deps.showToast(
         `Errore salvataggio campagne: ${error instanceof Error ? error.message : 'errore'}`,
+        'danger',
+      );
+      throw error;
+    }
+  };
+
+  const updateMailCampaignOwner = async (campaignId: string, owner: string): Promise<void> => {
+    const state = getState();
+    const campaign = state.mailCampaigns.find((item) => item.id === campaignId);
+    if (!campaign) return;
+    const updatedCampaign: MailCampaign = { ...campaign, owner };
+    deps.setMailCampaigns(state.mailCampaigns.map((item) => (
+      item.id === campaignId ? updatedCampaign : item
+    )));
+    if (!deps.db) return;
+    try {
+      await persistSingleMailCampaign(deps.db, updatedCampaign);
+      deps.showToast('Owner aggiornato.', 'success');
+    } catch (error) {
+      deps.showToast(
+        `Errore salvataggio owner: ${error instanceof Error ? error.message : 'errore'}`,
         'danger',
       );
       throw error;
@@ -143,12 +166,14 @@ export function createMailCampaignActions(
         ...steps.map((step) => ({ ...step, campaignId })),
       ];
     }
-    await applyState({
+    const saved = await applyState({
       ...state,
       mailCampaigns: nextCampaigns,
       mailCampaignSteps: nextSteps,
     });
-    deps.showToast(input.id ? 'Campagna aggiornata.' : 'Campagna creata.', 'success');
+    if (saved) {
+      deps.showToast(input.id ? 'Campagna aggiornata.' : 'Campagna creata.', 'success');
+    }
     return campaignId;
   };
 
@@ -286,6 +311,7 @@ export function createMailCampaignActions(
 
   return {
     saveMailCampaign,
+    updateMailCampaignOwner,
     deleteMailCampaignById,
     addContactsToCampaign,
     removeContactFromCampaign,

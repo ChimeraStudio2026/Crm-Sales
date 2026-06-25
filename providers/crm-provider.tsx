@@ -209,6 +209,7 @@ interface CrmContextValue {
   mailCampaignContacts: MailCampaignContact[];
   mailCampaignSendTracking: MailCampaignSendTracking[];
   saveMailCampaign: (input: Partial<MailCampaign> & { name: string }, steps?: MailCampaignStep[]) => Promise<string>;
+  updateMailCampaignOwner: (campaignId: string, owner: string) => Promise<void>;
   deleteMailCampaignById: (campaignId: string) => Promise<void>;
   addContactsToCampaign: (campaignId: string, refs: MailCampaignContactRef[]) => Promise<void>;
   removeContactFromCampaign: (campaignContactId: string) => Promise<void>;
@@ -1434,6 +1435,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
     mailCampaignContacts,
     mailCampaignSendTracking,
     saveMailCampaign: mailCampaignActions.saveMailCampaign,
+    updateMailCampaignOwner: mailCampaignActions.updateMailCampaignOwner,
     deleteMailCampaignById,
     addContactsToCampaign: mailCampaignActions.addContactsToCampaign,
     removeContactFromCampaign: mailCampaignActions.removeContactFromCampaign,

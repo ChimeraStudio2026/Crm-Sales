@@ -6,6 +6,7 @@ import type {
   FunnelRowStatus,
   FunnelSemaforoState,
 } from '@/lib/types/commercial-funnel';
+import { FUNNEL_ACTION_TYPES } from '@/lib/types/commercial-funnel';
 
 export const FUNNEL_SLOT_COUNT = 5;
 
@@ -43,14 +44,7 @@ export function normalizeFunnelActions(value: unknown): FunnelActionSlot[] {
 }
 
 export function isFunnelActionType(value: string): value is FunnelActionType {
-  return [
-    'Mail Di contatto',
-    'Incontro in presenza',
-    'Call',
-    'Quotazione richiesta',
-    'Convertito',
-    'Perso',
-  ].includes(value);
+  return (FUNNEL_ACTION_TYPES as readonly string[]).includes(value);
 }
 
 function daysBetween(fromDate: string, toDate: string): number {

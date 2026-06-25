@@ -180,13 +180,14 @@ export function FunnelClientsTable({
                 rows.map(({ entry, client, status, semaforo, isLost, isConverted, isLocked }) => {
                   const isExpanded = expandedEntries.has(entry.id);
                   const clientName = client?.name || 'Cliente non trovato';
+                  const displaySemaforo = isConverted ? 'green' : semaforo;
                   return (
                     <Fragment key={entry.id}>
                       <tr className={`funnel-row${isLost ? ' is-lost' : ''}${isConverted ? ' is-converted' : ''}`}>
                         <td className="funnel-col-semaforo">
                           <span
-                            className={`funnel-semaforo funnel-semaforo-${semaforo}`}
-                            title={semaforo === 'green' ? 'Nei tempi' : 'Fuori tempo'}
+                            className={`funnel-semaforo funnel-semaforo-${displaySemaforo}`}
+                            title={isConverted ? 'Convertito' : displaySemaforo === 'green' ? 'Nei tempi' : 'Fuori tempo'}
                           />
                         </td>
                         <td className="funnel-col-client">

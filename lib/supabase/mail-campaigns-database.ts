@@ -13,6 +13,7 @@ interface MailCampaignRow {
   status: string;
   start_date: string | null;
   end_date: string | null;
+  owner: string | null;
   created_at: string;
 }
 
@@ -51,6 +52,7 @@ function rowToCampaign(row: MailCampaignRow): MailCampaign {
     status: row.status as MailCampaign['status'],
     startDate: row.start_date || '',
     endDate: row.end_date || '',
+    owner: row.owner || '',
     createdAt: row.created_at || '',
   };
 }
@@ -128,6 +130,7 @@ export async function persistMailCampaigns(
     status: campaign.status,
     start_date: campaign.startDate || null,
     end_date: campaign.endDate || null,
+    owner: campaign.owner || '',
     updated_at: new Date().toISOString(),
   }));
   const { error } = await db.from('mail_campaigns').upsert(rows, { onConflict: 'id' });

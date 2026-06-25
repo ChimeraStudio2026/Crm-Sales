@@ -10,9 +10,11 @@ import { formatActionDateDisplay } from '@/lib/crm/utils';
 import { CampaignNameCell } from '@/components/mail-campaigns/campaign-name-cell';
 import { CampaignTableActions } from '@/components/mail-campaigns/campaign-table-actions';
 import { MAIL_CAMPAIGN_STATUS_LABELS } from '@/lib/constants/mail-campaigns';
+import { OWNERS } from '@/lib/constants/crm';
 import { useCrm } from '@/providers/crm-provider';
 import { TopHeader } from '@/components/layout/top-header';
 import type { MailCampaignStatus } from '@/lib/types/mail-campaigns';
+import type { Owner } from '@/lib/types/crm';
 
 const BRAND_SEARCH_MIN_LENGTH = 2;
 
@@ -31,6 +33,7 @@ export function CommercialFunnelSection() {
   const [status, setStatus] = useState<MailCampaignStatus>('Bozza');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [owner, setOwner] = useState<Owner | ''>('');
   const [brandSearch, setBrandSearch] = useState('');
 
   const rows = useMemo(
@@ -67,6 +70,7 @@ export function CommercialFunnelSection() {
       status,
       startDate,
       endDate,
+      owner,
     });
     setShowForm(false);
     setName('');
@@ -74,6 +78,7 @@ export function CommercialFunnelSection() {
     setStatus('Bozza');
     setStartDate('');
     setEndDate('');
+    setOwner('');
     router.push(`/funnel/${campaignId}`);
   };
 
@@ -87,6 +92,22 @@ export function CommercialFunnelSection() {
       status: campaign.status,
       startDate: campaign.startDate,
       endDate: campaign.endDate,
+      owner: campaign.owner,
+      createdAt: campaign.createdAt,
+    });
+  };
+
+  const handleOwnerChange = async (campaignId: string, nextOwner: Owner | ''): Promise<void> => {
+    const campaign = mailCampaigns.find((item) => item.id === campaignId);
+    if (!campaign) return;
+    await saveMailCampaign({
+      id: campaign.id,
+      name: campaign.name,
+      description: campaign.description,
+      status: campaign.status,
+      startDate: campaign.startDate,
+      endDate: campaign.endDate,
+      owner: nextOwner,
       createdAt: campaign.createdAt,
     });
   };
@@ -182,10 +203,12 @@ export function CommercialFunnelSection() {
               <thead>
                 <tr>
                   <th>Nome Campagna</th>
+                  <th>Owner</th>
                   <th>Stato</th>
                   <th>Data Inizio</th>
                   <th>Clienti</th>
                   <th>Attivi</th>
+                  <th>Convertiti</th>
                   <th>Persi</th>
                   <th>Semafori rossi</th>
                   <th>Azioni</th>
@@ -194,17 +217,32 @@ export function CommercialFunnelSection() {
               <tbody>
                 {displayRows.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="mail-campaigns-empty">
+                    <td colSpan={10} className="mail-campaigns-empty">
                       {isBrandSearchActive
                         ? 'Nessuna campagna contiene il brand cercato.'
                         : 'Nessuna campagna. Creane una con + per iniziare il funnel commerciale.'}
                     </td>
                   </tr>
                 ) : (
-                  displayRows.map(({ campaign, totalClients, activeCount, lostCount, redSemaforoCount }) => (
+                  displayRows.map(({ campaign, totalClients, activeCount, convertedCount, lostCount, redSemaforoCount }) => (
                     <tr key={campaign.id}>
                       <td>
                         <CampaignNameCell campaign={campaign} onSaveName={handleRenameCampaign} />
+                      </td>
+                      <td>
+                        <select
+                          className="table-cell-select"
+                          value={campaign.owner}
+                          onChange={(event) => void handleOwnerChange(
+                            campaign.id,
+                            event.target.value as Owner | '',
+                          )}
+                        >
+                          <option value="">—</option>
+                          {OWNERS.map((profile) => (
+                            <option key={profile} value={profile}>{profile}</option>
+                          ))}
+                        </select>
                       </td>
                       <td>
                         <span className={`mail-campaign-status mail-campaign-status-${campaign.status.toLowerCase()}`}>
@@ -214,6 +252,7 @@ export function CommercialFunnelSection() {
                       <td>{campaign.startDate || '—'}</td>
                       <td className="analysis-num">{totalClients}</td>
                       <td className="analysis-num">{activeCount}</td>
+                      <td className="analysis-num funnel-converted-count">{convertedCount}</td>
                       <td className="analysis-num">{lostCount}</td>
                       <td className="analysis-num">
                         <span
@@ -260,6 +299,19 @@ export function CommercialFunnelSection() {
                   <textarea className="form-textarea" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
                 </div>
                 <div className="form-row">
+                  <div className="form-group">
+                    <label>Owner</label>
+                    <select
+                      className="form-select"
+                      value={owner}
+                      onChange={(event) => setOwner(event.target.value as Owner | '')}
+                    >
+                      <option value="">—</option>
+                      {OWNERS.map((profile) => (
+                        <option key={profile} value={profile}>{profile}</option>
+                      ))}
+                    </select>
+                  </div>
                   <div className="form-group">
                     <label>Stato</label>
                     <select className="form-select" value={status} onChange={(e) => setStatus(e.target.value as MailCampaignStatus)}>

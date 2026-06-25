@@ -11,6 +11,7 @@ export interface MailCampaign {
   status: MailCampaignStatus;
   startDate: string;
   endDate: string;
+  owner: string;
   createdAt: string;
 }
 

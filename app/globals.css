@@ -6536,7 +6536,16 @@ body:has(.drawer.open) .jonny-chat-root {
 }
 
 .funnel-row.is-converted {
-    background: rgba(34, 197, 94, 0.04);
+    background: rgba(34, 197, 94, 0.08);
+}
+
+.funnel-converted-count {
+    color: #166534;
+    font-weight: 600;
+}
+
+.funnel-stat-converted strong {
+    color: #166534;
 }
 
 .funnel-picker-tabs {

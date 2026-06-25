@@ -130,6 +130,7 @@ export function createMailCampaignActions(
       status: input.status || 'Bozza',
       startDate: input.startDate || '',
       endDate: input.endDate || '',
+      owner: input.owner || '',
       createdAt: input.createdAt || new Date().toISOString(),
     };
     const nextCampaigns = input.id

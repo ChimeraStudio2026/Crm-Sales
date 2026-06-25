@@ -13,7 +13,6 @@ interface CommercialFunnelPersistDeps {
   db: SupabaseClient | null;
   setCommercialFunnelEntries: Dispatch<SetStateAction<CommercialFunnelEntry[]>>;
   showToast: (message: string, type?: 'info' | 'success' | 'warning' | 'danger') => void;
-  promoteColdClientToMainList: (clientId: string) => Promise<void>;
 }
 
 export function createCommercialFunnelActions(
@@ -81,16 +80,9 @@ export function createCommercialFunnelActions(
       };
     });
     if (actionType === 'Convertito') {
-      if (entry.clientSource === 'main') {
-        const nextEntry: CommercialFunnelEntry = { ...entry, actions: nextActions };
-        await applyEntries(state.map((item) => (item.id === entryId ? nextEntry : item)));
-        deps.showToast('Cliente segnato come convertito. Resta in Lista Clienti.', 'success');
-        return;
-      }
-      if (deps.db) await deleteCommercialFunnelEntry(deps.db, entryId);
-      await deps.promoteColdClientToMainList(entry.clientId);
-      await applyEntries(state.filter((item) => item.id !== entryId));
-      deps.showToast('Cliente convertito e spostato in Lista Clienti.', 'success');
+      const nextEntry: CommercialFunnelEntry = { ...entry, actions: nextActions };
+      await applyEntries(state.map((item) => (item.id === entryId ? nextEntry : item)));
+      deps.showToast('Cliente segnato come convertito. Resta nel funnel commerciale.', 'success');
       return;
     }
     const isLeavingPerso = entry.actions[slotIndex]?.type === 'Perso' && actionType !== 'Perso';

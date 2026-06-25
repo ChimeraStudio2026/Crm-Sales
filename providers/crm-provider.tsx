@@ -370,23 +370,16 @@ export function CrmProvider({ children }: CrmProviderProps) {
     return clientsMutationQueueRef.current;
   }, [db, showToast]);
 
-  const promoteColdClientToMainList = useCallback(async (clientId: string): Promise<void> => {
-    await mutateClients((prev) => prev.map((client) => (
-      client.id === clientId ? { ...client, isColdClient: false } : client
-    )), { recalculate: false });
-  }, [mutateClients]);
-
   const commercialFunnelActions = useMemo(
     () => createCommercialFunnelActions(
       {
         db,
         setCommercialFunnelEntries,
         showToast,
-        promoteColdClientToMainList,
       },
       () => commercialFunnelStateRef.current.commercialFunnelEntries,
     ),
-    [db, promoteColdClientToMainList, showToast],
+    [db, showToast],
   );
 
   const deleteMailCampaignById = useCallback(async (campaignId: string): Promise<void> => {

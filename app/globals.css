@@ -6522,8 +6522,6 @@ body:has(.drawer.open) .jonny-chat-root {
     gap: 2px;
     min-width: 0;
 }
-    text-align: left;
-}
 
 .funnel-status-cell {
     display: flex;

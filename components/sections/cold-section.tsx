@@ -14,9 +14,11 @@ import {
   formatCurrency,
   isActionDateStale,
   isClientInColdSection,
+  isClientInWorkspace,
   shouldHighlightIncompleteClient,
 } from '@/lib/crm/utils';
 import { useCrm } from '@/providers/crm-provider';
+import { useWorkspace } from '@/providers/workspace-provider';
 import { ClientDrawer } from '@/components/drawers/client-drawer';
 import { ClientDetailPanel } from '@/components/clients/client-detail-panel';
 import { ClientOriginSelect } from '@/components/clients/client-origin-select';
@@ -63,6 +65,7 @@ export function ColdClientsSection() {
     updateClientProductOffers,
     enrichClientApollo,
   } = useCrm();
+  const { workspaceId, activeWorkspace } = useWorkspace();
   const [search, setSearch] = useState('');
   const [filterOwner, setFilterOwner] = useState('');
   const [sort, setSort] = useState<SortState>({ column: 'name', direction: 'asc' });
@@ -77,6 +80,7 @@ export function ColdClientsSection() {
     const query = search.toLowerCase().trim();
     let list = clients.filter((client) => {
       if (!isClientInColdSection(client)) return false;
+      if (!isClientInWorkspace(client, workspaceId)) return false;
       const matchesQuery =
         !query ||
         client.name.toLowerCase().includes(query) ||
@@ -87,9 +91,11 @@ export function ColdClientsSection() {
       return matchesQuery && (!filterOwner || client.owner === filterOwner);
     });
     return sortClients(list, sort);
-  }, [clients, filterOwner, search, sort]);
+  }, [clients, filterOwner, search, sort, workspaceId]);
 
-  const totalCold = clients.filter(isClientInColdSection).length;
+  const totalCold = clients.filter(
+    (client) => isClientInColdSection(client) && isClientInWorkspace(client, workspaceId),
+  ).length;
   const columnCount = COLD_TABLE_COLUMN_ORDER.length;
 
   const handleSort = (column: string): void => {
@@ -347,8 +353,9 @@ export function ColdClientsSection() {
             </div>
           </div>
           <p className="cold-section-hint">
-            Prospect con cui non avete <strong>mai lavorato</strong>. I clienti importati da OKR/Excel restano in Lista Clienti.
-            Se imposti <strong>Fatturato 2026</strong> &gt; €1, il cliente passa alla lista principale.
+            Prospect <strong>{activeWorkspace.label}</strong> con cui non avete <strong>mai lavorato</strong>.
+            I clienti importati da OKR/Excel restano in Lista Clienti (Chimera).
+            Se imposti <strong>Fatturato 2026</strong> &gt; €1, il cliente passa alla lista principale del workspace.
           </p>
           <div className="cold-clients-accordion">
             {COLD_CLIENT_CATEGORIES.map((category) => {
@@ -388,7 +395,12 @@ export function ColdClientsSection() {
         </section>
       </div>
       {drawerOpen && (
-        <ClientDrawer client={editClient} isCold onClose={() => setDrawerOpen(false)} />
+        <ClientDrawer
+          client={editClient}
+          isCold
+          workspaceId={workspaceId}
+          onClose={() => setDrawerOpen(false)}
+        />
       )}
     </>
   );

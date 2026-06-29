@@ -326,6 +326,39 @@ input, select, textarea, button {
     gap: 12px;
 }
 
+.workspace-selector {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+.workspace-selector-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.workspace-selector-select {
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+    min-width: 120px;
+}
+
+.workspace-selector-badge {
+    display: none;
+}
+
 .quick-stats-badge {
     display: flex;
     align-items: center;

@@ -3,8 +3,10 @@
 import { PlusCircle } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { PAGE_META } from '@/lib/constants/crm';
+import { isWorkspaceScopedPath } from '@/lib/constants/workspaces';
 import { useCrm } from '@/providers/crm-provider';
 import { ThemeToggleButton } from '@/components/ui/theme-toggle-button';
+import { WorkspaceSelector } from '@/components/layout/workspace-selector';
 import { formatCurrency } from '@/lib/crm/utils';
 
 interface TopHeaderProps {
@@ -15,6 +17,7 @@ export function TopHeader({ onQuickAdd }: TopHeaderProps) {
   const pathname = usePathname();
   const { totalRevenue2026 } = useCrm();
   const meta = PAGE_META[pathname] || PAGE_META['/analysis'];
+  const showWorkspaceSelector = isWorkspaceScopedPath(pathname);
 
   return (
     <header className="top-header">
@@ -23,6 +26,7 @@ export function TopHeader({ onQuickAdd }: TopHeaderProps) {
         <p id="header-subtitle">{meta.subtitle}</p>
       </div>
       <div className="header-actions">
+        {showWorkspaceSelector && <WorkspaceSelector />}
         <ThemeToggleButton />
         <div className="quick-stats-badge">
           <span>Fatturato 2026: </span>

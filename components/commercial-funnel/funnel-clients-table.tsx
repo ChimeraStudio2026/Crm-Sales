@@ -13,6 +13,7 @@ import {
   resolveFunnelSemaforo,
   resolveFunnelStatus,
 } from '@/lib/commercial-funnel/index';
+import { DEFAULT_WORKSPACE_ID } from '@/lib/constants/workspaces';
 import { formatActionDateDisplay } from '@/lib/crm/utils';
 import { FUNNEL_ACTION_TYPES } from '@/lib/types/commercial-funnel';
 import type { CommercialFunnelEntry, FunnelActionType } from '@/lib/types/commercial-funnel';
@@ -136,11 +137,15 @@ export function FunnelClientsTable({
     (type) => type !== 'Perso' && type !== 'Convertito',
   );
 
+  const currentCampaign = mailCampaigns.find((campaign) => campaign.id === campaignId);
+  const campaignWorkspaceId = currentCampaign?.workspaceId || DEFAULT_WORKSPACE_ID;
+
   const otherCampaigns = useMemo(
     () => mailCampaigns
       .filter((campaign) => campaign.id !== campaignId)
+      .filter((campaign) => (campaign.workspaceId || DEFAULT_WORKSPACE_ID) === campaignWorkspaceId)
       .sort((a, b) => a.name.localeCompare(b.name, 'it')),
-    [campaignId, mailCampaigns],
+    [campaignId, campaignWorkspaceId, mailCampaigns],
   );
 
   return (

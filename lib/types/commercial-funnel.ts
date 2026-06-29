@@ -26,6 +26,7 @@ export interface FunnelClientRef {
 
 export interface CommercialFunnelEntry {
   id: string;
+  workspaceId: string;
   campaignId: string;
   clientId: string;
   clientSource: FunnelClientSource;

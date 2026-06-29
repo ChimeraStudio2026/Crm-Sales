@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { DEFAULT_WORKSPACE_ID } from '@/lib/constants/workspaces';
 import { normalizeFunnelActions } from '@/lib/commercial-funnel/index';
 import type {
   CommercialFunnelEntry,
@@ -8,6 +9,7 @@ import type {
 
 interface CommercialFunnelEntryRow {
   id: string;
+  workspace_id: string | null;
   campaign_id: string;
   client_id: string;
   client_source: string | null;
@@ -23,6 +25,7 @@ function normalizeClientSource(value: string | null | undefined): FunnelClientSo
 function rowToEntry(row: CommercialFunnelEntryRow): CommercialFunnelEntry {
   return {
     id: row.id,
+    workspaceId: row.workspace_id || DEFAULT_WORKSPACE_ID,
     campaignId: row.campaign_id,
     clientId: row.client_id,
     clientSource: normalizeClientSource(row.client_source),
@@ -50,6 +53,7 @@ export async function persistCommercialFunnelEntries(
   if (entries.length === 0) return;
   const rows = entries.map((entry) => ({
     id: entry.id,
+    workspace_id: entry.workspaceId || DEFAULT_WORKSPACE_ID,
     campaign_id: entry.campaignId,
     client_id: entry.clientId,
     client_source: entry.clientSource,
@@ -101,10 +105,11 @@ function resolveJoinedName(
 export async function searchCommercialFunnelByBrand(
   db: SupabaseClient,
   searchQuery: string,
+  workspaceId?: string,
 ): Promise<FunnelBrandSearchResult[]> {
   const query = searchQuery.trim();
   if (query.length < 2) return [];
-  const { data, error } = await db
+  let request = db
     .from('commercial_funnel_entries')
     .select(`
       id,
@@ -115,6 +120,10 @@ export async function searchCommercialFunnelByBrand(
       mail_campaigns!inner ( name )
     `)
     .ilike('clients.name', `%${query}%`);
+  if (workspaceId) {
+    request = request.eq('workspace_id', workspaceId);
+  }
+  const { data, error } = await request;
   if (error) throw error;
   return (data || []).map((row: FunnelBrandSearchRow) => ({
     entryId: row.id,

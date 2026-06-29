@@ -6,6 +6,7 @@ export type MailSendStatus = 'Da Inviare' | 'Inviata' | 'Non Necessaria';
 
 export interface MailCampaign {
   id: string;
+  workspaceId: string;
   name: string;
   description: string;
   status: MailCampaignStatus;

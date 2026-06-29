@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { DEFAULT_WORKSPACE_ID } from '@/lib/constants/workspaces';
 import { createEmptyFunnelActions } from '@/lib/commercial-funnel/index';
 import { createUniqueId } from '@/lib/crm/utils';
 import {
@@ -8,11 +9,13 @@ import {
   persistCommercialFunnelEntries,
 } from '@/lib/supabase/commercial-funnel-database';
 import type { CommercialFunnelEntry, FunnelActionType, FunnelClientRef } from '@/lib/types/commercial-funnel';
+import type { MailCampaign } from '@/lib/types/mail-campaigns';
 
 interface CommercialFunnelPersistDeps {
   db: SupabaseClient | null;
   setCommercialFunnelEntries: Dispatch<SetStateAction<CommercialFunnelEntry[]>>;
   showToast: (message: string, type?: 'info' | 'success' | 'warning' | 'danger') => void;
+  getCampaignById: (campaignId: string) => MailCampaign | undefined;
 }
 
 export function createCommercialFunnelActions(
@@ -43,10 +46,13 @@ export function createCommercialFunnelActions(
         .filter((entry) => entry.campaignId === campaignId)
         .map((entry) => entry.clientId),
     );
+    const campaign = deps.getCampaignById(campaignId);
+    const workspaceId = campaign?.workspaceId || DEFAULT_WORKSPACE_ID;
     const newEntries: CommercialFunnelEntry[] = clientRefs
       .filter((ref) => !existingIds.has(ref.clientId))
       .map((ref) => ({
         id: createUniqueId('funnel-entry'),
+        workspaceId,
         campaignId,
         clientId: ref.clientId,
         clientSource: ref.clientSource,
@@ -145,7 +151,13 @@ export function createCommercialFunnelActions(
       deps.showToast('Questo cliente è già presente nella campagna di destinazione.', 'warning');
       return;
     }
-    const nextEntry: CommercialFunnelEntry = { ...entry, campaignId: targetCampaignId };
+    const targetCampaign = deps.getCampaignById(targetCampaignId);
+    const workspaceId = targetCampaign?.workspaceId || entry.workspaceId || DEFAULT_WORKSPACE_ID;
+    const nextEntry: CommercialFunnelEntry = {
+      ...entry,
+      campaignId: targetCampaignId,
+      workspaceId,
+    };
     await applyEntries(state.map((item) => (item.id === entryId ? nextEntry : item)));
     deps.showToast('Cliente spostato nella nuova campagna.', 'success');
   };

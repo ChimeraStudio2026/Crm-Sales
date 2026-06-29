@@ -12,6 +12,7 @@ interface CommercialFunnelEntryRow {
   workspace_id: string | null;
   campaign_id: string;
   client_id: string;
+  contact_id: string | null;
   client_source: string | null;
   actions: unknown;
   lost_reason: string;
@@ -28,6 +29,7 @@ function rowToEntry(row: CommercialFunnelEntryRow): CommercialFunnelEntry {
     workspaceId: row.workspace_id || DEFAULT_WORKSPACE_ID,
     campaignId: row.campaign_id,
     clientId: row.client_id,
+    contactId: row.contact_id || '',
     clientSource: normalizeClientSource(row.client_source),
     actions: normalizeFunnelActions(row.actions),
     lostReason: row.lost_reason || '',
@@ -56,6 +58,7 @@ export async function persistCommercialFunnelEntries(
     workspace_id: entry.workspaceId || DEFAULT_WORKSPACE_ID,
     campaign_id: entry.campaignId,
     client_id: entry.clientId,
+    contact_id: entry.contactId || '',
     client_source: entry.clientSource,
     actions: entry.actions,
     lost_reason: entry.lostReason || '',

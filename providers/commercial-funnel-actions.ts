@@ -2,6 +2,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { DEFAULT_WORKSPACE_ID } from '@/lib/constants/workspaces';
 import { createEmptyFunnelActions } from '@/lib/commercial-funnel/index';
+import { buildFunnelEntryKey } from '@/lib/commercial-funnel/contacts';
 import { createUniqueId } from '@/lib/crm/utils';
 import {
   deleteCommercialFunnelEntry,
@@ -41,20 +42,21 @@ export function createCommercialFunnelActions(
     clientRefs: FunnelClientRef[],
   ): Promise<void> => {
     const state = getEntries();
-    const existingIds = new Set(
+    const existingKeys = new Set(
       state
         .filter((entry) => entry.campaignId === campaignId)
-        .map((entry) => entry.clientId),
+        .map((entry) => buildFunnelEntryKey(entry.clientId, entry.contactId)),
     );
     const campaign = deps.getCampaignById(campaignId);
     const workspaceId = campaign?.workspaceId || DEFAULT_WORKSPACE_ID;
     const newEntries: CommercialFunnelEntry[] = clientRefs
-      .filter((ref) => !existingIds.has(ref.clientId))
+      .filter((ref) => !existingKeys.has(buildFunnelEntryKey(ref.clientId, ref.contactId)))
       .map((ref) => ({
         id: createUniqueId('funnel-entry'),
         workspaceId,
         campaignId,
         clientId: ref.clientId,
+        contactId: ref.contactId || '',
         clientSource: ref.clientSource,
         actions: createEmptyFunnelActions(),
         lostReason: '',
@@ -144,11 +146,13 @@ export function createCommercialFunnelActions(
       deps.showToast('Il cliente è già in questa campagna.', 'info');
       return;
     }
-    const targetHasClient = state.some(
-      (item) => item.campaignId === targetCampaignId && item.clientId === entry.clientId,
+    const targetHasEntry = state.some(
+      (item) => item.campaignId === targetCampaignId
+        && buildFunnelEntryKey(item.clientId, item.contactId)
+          === buildFunnelEntryKey(entry.clientId, entry.contactId),
     );
-    if (targetHasClient) {
-      deps.showToast('Questo cliente è già presente nella campagna di destinazione.', 'warning');
+    if (targetHasEntry) {
+      deps.showToast('Questo contatto è già presente nella campagna di destinazione.', 'warning');
       return;
     }
     const targetCampaign = deps.getCampaignById(targetCampaignId);

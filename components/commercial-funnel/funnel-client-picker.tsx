@@ -3,6 +3,10 @@
 import { useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
 import { CLIENT_TYPES } from '@/lib/constants/crm';
+import {
+  getAvailableFunnelContacts,
+  isFunnelClientFullyAdded,
+} from '@/lib/commercial-funnel/contacts';
 import { isClientInColdSection, isClientInMainList, isClientInWorkspace } from '@/lib/crm/utils';
 import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
@@ -11,13 +15,13 @@ import type { FunnelClientRef, FunnelClientSource } from '@/lib/types/commercial
 type FunnelPickerTab = 'cold' | 'main';
 
 interface FunnelClientPickerProps {
-  existingClientIds: Set<string>;
+  existingEntryKeys: Set<string>;
   onClose: () => void;
   onAdd: (refs: FunnelClientRef[]) => void;
 }
 
 export function FunnelClientPicker({
-  existingClientIds,
+  existingEntryKeys,
   onClose,
   onAdd,
 }: FunnelClientPickerProps) {
@@ -26,7 +30,7 @@ export function FunnelClientPicker({
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [activeTab, setActiveTab] = useState<FunnelPickerTab>('cold');
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedContactByClient, setSelectedContactByClient] = useState<Record<string, string>>({});
 
   const clientSource: FunnelClientSource = activeTab === 'main' ? 'main' : 'cold';
 
@@ -39,7 +43,7 @@ export function FunnelClientPicker({
           ? isClientInColdSection(client)
           : isClientInMainList(client)
       ))
-      .filter((client) => !existingClientIds.has(client.id))
+      .filter((client) => !isFunnelClientFullyAdded(client, existingEntryKeys))
       .filter((client) => !typeFilter || client.type === typeFilter)
       .filter((client) => {
         if (!query) return true;
@@ -48,32 +52,64 @@ export function FunnelClientPicker({
           client.type,
           client.owner,
           client.relationship,
-          ...client.contacts.flatMap((contact) => [contact.name, contact.email]),
+          ...client.contacts.flatMap((contact) => [contact.name, contact.email, contact.role]),
         ].some((value) => value.toLowerCase().includes(query));
       })
       .sort((a, b) => a.name.localeCompare(b.name, 'it'));
-  }, [activeTab, clients, existingClientIds, search, typeFilter, workspaceId]);
+  }, [activeTab, clients, existingEntryKeys, search, typeFilter, workspaceId]);
+
+  const selectedClientIds = useMemo(
+    () => new Set(Object.keys(selectedContactByClient)),
+    [selectedContactByClient],
+  );
 
   const toggleRow = (clientId: string): void => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(clientId)) next.delete(clientId);
-      else next.add(clientId);
-      return next;
+    setSelectedContactByClient((prev) => {
+      if (prev[clientId] !== undefined) {
+        const next = { ...prev };
+        delete next[clientId];
+        return next;
+      }
+      const client = clients.find((item) => item.id === clientId);
+      if (!client) return prev;
+      const availableContacts = getAvailableFunnelContacts(client, existingEntryKeys);
+      if (availableContacts.length === 0) return prev;
+      return {
+        ...prev,
+        [clientId]: availableContacts[0]?.id || '',
+      };
     });
   };
 
+  const updateContactSelection = (clientId: string, contactId: string): void => {
+    setSelectedContactByClient((prev) => ({
+      ...prev,
+      [clientId]: contactId,
+    }));
+  };
+
   const selectAllVisible = (): void => {
-    setSelectedIds(new Set(rows.map((row) => row.id)));
+    const next: Record<string, string> = {};
+    rows.forEach((client) => {
+      const availableContacts = getAvailableFunnelContacts(client, existingEntryKeys);
+      if (availableContacts.length === 0) return;
+      next[client.id] = availableContacts[0]?.id || '';
+    });
+    setSelectedContactByClient(next);
   };
 
   const handleTabChange = (tab: FunnelPickerTab): void => {
     setActiveTab(tab);
-    setSelectedIds(new Set());
+    setSelectedContactByClient({});
   };
 
   const handleSubmit = (): void => {
-    onAdd([...selectedIds].map((clientId) => ({ clientId, clientSource })));
+    const refs = Object.entries(selectedContactByClient).map(([clientId, contactId]) => ({
+      clientId,
+      contactId,
+      clientSource,
+    }));
+    onAdd(refs);
   };
 
   return (
@@ -103,7 +139,7 @@ export function FunnelClientPicker({
               <Search size={18} />
               <input
                 className="search-input"
-                placeholder="Cerca cliente..."
+                placeholder="Cerca cliente o contatto..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -124,34 +160,64 @@ export function FunnelClientPicker({
           </div>
           <p className="mail-picker-hint">
             {activeTab === 'cold'
-              ? 'Clienti freddi: se convertiti passano in Lista Clienti. Se persi restano nel funnel.'
-              : 'Lista clienti: il cliente resta sempre in Lista Clienti, anche se convertito o perso nella campagna.'}
+              ? 'Seleziona il cliente e associa il contatto di riferimento per questa campagna.'
+              : 'Seleziona il cliente dalla lista principale e scegli il contatto associato.'}
           </p>
           <div className="mail-picker-list">
             {rows.length === 0 ? (
               <p className="mail-campaigns-empty">Nessun cliente disponibile con i filtri attuali.</p>
             ) : (
-              rows.map((client) => (
-                <label
-                  key={client.id}
-                  className={`mail-picker-row${selectedIds.has(client.id) ? ' is-selected' : ''}`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.has(client.id)}
-                    onChange={() => toggleRow(client.id)}
-                  />
-                  <div className="mail-picker-row-body">
-                    <strong>{client.name}</strong>
-                    <span>{client.type} · {client.owner}</span>
-                    <small>
-                      {client.contacts.length > 0
-                        ? client.contacts.map((contact) => contact.email || contact.name).join(', ')
-                        : 'Nessun contatto'}
-                    </small>
+              rows.map((client) => {
+                const availableContacts = getAvailableFunnelContacts(client, existingEntryKeys);
+                const isSelected = selectedClientIds.has(client.id);
+                const selectedContactId = selectedContactByClient[client.id]
+                  ?? availableContacts[0]?.id
+                  ?? '';
+                return (
+                  <div
+                    key={client.id}
+                    className={`mail-picker-row funnel-picker-row${isSelected ? ' is-selected' : ''}`}
+                  >
+                    <label className="funnel-picker-row-main">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleRow(client.id)}
+                      />
+                      <div className="mail-picker-row-body">
+                        <strong>{client.name}</strong>
+                        <span>{client.type} · {client.owner}</span>
+                        <small>
+                          {client.contacts.length > 0
+                            ? `${client.contacts.length} contatti associati`
+                            : 'Nessun contatto strutturato'}
+                        </small>
+                      </div>
+                    </label>
+                    {isSelected && (
+                      <div className="funnel-picker-contact-select-wrap">
+                        <label className="funnel-picker-contact-label" htmlFor={`funnel-contact-${client.id}`}>
+                          Contatto
+                        </label>
+                        <select
+                          id={`funnel-contact-${client.id}`}
+                          className="form-select funnel-picker-contact-select"
+                          value={selectedContactId}
+                          onChange={(event) => updateContactSelection(client.id, event.target.value)}
+                        >
+                          {availableContacts.map((contact) => (
+                            <option key={contact.id || 'default'} value={contact.id}>
+                              {contact.name.trim() || client.name}
+                              {contact.email ? ` · ${contact.email}` : ''}
+                              {contact.role ? ` · ${contact.role}` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   </div>
-                </label>
-              ))
+                );
+              })
             )}
           </div>
         </div>
@@ -160,10 +226,10 @@ export function FunnelClientPicker({
           <button
             type="button"
             className="btn btn-primary"
-            disabled={selectedIds.size === 0}
+            disabled={selectedClientIds.size === 0}
             onClick={handleSubmit}
           >
-            Aggiungi {selectedIds.size} clienti
+            Aggiungi {selectedClientIds.size} {selectedClientIds.size === 1 ? 'cliente' : 'clienti'}
           </button>
         </div>
       </div>

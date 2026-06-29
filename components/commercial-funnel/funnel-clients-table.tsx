@@ -13,6 +13,10 @@ import {
   resolveFunnelSemaforo,
   resolveFunnelStatus,
 } from '@/lib/commercial-funnel/index';
+import {
+  buildFunnelEntryKey,
+  resolveFunnelContactLabel,
+} from '@/lib/commercial-funnel/contacts';
 import { DEFAULT_WORKSPACE_ID } from '@/lib/constants/workspaces';
 import { formatActionDateDisplay } from '@/lib/crm/utils';
 import { FUNNEL_ACTION_TYPES } from '@/lib/types/commercial-funnel';
@@ -54,8 +58,8 @@ export function FunnelClientsTable({
     [clients],
   );
 
-  const existingClientIds = useMemo(
-    () => new Set(entries.map((entry) => entry.clientId)),
+  const existingEntryKeys = useMemo(
+    () => new Set(entries.map((entry) => buildFunnelEntryKey(entry.clientId, entry.contactId))),
     [entries],
   );
 
@@ -185,6 +189,7 @@ export function FunnelClientsTable({
                 rows.map(({ entry, client, status, semaforo, isLost, isConverted, isLocked }) => {
                   const isExpanded = expandedEntries.has(entry.id);
                   const clientName = client?.name || 'Cliente non trovato';
+                  const contactLabel = resolveFunnelContactLabel(client, entry.contactId);
                   const displaySemaforo = isConverted ? 'green' : semaforo;
                   return (
                     <Fragment key={entry.id}>
@@ -205,8 +210,11 @@ export function FunnelClientsTable({
                               size={14}
                               className={`row-expand-icon${isExpanded ? ' is-expanded' : ''}`}
                             />
-                                <strong>{clientName}</strong>
-                                {entry.clientSource === 'main' && (
+                            <span className="funnel-client-toggle-text">
+                              <strong>{clientName}</strong>
+                              <small className="funnel-entry-contact">{contactLabel}</small>
+                            </span>
+                            {entry.clientSource === 'main' && (
                                   <span className="funnel-main-list-badge">Lista</span>
                                 )}
                                 {isLost && <span className="funnel-lost-badge">Perso</span>}
@@ -331,13 +339,18 @@ export function FunnelClientsTable({
                                   <span>Nessun contatto</span>
                                 ) : (
                                   <ul>
-                                    {client.contacts.map((contact) => (
-                                      <li key={contact.id}>
+                                    {client.contacts.map((contact) => {
+                                      const isLinked = contact.id === entry.contactId
+                                        || (!entry.contactId && client.contacts[0]?.id === contact.id);
+                                      return (
+                                      <li key={contact.id} className={isLinked ? 'is-linked-contact' : ''}>
                                         <strong>{contact.name || '—'}</strong>
                                         {contact.email ? ` · ${contact.email}` : ''}
                                         {contact.role ? ` · ${contact.role}` : ''}
+                                        {isLinked ? ' · collegato al funnel' : ''}
                                       </li>
-                                    ))}
+                                      );
+                                    })}
                                   </ul>
                                 )}
                               </div>
@@ -377,7 +390,7 @@ export function FunnelClientsTable({
       </div>
       {showPicker && (
         <FunnelClientPicker
-          existingClientIds={existingClientIds}
+          existingEntryKeys={existingEntryKeys}
           onClose={() => setShowPicker(false)}
           onAdd={(refs) => void addClientsToFunnel(campaignId, refs).then(() => setShowPicker(false))}
         />

@@ -6264,6 +6264,52 @@ body:has(.drawer.open) .jonny-chat-root {
     font-size: 0.8rem;
 }
 
+.funnel-picker-row {
+    flex-direction: column;
+    align-items: stretch;
+    cursor: default;
+}
+
+.funnel-picker-row-main {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    cursor: pointer;
+}
+
+.funnel-picker-contact-select-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border-color);
+}
+
+.funnel-picker-contact-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.funnel-picker-contact-select {
+    width: 100%;
+}
+
+.funnel-entry-contact {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    font-weight: 500;
+}
+
+.funnel-expanded-contacts li.is-linked-contact {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
 .client-detail-tabs {
     display: flex;
     gap: 8px;
@@ -6460,13 +6506,22 @@ body:has(.drawer.open) .jonny-chat-root {
 
 .funnel-client-toggle {
     display: inline-flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 6px;
     padding: 0;
     border: none;
     background: transparent;
     color: inherit;
     cursor: pointer;
+    text-align: left;
+}
+
+.funnel-client-toggle-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
     text-align: left;
 }
 

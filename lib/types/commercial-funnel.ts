@@ -21,6 +21,7 @@ export type FunnelClientSource = 'cold' | 'main';
 
 export interface FunnelClientRef {
   clientId: string;
+  contactId: string;
   clientSource: FunnelClientSource;
 }
 
@@ -29,6 +30,7 @@ export interface CommercialFunnelEntry {
   workspaceId: string;
   campaignId: string;
   clientId: string;
+  contactId: string;
   clientSource: FunnelClientSource;
   actions: FunnelActionSlot[];
   lostReason: string;

@@ -7,8 +7,8 @@ import {
   COLD_CLIENT_CATEGORIES,
   COLD_TABLE_COLUMN_ORDER,
   CRM_TABLE_COLUMN_DEFS,
-  OWNERS,
 } from '@/lib/constants/crm';
+import { getOwnersForWorkspace, resolveOwnerForWorkspace } from '@/lib/crm/owners';
 import {
   formatActionDateDisplay,
   formatCurrency,
@@ -66,6 +66,7 @@ export function ColdClientsSection() {
     enrichClientApollo,
   } = useCrm();
   const { workspaceId, activeWorkspace } = useWorkspace();
+  const workspaceOwners = useMemo(() => getOwnersForWorkspace(workspaceId), [workspaceId]);
   const [search, setSearch] = useState('');
   const [filterOwner, setFilterOwner] = useState('');
   const [sort, setSort] = useState<SortState>({ column: 'name', direction: 'asc' });
@@ -174,10 +175,10 @@ export function ColdClientsSection() {
           <td key={columnId}>
             <select
               className="table-cell-select"
-              value={client.owner}
+              value={resolveOwnerForWorkspace(client.owner, workspaceId)}
               onChange={(e) => void updateClientField(client.id, 'owner', e.target.value)}
             >
-              {OWNERS.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
+              {workspaceOwners.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
             </select>
           </td>
         );
@@ -333,7 +334,7 @@ export function ColdClientsSection() {
               <div className="filter-group">
                 <select className="filter-select" value={filterOwner} onChange={(e) => setFilterOwner(e.target.value)}>
                   <option value="">Tutti gli Owner</option>
-                  {OWNERS.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
+                  {workspaceOwners.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
                 </select>
               </div>
             </div>

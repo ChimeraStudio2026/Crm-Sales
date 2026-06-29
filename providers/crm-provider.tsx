@@ -31,7 +31,8 @@ import {
   isAnalysisYear,
   resolveOwnerFromEmail,
 } from '@/lib/constants/crm';
-import { DEFAULT_WORKSPACE_ID } from '@/lib/constants/workspaces';
+import { DEFAULT_WORKSPACE_ID, ICIB_WORKSPACE_ID } from '@/lib/constants/workspaces';
+import { getDefaultOwnerForWorkspace } from '@/lib/crm/owners';
 import { createDefaultForecasts, createEmptyForecastsByYear } from '@/lib/analysis/index';
 import type {
   MailCampaign,
@@ -704,7 +705,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
         workspaceId,
         name: input.name,
         type: input.type || 'Cliente Diretto',
-        owner: input.owner || 'Jeck',
+        owner: input.owner || getDefaultOwnerForWorkspace(workspaceId),
         clientOrigin: input.clientOrigin || '',
         relationship: input.relationship || 'Nuovo Cliente',
         manualRelationship: false,
@@ -746,7 +747,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
           workspaceId: DEFAULT_WORKSPACE_ID,
           name: input.name.trim(),
           type: input.type || 'Cliente Diretto',
-          owner: input.owner || 'Jeck',
+          owner: input.owner || getDefaultOwnerForWorkspace(DEFAULT_WORKSPACE_ID),
           clientOrigin: input.clientOrigin || '',
           relationship: input.relationship || 'Nuovo Cliente',
           manualRelationship: false,

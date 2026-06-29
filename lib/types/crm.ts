@@ -125,7 +125,7 @@ export type ClientType =
   | 'CDP'
   | 'Agenzia Eventi';
 
-export type Owner = 'Jeck' | 'Virgi' | 'Martina';
+export type Owner = 'Jeck' | 'Virgi' | 'Martina' | 'Vitto';
 
 export type ClientOrigin = 'Jeck' | 'Inbound' | 'Instagram' | 'Community' | 'Outbound';
 

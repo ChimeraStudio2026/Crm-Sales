@@ -10,7 +10,7 @@ import { formatActionDateDisplay } from '@/lib/crm/utils';
 import { CampaignNameCell } from '@/components/mail-campaigns/campaign-name-cell';
 import { CampaignTableActions } from '@/components/mail-campaigns/campaign-table-actions';
 import { MAIL_CAMPAIGN_STATUS_LABELS } from '@/lib/constants/mail-campaigns';
-import { OWNERS } from '@/lib/constants/crm';
+import { getOwnersForWorkspace, resolveOwnerForWorkspace } from '@/lib/crm/owners';
 import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
 import { TopHeader } from '@/components/layout/top-header';
@@ -30,6 +30,7 @@ export function CommercialFunnelSection() {
     deleteMailCampaignById,
   } = useCrm();
   const { workspaceId, activeWorkspace } = useWorkspace();
+  const workspaceOwners = useMemo(() => getOwnersForWorkspace(workspaceId), [workspaceId]);
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -235,14 +236,14 @@ export function CommercialFunnelSection() {
                       <td>
                         <select
                           className="table-cell-select"
-                          value={campaign.owner}
+                          value={resolveOwnerForWorkspace(campaign.owner, workspaceId)}
                           onChange={(event) => void handleOwnerChange(
                             campaign.id,
                             event.target.value as Owner | '',
                           )}
                         >
                           <option value="">—</option>
-                          {OWNERS.map((profile) => (
+                          {workspaceOwners.map((profile) => (
                             <option key={profile} value={profile}>{profile}</option>
                           ))}
                         </select>
@@ -310,7 +311,7 @@ export function CommercialFunnelSection() {
                       onChange={(event) => setOwner(event.target.value as Owner | '')}
                     >
                       <option value="">—</option>
-                      {OWNERS.map((profile) => (
+                      {workspaceOwners.map((profile) => (
                         <option key={profile} value={profile}>{profile}</option>
                       ))}
                     </select>

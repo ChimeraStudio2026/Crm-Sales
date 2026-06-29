@@ -1427,6 +1427,7 @@ body.crm-col-resizing {
 .cell-owner-jeck { --chip-color: #2563eb; --chip-fill: #dbeafe; }
 .cell-owner-virgi { --chip-color: #9333ea; --chip-fill: #f3e8ff; }
 .cell-owner-martina { --chip-color: #0d9488; --chip-fill: #ccfbf1; }
+.cell-owner-vitto { --chip-color: #ea580c; --chip-fill: #ffedd5; }
 
 /* Rapporto */
 .cell-rapporto-top20 { --chip-color: #ca8a04; --chip-fill: #fef9c3; }

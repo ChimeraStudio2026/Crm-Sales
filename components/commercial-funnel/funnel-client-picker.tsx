@@ -7,9 +7,8 @@ import {
   getAvailableFunnelContacts,
   isFunnelClientFullyAdded,
 } from '@/lib/commercial-funnel/contacts';
-import { isClientInColdSection, isClientInMainList, isClientInWorkspace } from '@/lib/crm/utils';
+import { isClientInColdSection, isClientInMainList } from '@/lib/crm/utils';
 import { useCrm } from '@/providers/crm-provider';
-import { useWorkspace } from '@/providers/workspace-provider';
 import type { FunnelClientRef, FunnelClientSource } from '@/lib/types/commercial-funnel';
 
 type FunnelPickerTab = 'cold' | 'main';
@@ -26,7 +25,6 @@ export function FunnelClientPicker({
   onAdd,
 }: FunnelClientPickerProps) {
   const { clients } = useCrm();
-  const { workspaceId } = useWorkspace();
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [activeTab, setActiveTab] = useState<FunnelPickerTab>('cold');
@@ -37,7 +35,6 @@ export function FunnelClientPicker({
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase();
     return clients
-      .filter((client) => isClientInWorkspace(client, workspaceId))
       .filter((client) => (
         activeTab === 'cold'
           ? isClientInColdSection(client)
@@ -56,7 +53,7 @@ export function FunnelClientPicker({
         ].some((value) => value.toLowerCase().includes(query));
       })
       .sort((a, b) => a.name.localeCompare(b.name, 'it'));
-  }, [activeTab, clients, existingEntryKeys, search, typeFilter, workspaceId]);
+  }, [activeTab, clients, existingEntryKeys, search, typeFilter]);
 
   const selectedClientIds = useMemo(
     () => new Set(Object.keys(selectedContactByClient)),

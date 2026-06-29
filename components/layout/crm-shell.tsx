@@ -4,7 +4,6 @@ import { ToastContainer } from '@/components/ui/toast-container';
 import { JonnyChat } from '@/components/jonny/jonny-chat';
 import { Sidebar } from '@/components/layout/sidebar';
 import { CrmProvider, useCrm } from '@/providers/crm-provider';
-import { WorkspaceProvider } from '@/providers/workspace-provider';
 
 interface CrmShellProps {
   children: React.ReactNode;
@@ -12,11 +11,9 @@ interface CrmShellProps {
 
 export function CrmShell({ children }: CrmShellProps) {
   return (
-    <WorkspaceProvider>
-      <CrmProvider>
-        <CrmShellInner>{children}</CrmShellInner>
-      </CrmProvider>
-    </WorkspaceProvider>
+    <CrmProvider>
+      <CrmShellInner>{children}</CrmShellInner>
+    </CrmProvider>
   );
 }
 

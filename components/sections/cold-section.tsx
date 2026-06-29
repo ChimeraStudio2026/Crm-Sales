@@ -7,18 +7,16 @@ import {
   COLD_CLIENT_CATEGORIES,
   COLD_TABLE_COLUMN_ORDER,
   CRM_TABLE_COLUMN_DEFS,
+  OWNERS,
 } from '@/lib/constants/crm';
-import { getOwnersForWorkspace, resolveOwnerForWorkspace } from '@/lib/crm/owners';
 import {
   formatActionDateDisplay,
   formatCurrency,
   isActionDateStale,
   isClientInColdSection,
-  isClientInWorkspace,
   shouldHighlightIncompleteClient,
 } from '@/lib/crm/utils';
 import { useCrm } from '@/providers/crm-provider';
-import { useWorkspace } from '@/providers/workspace-provider';
 import { ClientDrawer } from '@/components/drawers/client-drawer';
 import { ClientDetailPanel } from '@/components/clients/client-detail-panel';
 import { ClientOriginSelect } from '@/components/clients/client-origin-select';
@@ -65,8 +63,6 @@ export function ColdClientsSection() {
     updateClientProductOffers,
     enrichClientApollo,
   } = useCrm();
-  const { workspaceId, activeWorkspace } = useWorkspace();
-  const workspaceOwners = useMemo(() => getOwnersForWorkspace(workspaceId), [workspaceId]);
   const [search, setSearch] = useState('');
   const [filterOwner, setFilterOwner] = useState('');
   const [sort, setSort] = useState<SortState>({ column: 'name', direction: 'asc' });
@@ -81,7 +77,6 @@ export function ColdClientsSection() {
     const query = search.toLowerCase().trim();
     let list = clients.filter((client) => {
       if (!isClientInColdSection(client)) return false;
-      if (!isClientInWorkspace(client, workspaceId)) return false;
       const matchesQuery =
         !query ||
         client.name.toLowerCase().includes(query) ||
@@ -92,11 +87,9 @@ export function ColdClientsSection() {
       return matchesQuery && (!filterOwner || client.owner === filterOwner);
     });
     return sortClients(list, sort);
-  }, [clients, filterOwner, search, sort, workspaceId]);
+  }, [clients, filterOwner, search, sort]);
 
-  const totalCold = clients.filter(
-    (client) => isClientInColdSection(client) && isClientInWorkspace(client, workspaceId),
-  ).length;
+  const totalCold = clients.filter(isClientInColdSection).length;
   const columnCount = COLD_TABLE_COLUMN_ORDER.length;
 
   const handleSort = (column: string): void => {
@@ -175,10 +168,10 @@ export function ColdClientsSection() {
           <td key={columnId}>
             <select
               className="table-cell-select"
-              value={resolveOwnerForWorkspace(client.owner, workspaceId)}
+              value={client.owner}
               onChange={(e) => void updateClientField(client.id, 'owner', e.target.value)}
             >
-              {workspaceOwners.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
+              {OWNERS.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
             </select>
           </td>
         );
@@ -334,7 +327,7 @@ export function ColdClientsSection() {
               <div className="filter-group">
                 <select className="filter-select" value={filterOwner} onChange={(e) => setFilterOwner(e.target.value)}>
                   <option value="">Tutti gli Owner</option>
-                  {workspaceOwners.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
+                  {OWNERS.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
                 </select>
               </div>
             </div>
@@ -354,9 +347,8 @@ export function ColdClientsSection() {
             </div>
           </div>
           <p className="cold-section-hint">
-            Prospect <strong>{activeWorkspace.label}</strong> con cui non avete <strong>mai lavorato</strong>.
-            I clienti importati da OKR/Excel restano in Lista Clienti (Chimera).
-            Se imposti <strong>Fatturato 2026</strong> &gt; €1, il cliente passa alla lista principale del workspace.
+            Prospect con cui non avete <strong>mai lavorato</strong>. I clienti importati da OKR/Excel restano in Lista Clienti.
+            Se imposti <strong>Fatturato 2026</strong> &gt; €1, il cliente passa alla lista principale.
           </p>
           <div className="cold-clients-accordion">
             {COLD_CLIENT_CATEGORIES.map((category) => {
@@ -396,12 +388,7 @@ export function ColdClientsSection() {
         </section>
       </div>
       {drawerOpen && (
-        <ClientDrawer
-          client={editClient}
-          isCold
-          workspaceId={workspaceId}
-          onClose={() => setDrawerOpen(false)}
-        />
+        <ClientDrawer client={editClient} isCold onClose={() => setDrawerOpen(false)} />
       )}
     </>
   );

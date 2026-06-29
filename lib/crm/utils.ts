@@ -79,10 +79,6 @@ export function extractDomainFromEmail(email: string): string {
   return domain;
 }
 
-export function isClientInWorkspace(client: Client, workspaceId: string): boolean {
-  return (client.workspaceId || 'chimera') === workspaceId;
-}
-
 export function isClientInColdSection(client: Client): boolean {
   return client.isColdClient === true && client.relationship !== 'Eliminato';
 }

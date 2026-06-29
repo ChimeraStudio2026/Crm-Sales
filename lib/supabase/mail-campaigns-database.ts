@@ -1,5 +1,4 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { DEFAULT_WORKSPACE_ID } from '@/lib/constants/workspaces';
 import {
   embedCampaignOwnerInDescription,
   resolveCampaignOwner,
@@ -12,6 +11,8 @@ import type {
 } from '@/lib/types/mail-campaigns';
 
 let mailCampaignOwnerColumnAvailable: boolean | null = null;
+
+const CHIMERA_WORKSPACE_ID = 'chimera';
 
 function isMissingOwnerColumnError(error: { message?: string; code?: string }): boolean {
   const message = (error.message || '').toLowerCase();
@@ -42,7 +43,7 @@ function buildMailCampaignRows(
       : embedCampaignOwnerInDescription(campaign.description || '', campaign.owner || '');
     const row: Record<string, unknown> = {
       id: campaign.id,
-      workspace_id: campaign.workspaceId || DEFAULT_WORKSPACE_ID,
+      workspace_id: CHIMERA_WORKSPACE_ID,
       name: campaign.name,
       description,
       status: campaign.status,
@@ -57,7 +58,6 @@ function buildMailCampaignRows(
 
 interface MailCampaignRow {
   id: string;
-  workspace_id: string | null;
   name: string;
   description: string;
   status: string;
@@ -101,7 +101,6 @@ function rowToCampaign(row: MailCampaignRow): MailCampaign {
   );
   return {
     id: row.id,
-    workspaceId: row.workspace_id || DEFAULT_WORKSPACE_ID,
     name: row.name,
     description: resolved.description,
     status: row.status as MailCampaign['status'],

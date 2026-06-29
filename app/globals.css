@@ -326,39 +326,6 @@ input, select, textarea, button {
     gap: 12px;
 }
 
-.workspace-selector {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 10px;
-    background: var(--bg-subtle);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-}
-
-.workspace-selector-label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-}
-
-.workspace-selector-select {
-    border: none;
-    background: transparent;
-    color: var(--text-primary);
-    font-size: 0.8125rem;
-    font-weight: 600;
-    cursor: pointer;
-    padding: 0;
-    min-width: 120px;
-}
-
-.workspace-selector-badge {
-    display: none;
-}
-
 .quick-stats-badge {
     display: flex;
     align-items: center;
@@ -1427,7 +1394,6 @@ body.crm-col-resizing {
 .cell-owner-jeck { --chip-color: #2563eb; --chip-fill: #dbeafe; }
 .cell-owner-virgi { --chip-color: #9333ea; --chip-fill: #f3e8ff; }
 .cell-owner-martina { --chip-color: #0d9488; --chip-fill: #ccfbf1; }
-.cell-owner-vitto { --chip-color: #ea580c; --chip-fill: #ffedd5; }
 
 /* Rapporto */
 .cell-rapporto-top20 { --chip-color: #ca8a04; --chip-fill: #fef9c3; }

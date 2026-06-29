@@ -31,8 +31,6 @@ import {
   isAnalysisYear,
   resolveOwnerFromEmail,
 } from '@/lib/constants/crm';
-import { DEFAULT_WORKSPACE_ID, ICIB_WORKSPACE_ID } from '@/lib/constants/workspaces';
-import { getDefaultOwnerForWorkspace } from '@/lib/crm/owners';
 import { createDefaultForecasts, createEmptyForecastsByYear } from '@/lib/analysis/index';
 import type {
   MailCampaign,
@@ -157,7 +155,7 @@ interface CrmContextValue {
   toasts: ToastMessage[];
   dismissToast: (id: string) => void;
   refreshApolloStatus: () => Promise<void>;
-  saveClient: (client: Partial<Client> & { name: string }, options?: { isCold?: boolean; isEdit?: boolean; id?: string; workspaceId?: string }) => Promise<void>;
+  saveClient: (client: Partial<Client> & { name: string }, options?: { isCold?: boolean; isEdit?: boolean; id?: string }) => Promise<void>;
   saveClients: (clients: Array<Partial<Client> & { name: string }>, options?: { isCold?: boolean }) => Promise<void>;
   deleteClient: (clientId: string) => Promise<void>;
   updateClientField: (clientId: string, field: keyof Client, value: unknown) => Promise<void>;
@@ -665,11 +663,10 @@ export function CrmProvider({ children }: CrmProviderProps) {
 
   const saveClient = useCallback(async (
     input: Partial<Client> & { name: string },
-    options?: { isCold?: boolean; isEdit?: boolean; id?: string; workspaceId?: string },
+    options?: { isCold?: boolean; isEdit?: boolean; id?: string },
   ) => {
     const id = options?.id || input.id;
     const isCold = options?.isCold ?? false;
-    const workspaceId = options?.workspaceId || input.workspaceId || DEFAULT_WORKSPACE_ID;
     await mutateClients((prev) => {
       if (id) {
         return prev.map((c) => {
@@ -680,7 +677,6 @@ export function CrmProvider({ children }: CrmProviderProps) {
             ...c,
             ...restInput,
             id: c.id,
-            workspaceId: input.workspaceId || c.workspaceId || DEFAULT_WORKSPACE_ID,
             contacts: input.contacts ?? c.contacts,
             productOffers: input.productOffers ?? c.productOffers,
             manualRelationship: input.manualRelationship ?? c.manualRelationship,
@@ -702,10 +698,9 @@ export function CrmProvider({ children }: CrmProviderProps) {
       const trimmedAction = (input.action || '').trim();
       const newClient: Client = {
         id: createUniqueId('client'),
-        workspaceId,
         name: input.name,
         type: input.type || 'Cliente Diretto',
-        owner: input.owner || getDefaultOwnerForWorkspace(workspaceId),
+        owner: input.owner || 'Jeck',
         clientOrigin: input.clientOrigin || '',
         relationship: input.relationship || 'Nuovo Cliente',
         manualRelationship: false,
@@ -744,10 +739,9 @@ export function CrmProvider({ children }: CrmProviderProps) {
         const trimmedAction = (input.action || '').trim();
         const newClient: Client = {
           id: createUniqueId('client'),
-          workspaceId: DEFAULT_WORKSPACE_ID,
           name: input.name.trim(),
           type: input.type || 'Cliente Diretto',
-          owner: input.owner || getDefaultOwnerForWorkspace(DEFAULT_WORKSPACE_ID),
+          owner: input.owner || 'Jeck',
           clientOrigin: input.clientOrigin || '',
           relationship: input.relationship || 'Nuovo Cliente',
           manualRelationship: false,

@@ -11,14 +11,12 @@ import {
   RELATIONSHIPS,
   TOP_20_REV_THRESHOLD,
 } from '@/lib/constants/crm';
-import { DEFAULT_WORKSPACE_ID } from '@/lib/constants/workspaces';
 import {
   formatActionDateDisplay,
   formatCurrency,
   isActionDateStale,
   isClientInActiveSection,
   isClientInMainList,
-  isClientInWorkspace,
   shouldHighlightIncompleteClient,
 } from '@/lib/crm/utils';
 import { useCrm } from '@/providers/crm-provider';
@@ -103,11 +101,7 @@ export function ClientsSection() {
   );
 
   const incompleteCount = useMemo(
-    () => clients.filter(
-      (c) => isClientInActiveSection(c)
-        && isClientInWorkspace(c, DEFAULT_WORKSPACE_ID)
-        && shouldHighlightIncompleteClient(c),
-    ).length,
+    () => clients.filter((c) => isClientInActiveSection(c) && shouldHighlightIncompleteClient(c)).length,
     [clients],
   );
 
@@ -115,7 +109,6 @@ export function ClientsSection() {
     const query = search.toLowerCase().trim();
     let list = clients.filter((c) => {
       if (!isClientInMainList(c)) return false;
-      if (!isClientInWorkspace(c, DEFAULT_WORKSPACE_ID)) return false;
       if (filterIncomplete && !shouldHighlightIncompleteClient(c)) return false;
       const matchesQuery =
         !query ||
@@ -149,9 +142,7 @@ export function ClientsSection() {
     return list;
   }, [clients, filterIncomplete, filterOwner, filterRelationship, filterType, search, sort]);
 
-  const totalInList = clients.filter(
-    (c) => isClientInMainList(c) && isClientInWorkspace(c, DEFAULT_WORKSPACE_ID),
-  ).length;
+  const totalInList = clients.filter(isClientInMainList).length;
   const columnCount = tableColumnOrder.length;
 
   const handleSort = (column: string) => {

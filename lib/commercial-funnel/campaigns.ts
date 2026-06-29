@@ -1,4 +1,3 @@
-import { DEFAULT_WORKSPACE_ID } from '@/lib/constants/workspaces';
 import type { MailCampaign } from '@/lib/types/mail-campaigns';
 import type { Client } from '@/lib/types/crm';
 import type { CommercialFunnelEntry, FunnelBrandSearchResult } from '@/lib/types/commercial-funnel';
@@ -11,20 +10,6 @@ export interface FunnelCampaignDashboardRow {
   convertedCount: number;
   lostCount: number;
   redSemaforoCount: number;
-}
-
-export function filterCampaignsByWorkspace(
-  campaigns: MailCampaign[],
-  workspaceId: string,
-): MailCampaign[] {
-  return campaigns.filter((campaign) => (campaign.workspaceId || DEFAULT_WORKSPACE_ID) === workspaceId);
-}
-
-export function filterFunnelEntriesByWorkspace(
-  entries: CommercialFunnelEntry[],
-  workspaceId: string,
-): CommercialFunnelEntry[] {
-  return entries.filter((entry) => (entry.workspaceId || DEFAULT_WORKSPACE_ID) === workspaceId);
 }
 
 export function getFunnelEntriesForCampaign(
@@ -67,25 +52,15 @@ export function searchFunnelEntriesByBrandName(
   entries: CommercialFunnelEntry[],
   clients: Client[],
   campaigns: MailCampaign[],
-  workspaceId?: string,
 ): FunnelBrandSearchResult[] {
   const normalizedQuery = query.trim().toLowerCase();
   if (normalizedQuery.length < 2) return [];
-  const scopedEntries = workspaceId
-    ? filterFunnelEntriesByWorkspace(entries, workspaceId)
-    : entries;
-  const scopedCampaignIds = new Set(
-    (workspaceId ? filterCampaignsByWorkspace(campaigns, workspaceId) : campaigns)
-      .map((campaign) => campaign.id),
-  );
   const clientIds = new Set(
     clients
-      .filter((client) => !workspaceId || (client.workspaceId || DEFAULT_WORKSPACE_ID) === workspaceId)
       .filter((client) => client.name.toLowerCase().includes(normalizedQuery))
       .map((client) => client.id),
   );
-  return scopedEntries
-    .filter((entry) => scopedCampaignIds.has(entry.campaignId))
+  return entries
     .filter((entry) => clientIds.has(entry.clientId))
     .map((entry) => {
       const client = clients.find((item) => item.id === entry.clientId);

@@ -1,5 +1,4 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { DEFAULT_WORKSPACE_ID } from '@/lib/constants/workspaces';
 import { normalizeFunnelActions } from '@/lib/commercial-funnel/index';
 import type {
   CommercialFunnelEntry,
@@ -7,9 +6,10 @@ import type {
   FunnelClientSource,
 } from '@/lib/types/commercial-funnel';
 
+const CHIMERA_WORKSPACE_ID = 'chimera';
+
 interface CommercialFunnelEntryRow {
   id: string;
-  workspace_id: string | null;
   campaign_id: string;
   client_id: string;
   contact_id: string | null;
@@ -26,7 +26,6 @@ function normalizeClientSource(value: string | null | undefined): FunnelClientSo
 function rowToEntry(row: CommercialFunnelEntryRow): CommercialFunnelEntry {
   return {
     id: row.id,
-    workspaceId: row.workspace_id || DEFAULT_WORKSPACE_ID,
     campaignId: row.campaign_id,
     clientId: row.client_id,
     contactId: row.contact_id || '',
@@ -55,7 +54,7 @@ export async function persistCommercialFunnelEntries(
   if (entries.length === 0) return;
   const rows = entries.map((entry) => ({
     id: entry.id,
-    workspace_id: entry.workspaceId || DEFAULT_WORKSPACE_ID,
+    workspace_id: CHIMERA_WORKSPACE_ID,
     campaign_id: entry.campaignId,
     client_id: entry.clientId,
     contact_id: entry.contactId || '',
@@ -108,11 +107,10 @@ function resolveJoinedName(
 export async function searchCommercialFunnelByBrand(
   db: SupabaseClient,
   searchQuery: string,
-  workspaceId?: string,
 ): Promise<FunnelBrandSearchResult[]> {
   const query = searchQuery.trim();
   if (query.length < 2) return [];
-  let request = db
+  const { data, error } = await db
     .from('commercial_funnel_entries')
     .select(`
       id,
@@ -123,10 +121,6 @@ export async function searchCommercialFunnelByBrand(
       mail_campaigns!inner ( name )
     `)
     .ilike('clients.name', `%${query}%`);
-  if (workspaceId) {
-    request = request.eq('workspace_id', workspaceId);
-  }
-  const { data, error } = await request;
   if (error) throw error;
   return (data || []).map((row: FunnelBrandSearchRow) => ({
     entryId: row.id,

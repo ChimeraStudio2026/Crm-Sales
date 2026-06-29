@@ -1,15 +1,13 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { FunnelClientsTable } from '@/components/commercial-funnel/funnel-clients-table';
 import { getFunnelEntriesForCampaign } from '@/lib/commercial-funnel/campaigns';
 import { isFunnelTerminalConvertedEntry, isFunnelTerminalLost } from '@/lib/commercial-funnel/index';
-import { DEFAULT_WORKSPACE_ID, isWorkspaceId } from '@/lib/constants/workspaces';
 import { MAIL_CAMPAIGN_STATUS_LABELS } from '@/lib/constants/mail-campaigns';
 import { useCrm } from '@/providers/crm-provider';
-import { useWorkspace } from '@/providers/workspace-provider';
 import { TopHeader } from '@/components/layout/top-header';
 
 interface FunnelCampaignDetailSectionProps {
@@ -18,18 +16,8 @@ interface FunnelCampaignDetailSectionProps {
 
 export function FunnelCampaignDetailSection({ campaignId }: FunnelCampaignDetailSectionProps) {
   const { mailCampaigns, commercialFunnelEntries } = useCrm();
-  const { setWorkspaceId } = useWorkspace();
 
   const campaign = mailCampaigns.find((item) => item.id === campaignId);
-
-  useEffect(() => {
-    if (!campaign) return;
-    const campaignWorkspaceId = campaign.workspaceId || DEFAULT_WORKSPACE_ID;
-    if (isWorkspaceId(campaignWorkspaceId)) {
-      setWorkspaceId(campaignWorkspaceId);
-    }
-  }, [campaignId, campaign, setWorkspaceId]);
-
   const entries = useMemo(
     () => getFunnelEntriesForCampaign(commercialFunnelEntries, campaignId),
     [commercialFunnelEntries, campaignId],

@@ -4,7 +4,6 @@ import {
   EXCEL_IMPORT_ACTION_PREFIX,
   EXCEL_IMPORT_DESC_PREFIX,
 } from '@/lib/constants/crm';
-import { DEFAULT_WORKSPACE_ID } from '@/lib/constants/workspaces';
 import { resolveCanonicalClientBrandName } from '@/lib/crm/client-brand-aliases';
 import { getRevenueFieldForImportYear } from '@/lib/crm/excel';
 import { resolveClientProductOffers } from '@/lib/crm/product-offers';
@@ -76,7 +75,6 @@ export function mergeClientsWithExcelImport(
     if (existingIndex === -1) {
       merged.push({
         id: createUniqueId('client'),
-        workspaceId: DEFAULT_WORKSPACE_ID,
         name: imported.name,
         type: 'Cliente Diretto',
         owner: 'Jeck',

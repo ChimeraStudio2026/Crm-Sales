@@ -1,6 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { DEFAULT_WORKSPACE_ID } from '@/lib/constants/workspaces';
 import { createUniqueId } from '@/lib/crm/utils';
 import { getStepsForCampaign } from '@/lib/mail-campaigns/index';
 import type {
@@ -150,7 +149,6 @@ export function createMailCampaignActions(
     const existingCampaign = state.mailCampaigns.find((item) => item.id === campaignId);
     const campaign: MailCampaign = {
       id: campaignId,
-      workspaceId: input.workspaceId || existingCampaign?.workspaceId || DEFAULT_WORKSPACE_ID,
       name: input.name,
       description: input.description || '',
       status: input.status || 'Bozza',

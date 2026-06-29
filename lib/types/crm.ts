@@ -29,7 +29,6 @@ export interface TaskAttachment {
 
 export interface Client {
   id: string;
-  workspaceId: string;
   name: string;
   type: ClientType;
   owner: Owner;
@@ -125,7 +124,7 @@ export type ClientType =
   | 'CDP'
   | 'Agenzia Eventi';
 
-export type Owner = 'Jeck' | 'Virgi' | 'Martina' | 'Vitto';
+export type Owner = 'Jeck' | 'Virgi' | 'Martina';
 
 export type ClientOrigin = 'Jeck' | 'Inbound' | 'Instagram' | 'Community' | 'Outbound';
 

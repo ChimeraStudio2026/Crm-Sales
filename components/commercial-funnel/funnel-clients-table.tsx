@@ -192,7 +192,7 @@ export function FunnelClientsTable({
                         <td className="funnel-col-semaforo">
                           <span
                             className={`funnel-semaforo funnel-semaforo-${displaySemaforo}`}
-                            title={isConverted ? 'Convertito' : displaySemaforo === 'green' ? 'Nei tempi' : 'Fuori tempo'}
+                            title={isConverted ? 'Convertito' : displaySemaforo === 'green' ? 'Nei tempi (entro 5 giorni)' : 'Fuori tempo (oltre 5 giorni)'}
                           />
                         </td>
                         <td className="funnel-col-client">

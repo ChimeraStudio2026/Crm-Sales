@@ -10,7 +10,7 @@ import { FUNNEL_ACTION_TYPES } from '@/lib/types/commercial-funnel';
 
 export const FUNNEL_SLOT_COUNT = 5;
 
-export const FUNNEL_GAP_THRESHOLDS_DAYS = [7, 10, 14, 20] as const;
+export const FUNNEL_SEMAFORO_THRESHOLD_DAYS = 5;
 
 export function createEmptyFunnelActions(): FunnelActionSlot[] {
   return Array.from({ length: FUNNEL_SLOT_COUNT }, () => ({
@@ -82,9 +82,8 @@ export function resolveFunnelSemaforo(actions: FunnelActionSlot[], today = getTo
   if (lastIndex >= FUNNEL_SLOT_COUNT - 1) return 'green';
   const next = actions[lastIndex + 1];
   if (next.type && next.date) return 'green';
-  const threshold = FUNNEL_GAP_THRESHOLDS_DAYS[lastIndex] ?? 20;
   const elapsed = daysBetween(last.date, today);
-  return elapsed > threshold ? 'red' : 'green';
+  return elapsed >= FUNNEL_SEMAFORO_THRESHOLD_DAYS ? 'red' : 'green';
 }
 
 export function isFunnelTerminalLost(entry: CommercialFunnelEntry): boolean {

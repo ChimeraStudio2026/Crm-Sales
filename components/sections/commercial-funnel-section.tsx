@@ -171,7 +171,7 @@ export function CommercialFunnelSection() {
                           <td>
                             <span
                               className={`funnel-semaforo funnel-semaforo-${semaforo}`}
-                              title={semaforo === 'red' ? 'Fuori tempo' : 'In tempo'}
+                              title={semaforo === 'red' ? 'Fuori tempo (oltre 5 giorni)' : 'In tempo (entro 5 giorni)'}
                               aria-label={semaforo === 'red' ? 'Semaforo rosso' : 'Semaforo verde'}
                             />
                           </td>
@@ -246,8 +246,8 @@ export function CommercialFunnelSection() {
                         <span
                           className={`funnel-semaforo-count${redSemaforoCount > 0 ? ' has-red' : ''}`}
                           title={redSemaforoCount > 0
-                            ? `${redSemaforoCount} clienti fuori tempo sulla prossima azione`
-                            : 'Nessun cliente fuori tempo'}
+                            ? `${redSemaforoCount} clienti oltre 5 giorni senza prossima azione`
+                            : 'Nessun cliente oltre 5 giorni'}
                         >
                           <span
                             className={`funnel-semaforo ${redSemaforoCount > 0 ? 'funnel-semaforo-red' : 'funnel-semaforo-green'}`}

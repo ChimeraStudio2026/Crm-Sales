@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { UserPlus, X } from 'lucide-react';
 import type { ProductOfferId } from '@/lib/constants/product-offers';
 import { getDefaultProductOfferIds, resolveClientProductOffers } from '@/lib/crm/product-offers';
-import { createUniqueId, formatActionDateDisplay } from '@/lib/crm/utils';
+import { createUniqueId } from '@/lib/crm/utils';
 import { ProductOffersTags } from '@/components/clients/product-offers-tags';
 import { SoldProductsTags } from '@/components/clients/sold-products-tags';
 import { ClientMailCampaignsTab } from '@/components/mail-campaigns/client-mail-campaigns-tab';
@@ -16,7 +16,6 @@ type ClientDetailTab = 'overview' | 'campaigns';
 interface ClientDetailPanelProps {
   client: Client;
   onUpdateContacts: (contacts: ClientContact[]) => Promise<void>;
-  onUpdateAction: (action: string) => Promise<void>;
   onUpdateProductOffers: (offerIds: ProductOfferId[]) => Promise<void>;
 }
 
@@ -33,27 +32,17 @@ function createEmptyContact(): ClientContact {
 export function ClientDetailPanel({
   client,
   onUpdateContacts,
-  onUpdateAction,
   onUpdateProductOffers,
 }: ClientDetailPanelProps) {
   const { okrRecords } = useCrm();
   const [activeTab, setActiveTab] = useState<ClientDetailTab>('overview');
   const [contacts, setContacts] = useState<ClientContact[]>(client.contacts);
-  const [actionText, setActionText] = useState(client.action);
-  const saveActionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const enabledOfferIds = resolveClientProductOffers(client.type, client.productOffers);
 
   useEffect(() => {
     setContacts(client.contacts.length > 0 ? client.contacts : [createEmptyContact()]);
-    setActionText(client.action);
     setActiveTab('overview');
-  }, [client.id, client.contacts, client.action]);
-
-  useEffect(() => {
-    return () => {
-      if (saveActionTimerRef.current) clearTimeout(saveActionTimerRef.current);
-    };
-  }, []);
+  }, [client.id, client.contacts]);
 
   const persistContacts = async (nextContacts: ClientContact[]) => {
     const filtered = nextContacts.filter(
@@ -90,30 +79,6 @@ export function ClientDetailPanel({
     await onUpdateProductOffers(next);
   };
 
-  const scheduleActionSave = (value: string) => {
-    if (saveActionTimerRef.current) clearTimeout(saveActionTimerRef.current);
-    saveActionTimerRef.current = setTimeout(() => {
-      if (value.trim() !== (client.action || '').trim()) {
-        void onUpdateAction(value);
-      }
-    }, 600);
-  };
-
-  const handleActionChange = (value: string) => {
-    setActionText(value);
-    scheduleActionSave(value);
-  };
-
-  const handleActionBlur = () => {
-    if (saveActionTimerRef.current) {
-      clearTimeout(saveActionTimerRef.current);
-      saveActionTimerRef.current = null;
-    }
-    if (actionText.trim() !== (client.action || '').trim()) {
-      void onUpdateAction(actionText);
-    }
-  };
-
   return (
     <div className="client-detail-panel" onClick={(event) => event.stopPropagation()}>
       <div className="client-detail-tabs" role="tablist" aria-label="Sezioni scheda cliente">
@@ -147,23 +112,6 @@ export function ClientDetailPanel({
           onToggleOffer={handleToggleOffer}
         />
         <SoldProductsTags client={client} okrRecords={okrRecords} />
-      </div>
-      <div className="client-actions-panel">
-        <div className="client-actions-header">
-          <strong>Sezione azione</strong>
-          <span className="client-actions-hint">
-            Data azione: {formatActionDateDisplay(client.actionDate)}
-          </span>
-        </div>
-        <textarea
-          className="contact-field-input client-action-textarea"
-          value={actionText}
-          onChange={(event) => handleActionChange(event.target.value)}
-          onBlur={handleActionBlur}
-          rows={5}
-          placeholder="Descrivi l'azione svolta con questo cliente..."
-          aria-label="Azione cliente"
-        />
       </div>
       <div className="contacts-panel-section">
         <div className="contacts-panel-header">

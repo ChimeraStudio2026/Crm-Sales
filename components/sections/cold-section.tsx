@@ -292,7 +292,6 @@ export function ColdClientsSection() {
                         <ClientDetailPanel
                           client={client}
                           onUpdateContacts={(contacts) => updateClientContacts(client.id, contacts)}
-                          onUpdateAction={(action) => updateClientAction(client.id, action)}
                           onUpdateProductOffers={(offerIds) => updateClientProductOffers(client.id, offerIds)}
                         />
                       </td>

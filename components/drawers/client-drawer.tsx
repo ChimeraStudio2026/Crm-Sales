@@ -1,8 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Sparkles, X } from 'lucide-react';
-import { CLIENT_ORIGINS, CLIENT_TYPES, OWNERS, RELATIONSHIPS } from '@/lib/constants/crm';
+import { CLIENT_TYPES, RELATIONSHIPS } from '@/lib/constants/crm';
+import { DEFAULT_WORKSPACE_ID } from '@/lib/constants/workspaces';
+import {
+  getClientOriginsForWorkspace,
+  getDefaultOwnerForWorkspace,
+  getOwnersForWorkspace,
+} from '@/lib/crm/workspace-clients';
 import { createUniqueId } from '@/lib/crm/utils';
 import { useCrm } from '@/providers/crm-provider';
 import type { Client, ClientContact, Owner } from '@/lib/types/crm';
@@ -16,9 +22,18 @@ interface ClientDrawerProps {
 
 export function ClientDrawer({ client, isCold, workspaceId, onClose }: ClientDrawerProps) {
   const { saveClient, enrichClientApollo } = useCrm();
+  const resolvedWorkspaceId = workspaceId || DEFAULT_WORKSPACE_ID;
+  const availableOwners = useMemo(
+    () => getOwnersForWorkspace(resolvedWorkspaceId),
+    [resolvedWorkspaceId],
+  );
+  const availableOrigins = useMemo(
+    () => getClientOriginsForWorkspace(resolvedWorkspaceId),
+    [resolvedWorkspaceId],
+  );
   const [name, setName] = useState('');
   const [type, setType] = useState(CLIENT_TYPES[0]);
-  const [owner, setOwner] = useState<Owner>('Jeck');
+  const [owner, setOwner] = useState<Owner>(() => getDefaultOwnerForWorkspace(resolvedWorkspaceId));
   const [clientOrigin, setClientOrigin] = useState<Client['clientOrigin']>('');
   const [relationship, setRelationship] = useState<Client['relationship']>('Nuovo Cliente');
   const [rev2023, setRev2023] = useState(0);
@@ -36,7 +51,7 @@ export function ClientDrawer({ client, isCold, workspaceId, onClose }: ClientDra
     if (client) {
       setName(client.name);
       setType(client.type);
-      setOwner(client.owner);
+      setOwner(availableOwners.includes(client.owner) ? client.owner : availableOwners[0]);
       setClientOrigin(client.clientOrigin || '');
       setRelationship(client.relationship);
       setRev2023(client.rev2023);
@@ -48,8 +63,10 @@ export function ClientDrawer({ client, isCold, workspaceId, onClose }: ClientDra
       setContacts(client.contacts.length > 0 ? client.contacts : [
         { id: createUniqueId('contact'), email: '', name: '', role: '', phone: '' },
       ]);
+      return;
     }
-  }, [client]);
+    setOwner(getDefaultOwnerForWorkspace(resolvedWorkspaceId));
+  }, [availableOwners, client, resolvedWorkspaceId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,7 +122,7 @@ export function ClientDrawer({ client, isCold, workspaceId, onClose }: ClientDra
             <div className="form-group">
               <label htmlFor="form-owner">Owner</label>
               <select id="form-owner" className="form-select" value={owner} onChange={(e) => setOwner(e.target.value as Client['owner'])}>
-                {OWNERS.map((o) => <option key={o} value={o}>{o}</option>)}
+                {availableOwners.map((o) => <option key={o} value={o}>{o}</option>)}
               </select>
             </div>
             <div className="form-group">
@@ -117,7 +134,7 @@ export function ClientDrawer({ client, isCold, workspaceId, onClose }: ClientDra
                 onChange={(e) => setClientOrigin(e.target.value as Client['clientOrigin'])}
               >
                 <option value="">Seleziona origine</option>
-                {CLIENT_ORIGINS.map((origin) => <option key={origin} value={origin}>{origin}</option>)}
+                {availableOrigins.map((origin) => <option key={origin} value={origin}>{origin}</option>)}
               </select>
             </div>
             {!isCold && (

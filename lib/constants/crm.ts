@@ -15,7 +15,7 @@ export const EXCEL_REV_EPSILON = 0.005;
 
 export const OWNERS: Owner[] = ['Jeck', 'Virgi', 'Martina'];
 
-export const OWNER_ZOD_ENUM = ['Jeck', 'Virgi', 'Martina'] as const satisfies readonly Owner[];
+export const OWNER_ZOD_ENUM = ['Jeck', 'Virgi', 'Martina', 'Martino'] as const satisfies readonly Owner[];
 
 export function isOwner(value: unknown): value is Owner {
   return typeof value === 'string' && OWNERS.includes(value as Owner);
@@ -24,6 +24,7 @@ export function isOwner(value: unknown): value is Owner {
 export function resolveOwnerFromEmail(email: string | null | undefined): Owner | null {
   const normalizedEmail = (email || '').trim().toLowerCase();
   if (!normalizedEmail) return null;
+  if (normalizedEmail.includes('martino.ilacqua')) return 'Martino';
   if (normalizedEmail.includes('virginia.riva')) return 'Virgi';
   if (normalizedEmail.includes('martina.gavazzi')) return 'Martina';
   if (normalizedEmail.includes('jeck')) return 'Jeck';
@@ -52,6 +53,7 @@ export const CLIENT_ORIGIN_CHIP_CLASSES: Record<ClientOrigin, string> = {
   Instagram: 'cell-origin-instagram',
   Community: 'cell-origin-community',
   Outbound: 'cell-origin-outbound',
+  Martino: 'cell-origin-martino',
 };
 
 export const RELATIONSHIPS: Relationship[] = [

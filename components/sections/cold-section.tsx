@@ -7,8 +7,8 @@ import {
   COLD_CLIENT_CATEGORIES,
   COLD_TABLE_COLUMN_ORDER,
   CRM_TABLE_COLUMN_DEFS,
-  OWNERS,
 } from '@/lib/constants/crm';
+import { getOwnersForWorkspace } from '@/lib/crm/workspace-clients';
 import {
   formatActionDateDisplay,
   formatCurrency,
@@ -66,6 +66,7 @@ export function ColdClientsSection() {
     enrichClientApollo,
   } = useCrm();
   const { workspaceId } = useWorkspace();
+  const availableOwners = useMemo(() => getOwnersForWorkspace(workspaceId), [workspaceId]);
   const [search, setSearch] = useState('');
   const [filterOwner, setFilterOwner] = useState('');
   const [sort, setSort] = useState<SortState>({ column: 'name', direction: 'asc' });
@@ -178,7 +179,7 @@ export function ColdClientsSection() {
               value={client.owner}
               onChange={(e) => void updateClientField(client.id, 'owner', e.target.value)}
             >
-              {OWNERS.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
+              {availableOwners.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
             </select>
           </td>
         );
@@ -187,6 +188,7 @@ export function ColdClientsSection() {
           <td key={columnId} className={`cell-origin ${getClientOriginCellClass(client.clientOrigin)}`}>
             <ClientOriginSelect
               value={client.clientOrigin}
+              workspaceId={workspaceId}
               onChange={(value) => void updateClientField(client.id, 'clientOrigin', value)}
             />
           </td>
@@ -333,7 +335,7 @@ export function ColdClientsSection() {
               <div className="filter-group">
                 <select className="filter-select" value={filterOwner} onChange={(e) => setFilterOwner(e.target.value)}>
                   <option value="">Tutti gli Owner</option>
-                  {OWNERS.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
+                  {availableOwners.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
                 </select>
               </div>
             </div>

@@ -1444,6 +1444,7 @@ body.crm-col-resizing {
 .cell-origin-instagram { --chip-color: #db2777; --chip-fill: #fce7f3; }
 .cell-origin-community { --chip-color: #9333ea; --chip-fill: #f3e8ff; }
 .cell-origin-outbound { --chip-color: #ea580c; --chip-fill: #ffedd5; }
+.cell-origin-martino { --chip-color: #0d9488; --chip-fill: #ccfbf1; }
 
 .cold-action-cell {
     min-width: 240px;

@@ -124,7 +124,7 @@ export const CRM_TABLE_COLUMN_DEFS = {
   actions: { label: 'Azioni', sortKey: null, align: 'center' as const, defaultWidth: 100, minWidth: 90, noExpand: true, noSort: true },
 };
 
-export const MAIN_TABLE_HIDDEN_COLUMNS = new Set(['contacts', 'action', 'rev2023', 'rev2024']);
+export const MAIN_TABLE_HIDDEN_COLUMNS = new Set(['contacts', 'action', 'actionDate', 'rev2023', 'rev2024']);
 
 export const DEFAULT_TABLE_COLUMN_ORDER = Object.keys(CRM_TABLE_COLUMN_DEFS).filter(
   (columnId) => !MAIN_TABLE_HIDDEN_COLUMNS.has(columnId),
@@ -132,8 +132,6 @@ export const DEFAULT_TABLE_COLUMN_ORDER = Object.keys(CRM_TABLE_COLUMN_DEFS).fil
 
 export const COLD_TABLE_COLUMN_ORDER = DEFAULT_TABLE_COLUMN_ORDER.filter(
   (columnId) => columnId !== 'relationship',
-).flatMap(
-  (columnId) => (columnId === 'actionDate' ? ['action', columnId] : [columnId]),
 );
 
 export const ACTION_DATE_STALE_DAYS = 10;

@@ -12,9 +12,7 @@ import {
   TOP_20_REV_THRESHOLD,
 } from '@/lib/constants/crm';
 import {
-  formatActionDateDisplay,
   formatCurrency,
-  isActionDateStale,
   isClientInActiveSection,
   isClientInMainList,
   shouldHighlightIncompleteClient,
@@ -115,7 +113,6 @@ export function ClientsSection() {
       const matchesQuery =
         !query ||
         c.name.toLowerCase().includes(query) ||
-        c.action.toLowerCase().includes(query) ||
         c.contacts.some((ct) =>
           `${ct.name} ${ct.email} ${ct.role} ${ct.phone}`.toLowerCase().includes(query),
         );
@@ -250,22 +247,6 @@ export function ClientsSection() {
         return <td key={columnId} style={{ textAlign: 'right' }}>{formatCurrency(client.rev2024)}</td>;
       case 'rev2023':
         return <td key={columnId} style={{ textAlign: 'right' }}>{formatCurrency(client.rev2023)}</td>;
-      case 'actionDate': {
-        const isStale = isActionDateStale(client.actionDate);
-        return (
-          <td
-            key={columnId}
-            className="col-data-azione"
-            title={isStale ? 'Azione non aggiornata da oltre 10 giorni' : undefined}
-          >
-            {client.actionDate ? (
-              <span className={isStale ? 'table-cell-chip cell-date-stale' : undefined}>
-                {formatActionDateDisplay(client.actionDate)}
-              </span>
-            ) : '—'}
-          </td>
-        );
-      }
       case 'actions':
         return (
           <td key={columnId}>

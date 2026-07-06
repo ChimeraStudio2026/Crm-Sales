@@ -41,7 +41,6 @@ export function ClientDrawer({ client, isCold, workspaceId, onClose }: ClientDra
   const [rev2025, setRev2025] = useState(0);
   const [rev2026, setRev2026] = useState(0);
   const [description, setDescription] = useState('');
-  const [action, setAction] = useState('');
   const [contacts, setContacts] = useState<ClientContact[]>([
     { id: createUniqueId('contact'), email: '', name: '', role: '', phone: '' },
   ]);
@@ -59,7 +58,6 @@ export function ClientDrawer({ client, isCold, workspaceId, onClose }: ClientDra
       setRev2025(client.rev2025);
       setRev2026(client.rev2026);
       setDescription(client.description);
-      setAction(client.action);
       setContacts(client.contacts.length > 0 ? client.contacts : [
         { id: createUniqueId('contact'), email: '', name: '', role: '', phone: '' },
       ]);
@@ -85,7 +83,6 @@ export function ClientDrawer({ client, isCold, workspaceId, onClose }: ClientDra
           rev2025,
           rev2026,
           description,
-          action,
           contacts,
           manualRelationship: client?.manualRelationship ?? false,
         },
@@ -199,10 +196,6 @@ export function ClientDrawer({ client, isCold, workspaceId, onClose }: ClientDra
             <div className="form-group">
               <label htmlFor="form-relationship-note">Nota rapporto</label>
               <textarea id="form-relationship-note" className="form-textarea" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
-            </div>
-            <div className="form-group">
-              <label htmlFor="form-action">Azione Eseguita</label>
-              <input id="form-action" className="form-input" value={action} onChange={(e) => setAction(e.target.value)} />
             </div>
           </div>
           <div className="drawer-footer">

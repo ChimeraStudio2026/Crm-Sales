@@ -10,9 +10,7 @@ import {
 } from '@/lib/constants/crm';
 import { getOwnersForWorkspace } from '@/lib/crm/workspace-clients';
 import {
-  formatActionDateDisplay,
   formatCurrency,
-  isActionDateStale,
   isClientInColdSection,
   shouldHighlightIncompleteClient,
 } from '@/lib/crm/utils';
@@ -51,17 +49,12 @@ function sortClients(list: Client[], sort: SortState): Client[] {
   });
 }
 
-function getCommittedActionValue(target: EventTarget & HTMLInputElement): string {
-  return target.value.trim();
-}
-
 export function ColdClientsSection() {
   const {
     clients,
     deleteClient,
     updateClientField,
     updateClientContacts,
-    updateClientAction,
     updateClientProductOffers,
     enrichClientApollo,
   } = useCrm();
@@ -85,7 +78,6 @@ export function ColdClientsSection() {
       const matchesQuery =
         !query ||
         client.name.toLowerCase().includes(query) ||
-        client.action.toLowerCase().includes(query) ||
         client.contacts.some((contact) =>
           `${contact.name} ${contact.email} ${contact.role} ${contact.phone}`.toLowerCase().includes(query),
         );
@@ -150,7 +142,7 @@ export function ColdClientsSection() {
               />
               <strong>{client.name}</strong>
               {isDraft && (
-                <span className="client-draft-badge" title="Completa nome, tipologia, owner, origine e almeno un contatto con email. L'azione è opzionale.">
+                <span className="client-draft-badge" title="Completa nome, tipologia, owner, origine e almeno un contatto con email.">
                   <span className="client-draft-dot" aria-hidden="true" />
                   Bozza
                 </span>
@@ -197,40 +189,6 @@ export function ColdClientsSection() {
         return <td key={columnId} style={{ textAlign: 'right' }}>{formatCurrency(client.rev2026)}</td>;
       case 'rev2025':
         return <td key={columnId} style={{ textAlign: 'right' }}>{formatCurrency(client.rev2025)}</td>;
-      case 'action':
-        return (
-          <td key={columnId} className="cold-action-cell">
-            <input
-              className="cold-action-input"
-              defaultValue={client.action}
-              placeholder="Azione da fare..."
-              onBlur={(event) => {
-                const nextAction = getCommittedActionValue(event.currentTarget);
-                if (nextAction !== client.action) void updateClientAction(client.id, nextAction);
-              }}
-              onKeyDown={(event) => {
-                if (event.key !== 'Enter') return;
-                event.currentTarget.blur();
-              }}
-            />
-          </td>
-        );
-      case 'actionDate': {
-        const isStale = isActionDateStale(client.actionDate);
-        return (
-          <td
-            key={columnId}
-            className="col-data-azione"
-            title={isStale ? 'Azione non aggiornata da oltre 10 giorni' : undefined}
-          >
-            {client.actionDate ? (
-              <span className={isStale ? 'table-cell-chip cell-date-stale' : undefined}>
-                {formatActionDateDisplay(client.actionDate)}
-              </span>
-            ) : '—'}
-          </td>
-        );
-      }
       case 'actions':
         return (
           <td key={columnId}>

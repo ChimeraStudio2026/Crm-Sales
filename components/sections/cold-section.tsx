@@ -17,6 +17,8 @@ import {
   shouldHighlightIncompleteClient,
 } from '@/lib/crm/utils';
 import { useCrm } from '@/providers/crm-provider';
+import { useWorkspace } from '@/providers/workspace-provider';
+import { isClientInWorkspace } from '@/lib/crm/workspace-access';
 import { ClientDrawer } from '@/components/drawers/client-drawer';
 import { ClientDetailPanel } from '@/components/clients/client-detail-panel';
 import { ClientOriginSelect } from '@/components/clients/client-origin-select';
@@ -63,6 +65,7 @@ export function ColdClientsSection() {
     updateClientProductOffers,
     enrichClientApollo,
   } = useCrm();
+  const { workspaceId } = useWorkspace();
   const [search, setSearch] = useState('');
   const [filterOwner, setFilterOwner] = useState('');
   const [sort, setSort] = useState<SortState>({ column: 'name', direction: 'asc' });
@@ -77,6 +80,7 @@ export function ColdClientsSection() {
     const query = search.toLowerCase().trim();
     let list = clients.filter((client) => {
       if (!isClientInColdSection(client)) return false;
+      if (!isClientInWorkspace(client, workspaceId)) return false;
       const matchesQuery =
         !query ||
         client.name.toLowerCase().includes(query) ||
@@ -87,9 +91,12 @@ export function ColdClientsSection() {
       return matchesQuery && (!filterOwner || client.owner === filterOwner);
     });
     return sortClients(list, sort);
-  }, [clients, filterOwner, search, sort]);
+  }, [clients, filterOwner, search, sort, workspaceId]);
 
-  const totalCold = clients.filter(isClientInColdSection).length;
+  const totalCold = useMemo(
+    () => clients.filter((client) => isClientInColdSection(client) && isClientInWorkspace(client, workspaceId)).length,
+    [clients, workspaceId],
+  );
   const columnCount = COLD_TABLE_COLUMN_ORDER.length;
 
   const handleSort = (column: string): void => {
@@ -387,7 +394,7 @@ export function ColdClientsSection() {
         </section>
       </div>
       {drawerOpen && (
-        <ClientDrawer client={editClient} isCold onClose={() => setDrawerOpen(false)} />
+        <ClientDrawer client={editClient} isCold workspaceId={workspaceId} onClose={() => setDrawerOpen(false)} />
       )}
     </>
   );

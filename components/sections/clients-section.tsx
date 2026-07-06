@@ -19,6 +19,8 @@ import {
   isClientInMainList,
   shouldHighlightIncompleteClient,
 } from '@/lib/crm/utils';
+import { DEFAULT_WORKSPACE_ID } from '@/lib/constants/workspaces';
+import { isClientInWorkspace } from '@/lib/crm/workspace-access';
 import { useCrm } from '@/providers/crm-provider';
 import { ClientDrawer } from '@/components/drawers/client-drawer';
 import { BulkClientsDrawer } from '@/components/drawers/bulk-clients-drawer';
@@ -108,6 +110,7 @@ export function ClientsSection() {
     const query = search.toLowerCase().trim();
     let list = clients.filter((c) => {
       if (!isClientInMainList(c)) return false;
+      if (!isClientInWorkspace(c, DEFAULT_WORKSPACE_ID)) return false;
       if (filterIncomplete && !shouldHighlightIncompleteClient(c)) return false;
       const matchesQuery =
         !query ||
@@ -141,7 +144,7 @@ export function ClientsSection() {
     return list;
   }, [clients, filterIncomplete, filterOwner, filterRelationship, filterType, search, sort]);
 
-  const totalInList = clients.filter(isClientInMainList).length;
+  const totalInList = clients.filter((c) => isClientInMainList(c) && isClientInWorkspace(c, DEFAULT_WORKSPACE_ID)).length;
   const columnCount = tableColumnOrder.length;
 
   const handleSort = (column: string) => {

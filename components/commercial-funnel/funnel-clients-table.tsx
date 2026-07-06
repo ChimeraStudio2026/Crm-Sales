@@ -17,6 +17,7 @@ import {
   buildFunnelEntryKey,
   resolveFunnelContactLabel,
 } from '@/lib/commercial-funnel/contacts';
+import { filterCampaignsByWorkspace } from '@/lib/commercial-funnel/campaigns';
 import { formatActionDateDisplay } from '@/lib/crm/utils';
 import { FUNNEL_ACTION_TYPES } from '@/lib/types/commercial-funnel';
 import type { CommercialFunnelEntry, FunnelActionType } from '@/lib/types/commercial-funnel';
@@ -141,9 +142,15 @@ export function FunnelClientsTable({
   );
 
   const otherCampaigns = useMemo(
-    () => mailCampaigns
-      .filter((campaign) => campaign.id !== campaignId)
-      .sort((a, b) => a.name.localeCompare(b.name, 'it')),
+    () => {
+      const currentCampaign = mailCampaigns.find((item) => item.id === campaignId);
+      const workspaceCampaigns = currentCampaign
+        ? filterCampaignsByWorkspace(mailCampaigns, currentCampaign.workspaceId)
+        : mailCampaigns;
+      return workspaceCampaigns
+        .filter((campaign) => campaign.id !== campaignId)
+        .sort((a, b) => a.name.localeCompare(b.name, 'it'));
+    },
     [campaignId, mailCampaigns],
   );
 

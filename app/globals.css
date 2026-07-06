@@ -344,6 +344,42 @@ input, select, textarea, button {
     font-weight: 600;
 }
 
+.workspace-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+.workspace-selector-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.workspace-selector-select {
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    outline: none;
+}
+
+.workspace-selector-badge {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--accent-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
 /* ==========================================================================
    GLASS CARDS & METRICS
    ========================================================================== */

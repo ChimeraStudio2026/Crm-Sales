@@ -17,11 +17,11 @@ import { createDefaultForecasts, createEmptyForecastsByYear, parseOkrMonthNumber
 import { isClientOrigin } from '@/lib/crm/client-origin';
 import { resolveClientProductOffers } from '@/lib/crm/product-offers';
 import { parseFunctionInvokeError } from '@/lib/supabase/function-errors';
-
-const CHIMERA_WORKSPACE_ID = 'chimera';
+import { DEFAULT_WORKSPACE_ID } from '@/lib/constants/workspaces';
 
 interface ClientRow {
   id: string;
+  workspace_id: string | null;
   name: string;
   type: string;
   owner: string;
@@ -130,7 +130,7 @@ function clientToRow(client: Client, includeHistoricalRevenue: boolean): Record<
   );
   const row: Record<string, unknown> = {
     id: client.id,
-    workspace_id: CHIMERA_WORKSPACE_ID,
+    workspace_id: client.workspaceId || DEFAULT_WORKSPACE_ID,
     name: client.name,
     type: client.type || 'Cliente Diretto',
     owner: client.owner || 'Jeck',
@@ -160,6 +160,7 @@ function rowToClient(row: ClientRow): Client {
   const clientType = row.type as Client['type'];
   return {
     id: row.id,
+    workspaceId: row.workspace_id || DEFAULT_WORKSPACE_ID,
     name: row.name,
     type: clientType,
     owner: row.owner as Client['owner'],

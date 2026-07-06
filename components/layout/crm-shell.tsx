@@ -3,7 +3,9 @@
 import { ToastContainer } from '@/components/ui/toast-container';
 import { JonnyChat } from '@/components/jonny/jonny-chat';
 import { Sidebar } from '@/components/layout/sidebar';
+import { WorkspaceRouteGuard } from '@/components/layout/workspace-route-guard';
 import { CrmProvider, useCrm } from '@/providers/crm-provider';
+import { WorkspaceProvider } from '@/providers/workspace-provider';
 
 interface CrmShellProps {
   children: React.ReactNode;
@@ -11,9 +13,11 @@ interface CrmShellProps {
 
 export function CrmShell({ children }: CrmShellProps) {
   return (
-    <CrmProvider>
-      <CrmShellInner>{children}</CrmShellInner>
-    </CrmProvider>
+    <WorkspaceProvider>
+      <CrmProvider>
+        <CrmShellInner>{children}</CrmShellInner>
+      </CrmProvider>
+    </WorkspaceProvider>
   );
 }
 
@@ -34,7 +38,9 @@ function CrmShellInner({ children }: CrmShellProps) {
   return (
     <>
       <Sidebar />
-      <main className="main-content">{children}</main>
+      <main className="main-content">
+        <WorkspaceRouteGuard>{children}</WorkspaceRouteGuard>
+      </main>
       <JonnyChat />
       <ToastContainer />
     </>

@@ -2,6 +2,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createEmptyFunnelActions } from '@/lib/commercial-funnel/index';
 import { buildFunnelEntryKey } from '@/lib/commercial-funnel/contacts';
+import { DEFAULT_WORKSPACE_ID } from '@/lib/constants/workspaces';
 import { createUniqueId } from '@/lib/crm/utils';
 import {
   deleteCommercialFunnelEntry,
@@ -46,10 +47,13 @@ export function createCommercialFunnelActions(
         .filter((entry) => entry.campaignId === campaignId)
         .map((entry) => buildFunnelEntryKey(entry.clientId, entry.contactId)),
     );
+    const campaign = deps.getCampaignById(campaignId);
+    const workspaceId = campaign?.workspaceId || DEFAULT_WORKSPACE_ID;
     const newEntries: CommercialFunnelEntry[] = clientRefs
       .filter((ref) => !existingKeys.has(buildFunnelEntryKey(ref.clientId, ref.contactId)))
       .map((ref) => ({
         id: createUniqueId('funnel-entry'),
+        workspaceId,
         campaignId,
         clientId: ref.clientId,
         contactId: ref.contactId || '',
@@ -151,9 +155,12 @@ export function createCommercialFunnelActions(
       deps.showToast('Questo contatto è già presente nella campagna di destinazione.', 'warning');
       return;
     }
+    const targetCampaign = deps.getCampaignById(targetCampaignId);
+    const workspaceId = targetCampaign?.workspaceId || entry.workspaceId || DEFAULT_WORKSPACE_ID;
     const nextEntry: CommercialFunnelEntry = {
       ...entry,
       campaignId: targetCampaignId,
+      workspaceId,
     };
     await applyEntries(state.map((item) => (item.id === entryId ? nextEntry : item)));
     deps.showToast('Cliente spostato nella nuova campagna.', 'success');

@@ -4,8 +4,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { OWNERS } from '@/lib/constants/crm';
 import { createUniqueId, getTodayString, isClientInActiveSection, isClientInColdSection } from '@/lib/crm/utils';
+import { isClientInWorkspace } from '@/lib/crm/workspace-access';
 import { ClientSearchSelect } from '@/components/clients/client-search-select';
 import { useCrm } from '@/providers/crm-provider';
+import { useWorkspace } from '@/providers/workspace-provider';
 import type { Idea, IdeaStatus, Owner, TaskSubtask } from '@/lib/types/crm';
 
 const TASK_STATUSES: { status: IdeaStatus; label: string }[] = [
@@ -41,6 +43,7 @@ export function TaskFormDrawer({
   onCreated,
 }: TaskFormDrawerProps) {
   const { clients, currentOwner, saveIdea } = useCrm();
+  const { workspaceId } = useWorkspace();
   const [name, setName] = useState('');
   const [clientId, setClientId] = useState('');
   const [status, setStatus] = useState<IdeaStatus>('Da fare');
@@ -53,15 +56,15 @@ export function TaskFormDrawer({
 
   const activeClients = useMemo(
     () => clients
-      .filter((client) => isClientInActiveSection(client))
+      .filter((client) => isClientInActiveSection(client) && isClientInWorkspace(client, workspaceId))
       .sort((a, b) => a.name.localeCompare(b.name, 'it')),
-    [clients],
+    [clients, workspaceId],
   );
   const coldClients = useMemo(
     () => clients
-      .filter((client) => isClientInColdSection(client))
+      .filter((client) => isClientInColdSection(client) && isClientInWorkspace(client, workspaceId))
       .sort((a, b) => a.name.localeCompare(b.name, 'it')),
-    [clients],
+    [clients, workspaceId],
   );
 
   useEffect(() => {

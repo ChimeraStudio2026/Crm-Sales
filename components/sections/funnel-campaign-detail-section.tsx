@@ -7,7 +7,9 @@ import { FunnelClientsTable } from '@/components/commercial-funnel/funnel-client
 import { getFunnelEntriesForCampaign } from '@/lib/commercial-funnel/campaigns';
 import { isFunnelTerminalConvertedEntry, isFunnelTerminalLost } from '@/lib/commercial-funnel/index';
 import { MAIL_CAMPAIGN_STATUS_LABELS } from '@/lib/constants/mail-campaigns';
+import { filterCampaignsByWorkspace } from '@/lib/commercial-funnel/campaigns';
 import { useCrm } from '@/providers/crm-provider';
+import { useWorkspace } from '@/providers/workspace-provider';
 import { TopHeader } from '@/components/layout/top-header';
 
 interface FunnelCampaignDetailSectionProps {
@@ -16,8 +18,12 @@ interface FunnelCampaignDetailSectionProps {
 
 export function FunnelCampaignDetailSection({ campaignId }: FunnelCampaignDetailSectionProps) {
   const { mailCampaigns, commercialFunnelEntries } = useCrm();
+  const { workspaceId } = useWorkspace();
 
   const campaign = mailCampaigns.find((item) => item.id === campaignId);
+  const isCampaignInWorkspace = campaign
+    ? filterCampaignsByWorkspace([campaign], workspaceId).length > 0
+    : false;
   const entries = useMemo(
     () => getFunnelEntriesForCampaign(commercialFunnelEntries, campaignId),
     [commercialFunnelEntries, campaignId],
@@ -34,7 +40,7 @@ export function FunnelCampaignDetailSection({ campaignId }: FunnelCampaignDetail
     };
   }, [entries]);
 
-  if (!campaign) {
+  if (!campaign || !isCampaignInWorkspace) {
     return (
       <>
         <TopHeader />

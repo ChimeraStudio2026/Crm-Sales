@@ -10,10 +10,11 @@ import type { Client, ClientContact, Owner } from '@/lib/types/crm';
 interface ClientDrawerProps {
   client: Client | null;
   isCold: boolean;
+  workspaceId?: string;
   onClose: () => void;
 }
 
-export function ClientDrawer({ client, isCold, onClose }: ClientDrawerProps) {
+export function ClientDrawer({ client, isCold, workspaceId, onClose }: ClientDrawerProps) {
   const { saveClient, enrichClientApollo } = useCrm();
   const [name, setName] = useState('');
   const [type, setType] = useState(CLIENT_TYPES[0]);
@@ -71,7 +72,7 @@ export function ClientDrawer({ client, isCold, onClose }: ClientDrawerProps) {
           contacts,
           manualRelationship: client?.manualRelationship ?? false,
         },
-        { isEdit: !!client, id: client?.id, isCold },
+        { isEdit: !!client, id: client?.id, isCold, workspaceId },
       );
       onClose();
     } finally {

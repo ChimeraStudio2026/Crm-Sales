@@ -1,5 +1,10 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import {
+  isPathAllowedForTinytoast,
+  isTinytoastUserEmail,
+  resolveWorkspaceAccess,
+} from '@/lib/crm/workspace-access';
 
 type CookieToSet = { name: string; value: string; options?: CookieOptions };
 
@@ -43,7 +48,13 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   }
   if (user && request.nextUrl.pathname === '/login') {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = '/analysis';
+    redirectUrl.pathname = resolveWorkspaceAccess(user.email).homePath;
+    redirectUrl.search = '';
+    return NextResponse.redirect(redirectUrl);
+  }
+  if (user && isTinytoastUserEmail(user.email) && !isPathAllowedForTinytoast(request.nextUrl.pathname)) {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = '/funnel';
     redirectUrl.search = '';
     return NextResponse.redirect(redirectUrl);
   }

@@ -4,7 +4,9 @@ import { useMemo, useRef, useState } from 'react';
 import { ChevronRight, Download, Paperclip, Plus, PlusCircle, Search, Trash2 } from 'lucide-react';
 import { createUniqueId, getTodayString } from '@/lib/crm/utils';
 import { isIdeaTaskInTodaySection, isIdeaTaskOverdue, sortIdeasForTodaySection } from '@/lib/tasks/index';
+import { isClientInWorkspace } from '@/lib/crm/workspace-access';
 import { useCrm } from '@/providers/crm-provider';
+import { useWorkspace } from '@/providers/workspace-provider';
 import { TaskFormDrawer } from '@/components/tasks/task-form-drawer';
 import { TopHeader } from '@/components/layout/top-header';
 import type { Idea, IdeaStatus, TaskSubtask } from '@/lib/types/crm';
@@ -37,6 +39,7 @@ export function IdeasSection() {
     downloadTaskAttachment,
     removeTaskAttachment,
   } = useCrm();
+  const { workspaceId } = useWorkspace();
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<TaskViewMode>('list');
   const [excludedTaskStatuses, setExcludedTaskStatuses] = useState<IdeaStatus[]>([]);
@@ -64,6 +67,7 @@ export function IdeasSection() {
     return excludeTasksByStatus(
       allTasks.filter((task) => {
         const client = clients.find((item) => item.id === task.clientId);
+        if (client && !isClientInWorkspace(client, workspaceId)) return false;
         const clientName = client?.name.toLowerCase() || '';
         const matchesOwner = !currentOwner || task.assignees.includes(currentOwner);
         const matchesQuery = !query ||
@@ -75,7 +79,7 @@ export function IdeasSection() {
       }),
       excludedStatusSet,
     );
-  }, [allTasks, clients, currentOwner, search, excludedStatusSet]);
+  }, [allTasks, clients, currentOwner, search, excludedStatusSet, workspaceId]);
 
   const visibleKanbanColumns = useMemo(
     () => COLUMNS.filter((column) => !excludedStatusSet.has(column.status)),

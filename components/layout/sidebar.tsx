@@ -20,8 +20,10 @@ import {
 import { useEffect, useState } from 'react';
 import { CrmLogo } from '@/components/ui/crm-logo';
 import { NAV_ITEMS } from '@/lib/constants/crm';
+import { getNavItemsForAccess } from '@/lib/crm/workspace-access';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { useUiPreferences } from '@/providers/ui-preferences-provider';
+import { useWorkspace } from '@/providers/workspace-provider';
 
 const ICON_MAP: Record<string, LucideIcon> = {
   BarChart3,
@@ -40,6 +42,8 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { logoDesktopSize } = useUiPreferences();
+  const { access } = useWorkspace();
+  const navItems = getNavItemsForAccess(access);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string>('');
   const [isDesktopViewport, setIsDesktopViewport] = useState(false);
@@ -94,7 +98,7 @@ export function Sidebar() {
         </div>
         <div className="sidebar-nav-label">Navigazione</div>
         <ul className="sidebar-menu">
-          {NAV_ITEMS.map((item) => {
+          {navItems.map((item) => {
             const Icon = ICON_MAP[item.icon];
             const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
@@ -111,7 +115,7 @@ export function Sidebar() {
           <div className="user-avatar">{userEmail ? userEmail[0].toUpperCase() : 'A'}</div>
           <div className="user-info">
             <span className="user-name">{userEmail || 'Utente'}</span>
-            <span className="user-role">Sales Team</span>
+            <span className="user-role">{access.navMode === 'tinytoast' ? 'Tinytoast' : 'Sales Team'}</span>
           </div>
           <button type="button" className="sidebar-signout" onClick={() => void handleSignOut()} title="Esci">
             <LogOut size={18} />

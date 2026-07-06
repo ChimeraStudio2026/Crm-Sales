@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { GitBranch, Plus, Search } from 'lucide-react';
-import { buildFunnelCampaignDashboardRow, searchFunnelEntriesByBrandName } from '@/lib/commercial-funnel/campaigns';
+import { buildFunnelCampaignDashboardRow, filterCampaignsByWorkspace, filterFunnelEntriesByWorkspace, searchFunnelEntriesByBrandName } from '@/lib/commercial-funnel/campaigns';
 import { resolveFunnelSemaforo, resolveFunnelStatus } from '@/lib/commercial-funnel/index';
 import { formatActionDateDisplay } from '@/lib/crm/utils';
 import { CampaignNameCell } from '@/components/mail-campaigns/campaign-name-cell';
@@ -12,6 +12,7 @@ import { CampaignTableActions } from '@/components/mail-campaigns/campaign-table
 import { MAIL_CAMPAIGN_STATUS_LABELS } from '@/lib/constants/mail-campaigns';
 import { OWNERS } from '@/lib/constants/crm';
 import { useCrm } from '@/providers/crm-provider';
+import { useWorkspace } from '@/providers/workspace-provider';
 import { TopHeader } from '@/components/layout/top-header';
 import type { MailCampaignStatus } from '@/lib/types/mail-campaigns';
 import type { Owner } from '@/lib/types/crm';
@@ -28,6 +29,7 @@ export function CommercialFunnelSection() {
     updateMailCampaignOwner,
     deleteMailCampaignById,
   } = useCrm();
+  const { workspaceId } = useWorkspace();
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -37,22 +39,32 @@ export function CommercialFunnelSection() {
   const [owner, setOwner] = useState<Owner | ''>('');
   const [brandSearch, setBrandSearch] = useState('');
 
+  const scopedCampaigns = useMemo(
+    () => filterCampaignsByWorkspace(mailCampaigns, workspaceId),
+    [mailCampaigns, workspaceId],
+  );
+  const scopedEntries = useMemo(
+    () => filterFunnelEntriesByWorkspace(commercialFunnelEntries, workspaceId),
+    [commercialFunnelEntries, workspaceId],
+  );
+
   const rows = useMemo(
-    () => mailCampaigns.map((campaign) => buildFunnelCampaignDashboardRow(
+    () => scopedCampaigns.map((campaign) => buildFunnelCampaignDashboardRow(
       campaign,
-      commercialFunnelEntries,
+      scopedEntries,
     )),
-    [mailCampaigns, commercialFunnelEntries],
+    [scopedCampaigns, scopedEntries],
   );
 
   const brandSearchResults = useMemo(
     () => searchFunnelEntriesByBrandName(
       brandSearch,
-      commercialFunnelEntries,
+      scopedEntries,
       clients,
-      mailCampaigns,
+      scopedCampaigns,
+      workspaceId,
     ),
-    [brandSearch, clients, commercialFunnelEntries, mailCampaigns],
+    [brandSearch, clients, scopedEntries, scopedCampaigns, workspaceId],
   );
 
   const filteredRows = useMemo(() => {
@@ -66,6 +78,7 @@ export function CommercialFunnelSection() {
   const handleCreate = async (event: React.FormEvent): Promise<void> => {
     event.preventDefault();
     const campaignId = await saveMailCampaign({
+      workspaceId,
       name,
       description,
       status,

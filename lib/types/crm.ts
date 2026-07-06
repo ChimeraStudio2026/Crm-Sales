@@ -29,6 +29,7 @@ export interface TaskAttachment {
 
 export interface Client {
   id: string;
+  workspaceId: string;
   name: string;
   type: ClientType;
   owner: Owner;

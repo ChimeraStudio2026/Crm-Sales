@@ -4,6 +4,8 @@ export const FUNNEL_ACTION_TYPES = [
   'Call',
   'Instagram',
   'Messaggio',
+  'Fissato appuntamento',
+  'Riscrivere',
   'Quotazione richiesta',
   'Convertito',
   'Perso',

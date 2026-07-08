@@ -26,7 +26,7 @@ export function createCrmTools(db: SupabaseClient) {
       inputSchema: z.object({
         query: z.string().optional().describe('Testo da cercare nel nome cliente'),
         relationship: z
-          .enum(['Nuovo Cliente', 'Ricorrente', 'Top 20%', 'Perso', 'Eliminato'])
+          .enum(['Nuovo Cliente', 'Ricorrente', 'Top 20%', 'Da recuperare', 'Perso', 'Eliminato'])
           .optional(),
         owner: z.enum(OWNER_ZOD_ENUM).optional(),
         limit: z.number().int().min(1).max(8).optional(),

@@ -51,6 +51,7 @@ const RELATIONSHIP_LABELS: Record<Relationship, string> = {
   'Nuovo Cliente': '⭐ Nuovo Cliente',
   Ricorrente: '⭐⭐ Ricorrente',
   'Top 20%': '⭐⭐⭐ Top 20%',
+  'Da recuperare': '🟡 Da recuperare',
   Perso: '🟠 Perso',
   Eliminato: '🔴 Eliminato',
 };
@@ -284,7 +285,7 @@ export function ClientsSection() {
               <strong>⭐⭐⭐</strong> Top 20% · oltre {formatCurrency(TOP_20_REV_THRESHOLD)}
             </span>
             <span className="recall-legend-item">
-              🟠 Perso · 🔴 Eliminato · solo manuali
+              🟡 Da recuperare · 🟠 Perso · 🔴 Eliminato · solo manuali
             </span>
           </div>
           <div className="table-filter-bar">

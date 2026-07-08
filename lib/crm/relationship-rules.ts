@@ -7,6 +7,7 @@ export const RELATIONSHIP_INDEX: Record<Relationship, number | null> = {
   'Nuovo Cliente': 1,
   Ricorrente: 2,
   'Top 20%': 3,
+  'Da recuperare': null,
   Perso: null,
   Eliminato: null,
 };
@@ -15,12 +16,13 @@ export const RELATIONSHIP_STARS: Record<Relationship, string> = {
   'Nuovo Cliente': '⭐',
   Ricorrente: '⭐⭐',
   'Top 20%': '⭐⭐⭐',
+  'Da recuperare': '—',
   Perso: '—',
   Eliminato: '—',
 };
 
 export function isManualOnlyRelationship(relationship: Relationship): boolean {
-  return relationship === 'Perso' || relationship === 'Eliminato';
+  return relationship === 'Da recuperare' || relationship === 'Perso' || relationship === 'Eliminato';
 }
 
 export function resolveAutoRelationship(revenue2026: number): Relationship {

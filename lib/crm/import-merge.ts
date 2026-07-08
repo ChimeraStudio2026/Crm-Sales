@@ -109,7 +109,6 @@ export function mergeClientsWithExcelImport(
     existing.isColdClient = false;
     if (
       existing.relationship !== 'Da recuperare'
-      && existing.relationship !== 'Perso'
       && existing.relationship !== 'Eliminato'
     ) {
       existing.manualRelationship = false;

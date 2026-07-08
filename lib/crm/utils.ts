@@ -1,6 +1,6 @@
 import type { Client, ClientContact } from '@/lib/types/crm';
 import { ACTION_DATE_STALE_DAYS, COLD_CLIENT_REV_THRESHOLD, DEFAULT_ACTION_DATE, EXCEL_IMPORT_ACTION_PREFIX } from '@/lib/constants/crm';
-import { applyAutoRelationships } from '@/lib/crm/relationship-rules';
+import { applyAutoRelationships, normalizeStoredRelationship } from '@/lib/crm/relationship-rules';
 import { normalizeClientProductOffers } from '@/lib/crm/product-offers';
 
 export function createUniqueId(prefix: string): string {
@@ -246,6 +246,10 @@ export function normalizeClients(clients: Client[]): Client[] {
     normalized.rev2026 = Number(normalized.rev2026) || 0;
     if (normalized.clientOrigin === undefined) {
       normalized.clientOrigin = '';
+    }
+    normalized.relationship = normalizeStoredRelationship(normalized.relationship || 'Nuovo Cliente');
+    if (normalized.relationship === 'Da recuperare' || normalized.relationship === 'Eliminato') {
+      normalized.manualRelationship = true;
     }
     normalizeClientContacts(normalized);
     normalizeClientProductOffers(normalized);

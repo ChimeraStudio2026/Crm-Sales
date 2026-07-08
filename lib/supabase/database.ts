@@ -15,6 +15,7 @@ import type {
 import { ANALYSIS_YEAR, isOwner } from '@/lib/constants/crm';
 import { createDefaultForecasts, createEmptyForecastsByYear, parseOkrMonthNumber } from '@/lib/analysis/index';
 import { isClientOrigin } from '@/lib/crm/client-origin';
+import { normalizeStoredRelationship } from '@/lib/crm/relationship-rules';
 import { resolveClientProductOffers } from '@/lib/crm/product-offers';
 import { parseFunctionInvokeError } from '@/lib/supabase/function-errors';
 import { DEFAULT_WORKSPACE_ID } from '@/lib/constants/workspaces';
@@ -135,7 +136,7 @@ function clientToRow(client: Client, includeHistoricalRevenue: boolean): Record<
     type: client.type || 'Cliente Diretto',
     owner: client.owner || 'Jeck',
     client_origin: client.clientOrigin || '',
-    relationship: client.relationship || 'Nuovo Cliente',
+    relationship: normalizeStoredRelationship(client.relationship || 'Nuovo Cliente'),
     manual_relationship: !!client.manualRelationship,
     rev_2025: Number(client.rev2025) || 0,
     rev_2026: Number(client.rev2026) || 0,
@@ -165,7 +166,7 @@ function rowToClient(row: ClientRow): Client {
     type: clientType,
     owner: row.owner as Client['owner'],
     clientOrigin: isClientOrigin(row.client_origin) ? row.client_origin : '',
-    relationship: row.relationship as Client['relationship'],
+    relationship: normalizeStoredRelationship(row.relationship || 'Nuovo Cliente'),
     manualRelationship: row.manual_relationship,
     rev2023: Number(row.rev_2023) || 0,
     rev2024: Number(row.rev_2024) || 0,

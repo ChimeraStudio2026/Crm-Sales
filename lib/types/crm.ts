@@ -134,7 +134,6 @@ export type Relationship =
   | 'Ricorrente'
   | 'Top 20%'
   | 'Da recuperare'
-  | 'Perso'
   | 'Eliminato';
 
 export type IdeaCategory = 'Content' | 'Mini prod' | 'Evento' | 'Prod';

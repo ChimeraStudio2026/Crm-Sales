@@ -50,7 +50,6 @@ function getEligibleRecallClientsByRelationship(
       isClientInActiveSection(c) &&
       c.relationship === relationship &&
       c.relationship !== 'Da recuperare' &&
-      c.relationship !== 'Perso' &&
       c.relationship !== 'Eliminato' &&
       !excludeIds.has(c.id),
   );

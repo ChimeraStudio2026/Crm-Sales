@@ -1,5 +1,5 @@
 import type { Client, Relationship } from '@/lib/types/crm';
-import { RECURRENT_REV_THRESHOLD, TOP_20_REV_THRESHOLD } from '@/lib/constants/crm';
+import { RECURRENT_REV_THRESHOLD, RELATIONSHIPS, TOP_20_REV_THRESHOLD } from '@/lib/constants/crm';
 
 export { RECURRENT_REV_THRESHOLD, TOP_20_REV_THRESHOLD } from '@/lib/constants/crm';
 
@@ -8,7 +8,6 @@ export const RELATIONSHIP_INDEX: Record<Relationship, number | null> = {
   Ricorrente: 2,
   'Top 20%': 3,
   'Da recuperare': null,
-  Perso: null,
   Eliminato: null,
 };
 
@@ -17,12 +16,19 @@ export const RELATIONSHIP_STARS: Record<Relationship, string> = {
   Ricorrente: '⭐⭐',
   'Top 20%': '⭐⭐⭐',
   'Da recuperare': '—',
-  Perso: '—',
   Eliminato: '—',
 };
 
+export function normalizeStoredRelationship(value: string): Relationship {
+  if (value === 'Perso') return 'Da recuperare';
+  if ((RELATIONSHIPS as readonly string[]).includes(value)) {
+    return value as Relationship;
+  }
+  return 'Nuovo Cliente';
+}
+
 export function isManualOnlyRelationship(relationship: Relationship): boolean {
-  return relationship === 'Da recuperare' || relationship === 'Perso' || relationship === 'Eliminato';
+  return relationship === 'Da recuperare' || relationship === 'Eliminato';
 }
 
 export function resolveAutoRelationship(revenue2026: number): Relationship {

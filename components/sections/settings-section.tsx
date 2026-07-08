@@ -185,7 +185,7 @@ export function SettingsSection() {
                 • <strong>Indice 1 — Nuovo Cliente:</strong> fatturato 2026 da €0 a €10.000<br />
                 • <strong>Indice 2 — Ricorrente:</strong> fatturato 2026 da €10.000 a €30.000<br />
                 • <strong>Indice 3 — Top 20%:</strong> fatturato 2026 oltre €30.000<br />
-                • <strong>Da recuperare</strong>, <strong>Perso</strong> e <strong>Eliminato:</strong> solo impostazione manuale<br />
+                • <strong>Da recuperare</strong> e <strong>Eliminato:</strong> solo impostazione manuale<br />
                 • Puoi cambiare il rapporto a mano dalla lista clienti; resta bloccato finché non lo modifichi di nuovo
               </p>
             </div>

@@ -37,6 +37,20 @@ function rowToEntry(row: CommercialFunnelEntryRow): CommercialFunnelEntry {
   };
 }
 
+function entryToRow(entry: CommercialFunnelEntry): Record<string, unknown> {
+  return {
+    id: entry.id,
+    workspace_id: entry.workspaceId || DEFAULT_WORKSPACE_ID,
+    campaign_id: entry.campaignId,
+    client_id: entry.clientId,
+    contact_id: entry.contactId || '',
+    client_source: entry.clientSource,
+    actions: entry.actions,
+    lost_reason: entry.lostReason || '',
+    updated_at: new Date().toISOString(),
+  };
+}
+
 export async function fetchCommercialFunnelEntries(
   db: SupabaseClient,
 ): Promise<CommercialFunnelEntry[]> {
@@ -53,18 +67,18 @@ export async function persistCommercialFunnelEntries(
   entries: CommercialFunnelEntry[],
 ): Promise<void> {
   if (entries.length === 0) return;
-  const rows = entries.map((entry) => ({
-    id: entry.id,
-    workspace_id: entry.workspaceId || DEFAULT_WORKSPACE_ID,
-    campaign_id: entry.campaignId,
-    client_id: entry.clientId,
-    contact_id: entry.contactId || '',
-    client_source: entry.clientSource,
-    actions: entry.actions,
-    lost_reason: entry.lostReason || '',
-    updated_at: new Date().toISOString(),
-  }));
+  const rows = entries.map((entry) => entryToRow(entry));
   const { error } = await db.from('commercial_funnel_entries').upsert(rows, { onConflict: 'id' });
+  if (error) throw error;
+}
+
+export async function persistSingleCommercialFunnelEntry(
+  db: SupabaseClient,
+  entry: CommercialFunnelEntry,
+): Promise<void> {
+  const { error } = await db
+    .from('commercial_funnel_entries')
+    .upsert(entryToRow(entry), { onConflict: 'id' });
   if (error) throw error;
 }
 

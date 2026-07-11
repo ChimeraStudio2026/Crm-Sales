@@ -1,71 +1,94 @@
-import { getTodayString } from '@/lib/crm/utils';
 import type {
   CommercialFunnelEntry,
   FunnelActionSlot,
   FunnelActionType,
   FunnelRowStatus,
   FunnelSemaforoState,
+  FunnelStage,
 } from '@/lib/types/commercial-funnel';
 import { FUNNEL_ACTION_TYPES } from '@/lib/types/commercial-funnel';
-
-export const FUNNEL_SLOT_COUNT = 5;
+import { getTodayString } from '@/lib/crm/utils';
+import {
+  computeFunnelStage,
+  getLastFilledActionIndex,
+  isFunnelActionType,
+  resolveFunnelStageDisplay,
+  sanitizeFunnelActionSlot,
+} from '@/lib/commercial-funnel/stage';
 
 export const FUNNEL_SEMAFORO_THRESHOLD_DAYS = 5;
 
-export function createEmptyFunnelActions(): FunnelActionSlot[] {
-  return Array.from({ length: FUNNEL_SLOT_COUNT }, () => ({
+export {
+  advanceFunnelStage,
+  computeFunnelStage,
+  isFunnelActionType,
+  isTerminalFunnelStage,
+  normalizeFunnelStage,
+  resolveFunnelStageDisplay,
+  resolveStageFromActionType,
+  withComputedStage,
+} from '@/lib/commercial-funnel/stage';
+
+export function createEmptyFunnelActionSlot(): FunnelActionSlot {
+  return {
     type: '',
     date: '',
     note: '',
     taskIds: [],
-  }));
+  };
+}
+
+export function isEmptyFunnelActionSlot(slot: FunnelActionSlot): boolean {
+  return !slot.type && !slot.date && !slot.note && slot.taskIds.length === 0;
+}
+
+export function compactFunnelActions(actions: FunnelActionSlot[]): FunnelActionSlot[] {
+  return actions.filter((slot) => !isEmptyFunnelActionSlot(slot));
+}
+
+export function getDisplayFunnelActions(
+  actions: FunnelActionSlot[],
+  canAppendEmptySlot = true,
+): FunnelActionSlot[] {
+  const compact = compactFunnelActions(actions);
+  if (compact.length === 0) return [createEmptyFunnelActionSlot()];
+  if (!canAppendEmptySlot) return compact;
+  const last = compact[compact.length - 1];
+  if (last.type) return [...compact, createEmptyFunnelActionSlot()];
+  return compact;
 }
 
 export function normalizeFunnelActions(value: unknown): FunnelActionSlot[] {
-  const empty = createEmptyFunnelActions();
-  if (!Array.isArray(value)) return empty;
-  return empty.map((slot, index) => {
-    const item = value[index];
-    if (!item || typeof item !== 'object') return slot;
-    const record = item as Partial<FunnelActionSlot>;
-    const type = typeof record.type === 'string' ? record.type : '';
-    const date = typeof record.date === 'string' ? record.date : '';
-    const note = typeof record.note === 'string' ? record.note : '';
-    const taskIds = Array.isArray(record.taskIds)
-      ? record.taskIds.filter((id): id is string => typeof id === 'string')
-      : [];
-    return {
-      type: isFunnelActionType(type) ? type : '',
-      date,
-      note,
-      taskIds,
-    };
-  });
+  if (!Array.isArray(value)) return [];
+  return compactFunnelActions(
+    value
+      .filter((item): item is Partial<FunnelActionSlot> => Boolean(item) && typeof item === 'object')
+      .map((item) => sanitizeFunnelActionSlot(item)),
+  );
 }
 
-export function isFunnelActionType(value: string): value is FunnelActionType {
-  return (FUNNEL_ACTION_TYPES as readonly string[]).includes(value);
+export function ensureActionSlot(actions: FunnelActionSlot[], slotIndex: number): FunnelActionSlot[] {
+  const next = [...actions];
+  while (next.length <= slotIndex) {
+    next.push(createEmptyFunnelActionSlot());
+  }
+  return next;
 }
 
-function daysBetween(fromDate: string, toDate: string): number {
-  const from = new Date(`${fromDate}T00:00:00`);
-  const to = new Date(`${toDate}T00:00:00`);
-  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) return 0;
-  return Math.floor((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24));
+export function finalizeFunnelActions(
+  actions: FunnelActionSlot[],
+  canAppendEmptySlot = true,
+): FunnelActionSlot[] {
+  const compact = compactFunnelActions(actions);
+  if (!canAppendEmptySlot) return compact;
+  return getDisplayFunnelActions(compact, true);
 }
 
-export function getLastFilledActionIndex(actions: FunnelActionSlot[]): number {
-  let lastIndex = -1;
-  actions.forEach((action, index) => {
-    if (action.type && action.date) lastIndex = index;
-  });
-  return lastIndex;
-}
-
+/** @deprecated Use resolveFunnelStageDisplay(entry) with persisted stage instead. */
 export function resolveFunnelStatus(actions: FunnelActionSlot[]): FunnelRowStatus {
   const lastIndex = getLastFilledActionIndex(actions);
   if (lastIndex < 0) {
-    return { label: 'In attesa Azione 1', date: '' };
+    return { label: 'In contatto', date: '' };
   }
   const last = actions[lastIndex];
   return {
@@ -79,25 +102,62 @@ export function resolveFunnelSemaforo(actions: FunnelActionSlot[], today = getTo
   if (lastIndex < 0) return 'green';
   const last = actions[lastIndex];
   if (last.type === 'Convertito' || last.type === 'Perso') return 'green';
-  if (lastIndex >= FUNNEL_SLOT_COUNT - 1) return 'green';
-  const next = actions[lastIndex + 1];
-  if (next.type && next.date) return 'green';
   const elapsed = daysBetween(last.date, today);
   return elapsed >= FUNNEL_SEMAFORO_THRESHOLD_DAYS ? 'red' : 'green';
 }
 
-export function isFunnelTerminalLost(entry: CommercialFunnelEntry): boolean {
-  return entry.actions.some((action) => action.type === 'Perso');
+function daysBetween(fromDate: string, toDate: string): number {
+  const from = new Date(`${fromDate}T00:00:00`);
+  const to = new Date(`${toDate}T00:00:00`);
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) return 0;
+  return Math.floor((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-export function isFunnelTerminalConverted(actions: FunnelActionSlot[]): boolean {
-  return actions.some((action) => action.type === 'Convertito');
+export function isFunnelTerminalLost(entry: CommercialFunnelEntry): boolean {
+  return entry.stage === 'Perso';
 }
 
 export function isFunnelTerminalConvertedEntry(entry: CommercialFunnelEntry): boolean {
-  return isFunnelTerminalConverted(entry.actions);
+  return entry.stage === 'Convertito';
 }
 
 export function isFunnelActionLocked(entry: CommercialFunnelEntry): boolean {
   return isFunnelTerminalLost(entry) || isFunnelTerminalConvertedEntry(entry);
 }
+
+export function getMaxDisplayActionColumns(entries: CommercialFunnelEntry[]): number {
+  if (entries.length === 0) return 1;
+  return entries.reduce((maxColumns, entry) => {
+    const canAppend = !isFunnelActionLocked(entry);
+    const columnCount = getDisplayFunnelActions(entry.actions, canAppend).length;
+    return Math.max(maxColumns, columnCount);
+  }, 1);
+}
+
+export function padDisplayActions(
+  actions: FunnelActionSlot[],
+  columnCount: number,
+  canAppendEmptySlot = true,
+): FunnelActionSlot[] {
+  const display = getDisplayFunnelActions(actions, canAppendEmptySlot);
+  const padded = [...display];
+  while (padded.length < columnCount) {
+    padded.push(createEmptyFunnelActionSlot());
+  }
+  return padded;
+}
+
+export function buildPersistedFunnelEntry(entry: CommercialFunnelEntry): CommercialFunnelEntry {
+  const canAppend = !isFunnelActionLocked(entry);
+  const actions = compactFunnelActions(entry.actions);
+  const stage = computeFunnelStage({ actions, lostReason: entry.lostReason });
+  return {
+    ...entry,
+    actions,
+    stage,
+  };
+}
+
+export type { FunnelActionType, FunnelStage };
+
+export { FUNNEL_ACTION_TYPES };

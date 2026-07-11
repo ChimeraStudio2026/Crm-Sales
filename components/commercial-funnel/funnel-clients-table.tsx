@@ -6,12 +6,13 @@ import { FunnelActionNoteBlock } from '@/components/commercial-funnel/funnel-act
 import { FunnelClientPicker } from '@/components/commercial-funnel/funnel-client-picker';
 import { FunnelPersoModal } from '@/components/commercial-funnel/funnel-perso-modal';
 import {
-  FUNNEL_SLOT_COUNT,
+  getMaxDisplayActionColumns,
   isFunnelActionLocked,
   isFunnelTerminalLost,
   isFunnelTerminalConvertedEntry,
+  padDisplayActions,
   resolveFunnelSemaforo,
-  resolveFunnelStatus,
+  resolveFunnelStageDisplay,
 } from '@/lib/commercial-funnel/index';
 import {
   buildFunnelEntryKey,
@@ -82,23 +83,33 @@ export function FunnelClientsTable({
     [entries],
   );
 
+  const maxActionColumns = useMemo(
+    () => getMaxDisplayActionColumns(entries),
+    [entries],
+  );
+
   const rows = useMemo(
     () => entries
       .map((entry) => ({
         entry,
         client: clientById.get(entry.clientId),
-        status: resolveFunnelStatus(entry.actions),
+        status: resolveFunnelStageDisplay(entry),
         semaforo: resolveFunnelSemaforo(entry.actions),
         isLost: isFunnelTerminalLost(entry),
         isConverted: isFunnelTerminalConvertedEntry(entry),
         isLocked: isFunnelActionLocked(entry),
+        displayActions: padDisplayActions(
+          entry.actions,
+          maxActionColumns,
+          !isFunnelActionLocked(entry),
+        ),
       }))
       .sort((a, b) => {
         const nameA = a.client?.name || '';
         const nameB = b.client?.name || '';
         return nameA.localeCompare(nameB, 'it');
       }),
-    [entries, clientById],
+    [entries, clientById, maxActionColumns],
   );
 
   const toggleExpanded = (entryId: string): void => {
@@ -196,7 +207,7 @@ export function FunnelClientsTable({
                 <th className="funnel-col-client">Cliente</th>
                 <th className="funnel-col-owner">Owner</th>
                 <th className="funnel-col-status">Status</th>
-                {Array.from({ length: FUNNEL_SLOT_COUNT }, (_, index) => (
+                {Array.from({ length: maxActionColumns }, (_, index) => (
                   <th key={`action-header-${index}`} className="funnel-col-action">
                     Azione {index + 1}
                   </th>
@@ -207,12 +218,12 @@ export function FunnelClientsTable({
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={FUNNEL_SLOT_COUNT + 5} className="mail-campaigns-empty">
+                  <td colSpan={maxActionColumns + 5} className="mail-campaigns-empty">
                     Nessun cliente in questa campagna. Usa + per aggiungere clienti freddi.
                   </td>
                 </tr>
               ) : (
-                rows.map(({ entry, client, status, semaforo, isLost, isConverted, isLocked }) => {
+                rows.map(({ entry, client, status, semaforo, isLost, isConverted, isLocked, displayActions }) => {
                   const isExpanded = expandedEntries.has(entry.id);
                   const clientName = client?.name || 'Cliente non trovato';
                   const contactLabel = resolveFunnelContactLabel(client, entry.contactId);
@@ -273,7 +284,7 @@ export function FunnelClientsTable({
                             )}
                           </div>
                         </td>
-                        {entry.actions.map((action, slotIndex) => (
+                        {displayActions.map((action, slotIndex) => (
                           <td key={`${entry.id}-action-${slotIndex}`} className="funnel-col-action">
                             <div className="funnel-action-cell">
                               <select
@@ -371,7 +382,7 @@ export function FunnelClientsTable({
                       </tr>
                       {isExpanded && client && (
                         <tr className="funnel-row-expanded">
-                          <td colSpan={FUNNEL_SLOT_COUNT + 5}>
+                          <td colSpan={maxActionColumns + 5}>
                             <div className="funnel-expanded-body">
                               <div className="funnel-expanded-block">
                                 <span className="funnel-expanded-label">Tipo cliente</span>
@@ -408,15 +419,17 @@ export function FunnelClientsTable({
                                 <span className="funnel-expanded-label">Note azioni</span>
                                 <div className="funnel-action-notes-grid">
                                   {entry.actions.map((action, slotIndex) => (
-                                    <FunnelActionNoteBlock
-                                      key={`${entry.id}-note-${slotIndex}`}
-                                      entryId={entry.id}
-                                      slotIndex={slotIndex}
-                                      action={action}
-                                      clientId={entry.clientId}
-                                      defaultAssignee={isOwner(displayOwner) ? displayOwner : client.owner}
-                                      isLocked={isLocked && action.type !== 'Perso'}
-                                    />
+                                    action.type ? (
+                                      <FunnelActionNoteBlock
+                                        key={`${entry.id}-note-${slotIndex}`}
+                                        entryId={entry.id}
+                                        slotIndex={slotIndex}
+                                        action={action}
+                                        clientId={entry.clientId}
+                                        defaultAssignee={isOwner(displayOwner) ? displayOwner : client.owner}
+                                        isLocked={isLocked && action.type !== 'Perso'}
+                                      />
+                                    ) : null
                                   ))}
                                 </div>
                               </div>

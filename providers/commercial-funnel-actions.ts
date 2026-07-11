@@ -1,6 +1,12 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { createEmptyFunnelActions } from '@/lib/commercial-funnel/index';
+import {
+  buildPersistedFunnelEntry,
+  createEmptyFunnelActionSlot,
+  ensureActionSlot,
+  finalizeFunnelActions,
+  isFunnelActionLocked,
+} from '@/lib/commercial-funnel/index';
 import { buildFunnelEntryKey } from '@/lib/commercial-funnel/contacts';
 import { DEFAULT_WORKSPACE_ID } from '@/lib/constants/workspaces';
 import { isOwner } from '@/lib/constants/crm';
@@ -22,6 +28,10 @@ interface CommercialFunnelPersistDeps {
   showToast: (message: string, type?: 'info' | 'success' | 'warning' | 'danger') => void;
   getCampaignById: (campaignId: string) => MailCampaign | undefined;
   getClientById: (clientId: string) => Client | undefined;
+}
+
+function persistableEntry(entry: CommercialFunnelEntry): CommercialFunnelEntry {
+  return buildPersistedFunnelEntry(entry);
 }
 
 export function createCommercialFunnelActions(
@@ -87,7 +97,7 @@ export function createCommercialFunnelActions(
       const workspaceId = campaign?.workspaceId || DEFAULT_WORKSPACE_ID;
       const newEntries: CommercialFunnelEntry[] = clientRefs
         .filter((ref) => !existingKeys.has(buildFunnelEntryKey(ref.clientId, ref.contactId)))
-        .map((ref) => ({
+        .map((ref) => persistableEntry({
           id: createUniqueId('funnel-entry'),
           workspaceId,
           campaignId,
@@ -95,7 +105,8 @@ export function createCommercialFunnelActions(
           contactId: ref.contactId || '',
           clientSource: ref.clientSource,
           owner: resolveEntryOwner(ref.clientId, campaign, workspaceId),
-          actions: createEmptyFunnelActions(),
+          stage: 'In contatto',
+          actions: [],
           lostReason: '',
           createdAt: new Date().toISOString(),
         }));
@@ -117,34 +128,33 @@ export function createCommercialFunnelActions(
       const state = getEntries();
       const entry = state.find((item) => item.id === entryId);
       if (!entry) return;
-      const nextActions = entry.actions.map((action, index) => {
-        if (index !== slotIndex) return action;
-        if (!actionType) return { type: '' as const, date: '', note: '', taskIds: [] };
-        return {
-          ...action,
+      const canAppend = !isFunnelActionLocked(entry);
+      let nextActions = ensureActionSlot(entry.actions, slotIndex);
+      const isLeavingPerso = entry.actions[slotIndex]?.type === 'Perso' && actionType !== 'Perso';
+      if (!actionType) {
+        nextActions[slotIndex] = createEmptyFunnelActionSlot();
+      } else {
+        nextActions[slotIndex] = {
+          ...nextActions[slotIndex],
           type: actionType,
           date: new Date().toISOString().slice(0, 10),
         };
-      });
-      if (actionType === 'Convertito') {
-        const nextEntry: CommercialFunnelEntry = { ...entry, actions: nextActions };
-        await applyEntries(
-          state.map((item) => (item.id === entryId ? nextEntry : item)),
-          [nextEntry],
-        );
-        deps.showToast('Cliente segnato come convertito. Resta nel funnel commerciale.', 'success');
-        return;
       }
-      const isLeavingPerso = entry.actions[slotIndex]?.type === 'Perso' && actionType !== 'Perso';
-      const nextEntry: CommercialFunnelEntry = {
+      nextActions = finalizeFunnelActions(nextActions, canAppend || isLeavingPerso);
+      const nextLostReason = isLeavingPerso ? '' : entry.lostReason;
+      const nextEntry = persistableEntry({
         ...entry,
         actions: nextActions,
-        lostReason: isLeavingPerso ? '' : entry.lostReason,
-      };
+        lostReason: nextLostReason,
+      });
       await applyEntries(
         state.map((item) => (item.id === entryId ? nextEntry : item)),
         [nextEntry],
       );
+      if (actionType === 'Convertito') {
+        deps.showToast('Cliente segnato come convertito. Resta nel funnel commerciale.', 'success');
+        return;
+      }
       if (isLeavingPerso && actionType) {
         deps.showToast('Cliente riattivato nel funnel.', 'success');
       }
@@ -156,7 +166,7 @@ export function createCommercialFunnelActions(
       const state = getEntries();
       const nextEntry = state.find((item) => item.id === entryId);
       if (!nextEntry) return;
-      const updatedEntry: CommercialFunnelEntry = { ...nextEntry, lostReason };
+      const updatedEntry = persistableEntry({ ...nextEntry, lostReason });
       await applyEntries(
         state.map((item) => (item.id === entryId ? updatedEntry : item)),
         [updatedEntry],
@@ -178,19 +188,18 @@ export function createCommercialFunnelActions(
       const state = getEntries();
       const entry = state.find((item) => item.id === entryId);
       if (!entry) return;
-      const nextActions = entry.actions.map((action, index) => {
-        if (index !== slotIndex) return action;
-        return {
-          ...action,
-          type: 'Perso' as const,
-          date: new Date().toISOString().slice(0, 10),
-        };
-      });
-      const nextEntry: CommercialFunnelEntry = {
+      let nextActions = ensureActionSlot(entry.actions, slotIndex);
+      nextActions[slotIndex] = {
+        ...nextActions[slotIndex],
+        type: 'Perso',
+        date: new Date().toISOString().slice(0, 10),
+      };
+      nextActions = finalizeFunnelActions(nextActions, false);
+      const nextEntry = persistableEntry({
         ...entry,
         actions: nextActions,
         lostReason: trimmedReason,
-      };
+      });
       await applyEntries(
         state.map((item) => (item.id === entryId ? nextEntry : item)),
         [nextEntry],
@@ -203,7 +212,7 @@ export function createCommercialFunnelActions(
       const state = getEntries();
       const entry = state.find((item) => item.id === entryId);
       if (!entry) return;
-      const nextEntry: CommercialFunnelEntry = { ...entry, owner };
+      const nextEntry = persistableEntry({ ...entry, owner });
       await applyEntries(
         state.map((item) => (item.id === entryId ? nextEntry : item)),
         [nextEntry],
@@ -220,10 +229,10 @@ export function createCommercialFunnelActions(
       const state = getEntries();
       const entry = state.find((item) => item.id === entryId);
       if (!entry) return;
-      const nextActions = entry.actions.map((action, index) => (
+      const nextActions = ensureActionSlot(entry.actions, slotIndex).map((action, index) => (
         index === slotIndex ? { ...action, note } : action
       ));
-      const nextEntry: CommercialFunnelEntry = { ...entry, actions: nextActions };
+      const nextEntry = persistableEntry({ ...entry, actions: nextActions });
       await applyEntries(
         state.map((item) => (item.id === entryId ? nextEntry : item)),
         [nextEntry],
@@ -274,11 +283,11 @@ export function createCommercialFunnelActions(
       }
       const targetCampaign = deps.getCampaignById(targetCampaignId);
       const workspaceId = targetCampaign?.workspaceId || entry.workspaceId || DEFAULT_WORKSPACE_ID;
-      const nextEntry: CommercialFunnelEntry = {
+      const nextEntry = persistableEntry({
         ...entry,
         campaignId: targetCampaignId,
         workspaceId,
-      };
+      });
       await applyEntries(
         state.map((item) => (item.id === entryId ? nextEntry : item)),
         [nextEntry],
@@ -305,13 +314,13 @@ export function createCommercialFunnelActions(
       const state = getEntries();
       const entry = state.find((item) => item.id === entryId);
       if (!entry) return;
-      const nextActions = entry.actions.map((action, index) => {
+      const nextActions = ensureActionSlot(entry.actions, slotIndex).map((action, index) => {
         if (index !== slotIndex) return action;
         const taskIds = action.taskIds || [];
         if (taskIds.includes(taskId)) return action;
         return { ...action, taskIds: [...taskIds, taskId] };
       });
-      const nextEntry: CommercialFunnelEntry = { ...entry, actions: nextActions };
+      const nextEntry = persistableEntry({ ...entry, actions: nextActions });
       await applyEntries(
         state.map((item) => (item.id === entryId ? nextEntry : item)),
         [nextEntry],

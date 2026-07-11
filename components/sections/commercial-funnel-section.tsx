@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { GitBranch, Plus, Search } from 'lucide-react';
 import { buildFunnelCampaignDashboardRow, filterCampaignsByWorkspace, filterFunnelEntriesByWorkspace, searchFunnelEntriesByBrandName } from '@/lib/commercial-funnel/campaigns';
-import { resolveFunnelSemaforo, resolveFunnelStatus } from '@/lib/commercial-funnel/index';
+import { resolveFunnelSemaforo, resolveFunnelStageDisplay } from '@/lib/commercial-funnel/index';
 import { formatActionDateDisplay } from '@/lib/crm/utils';
 import { CampaignNameCell } from '@/components/mail-campaigns/campaign-name-cell';
 import { CampaignStatusSelect } from '@/components/mail-campaigns/campaign-status-select';
@@ -171,7 +171,7 @@ export function CommercialFunnelSection() {
                     <tr>
                       <th>Brand</th>
                       <th>Campagna</th>
-                      <th>Ultima azione</th>
+                      <th>Stage</th>
                       <th>Semaforo</th>
                       <th> </th>
                     </tr>
@@ -179,7 +179,7 @@ export function CommercialFunnelSection() {
                   <tbody>
                     {brandSearchResults.map((result) => {
                       const entry = commercialFunnelEntries.find((item) => item.id === result.entryId);
-                      const status = entry ? resolveFunnelStatus(entry.actions) : null;
+                      const status = entry ? resolveFunnelStageDisplay(entry) : null;
                       const semaforo = entry ? resolveFunnelSemaforo(entry.actions) : 'green';
                       return (
                         <tr key={result.entryId}>

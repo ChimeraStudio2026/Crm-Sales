@@ -3817,6 +3817,100 @@ body.drawer-open {
 .analysis-accordion.is-open .analysis-accordion-body {
     display: block;
 }
+
+.retention-body {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.retention-intro {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.retention-kpi-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.retention-positive {
+    color: #16a34a;
+}
+
+.retention-negative {
+    color: #dc2626;
+}
+
+.retention-detail-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.retention-detail-header h4 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.retention-year-switcher,
+.retention-filter-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.retention-year-switcher-btn,
+.retention-filter-btn {
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 0.8125rem;
+    cursor: pointer;
+}
+
+.retention-year-switcher-btn.is-active,
+.retention-filter-btn.is-active {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: #fff;
+}
+
+.retention-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.retention-badge-gained {
+    background: rgba(22, 163, 74, 0.12);
+    color: #16a34a;
+}
+
+.retention-badge-lost {
+    background: rgba(220, 38, 38, 0.12);
+    color: #dc2626;
+}
+
+.retention-badge-retained {
+    background: rgba(59, 130, 246, 0.12);
+    color: #2563eb;
+}
+
+@media (max-width: 960px) {
+    .retention-kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 .analysis-kpi-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));

@@ -20,6 +20,7 @@ import { TopHeader } from '@/components/layout/top-header';
 import { OkrYearComparisonPanel } from '@/components/analysis/okr-year-comparison-panel';
 import { OkrClientComparisonPanel } from '@/components/analysis/okr-client-comparison-panel';
 import { RollingRevenuePanel } from '@/components/analysis/rolling-revenue-panel';
+import { RetentionPanel } from '@/components/analysis/retention-panel';
 import { useCrm } from '@/providers/crm-provider';
 
 function AnalysisNumberInput({
@@ -226,6 +227,7 @@ export function AnalysisSection() {
           <OkrYearComparisonPanel />
           <OkrClientComparisonPanel />
           <RollingRevenuePanel />
+          <RetentionPanel />
           <div className="analysis-intro glass-card">
             <h3><BarChart3 size={20} /> Analisi {analysisYear}</h3>
             <p>

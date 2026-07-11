@@ -5,13 +5,22 @@ export const FUNNEL_ACTION_TYPES = [
   'Instagram',
   'Messaggio',
   'Fissato appuntamento',
-  'Riscrivere',
   'Quotazione richiesta',
   'Convertito',
   'Perso',
 ] as const;
 
 export type FunnelActionType = typeof FUNNEL_ACTION_TYPES[number];
+
+export const FUNNEL_STAGES = [
+  'In contatto',
+  'Incontro fissato',
+  'Preventivo richiesto',
+  'Convertito',
+  'Perso',
+] as const;
+
+export type FunnelStage = typeof FUNNEL_STAGES[number];
 
 export interface FunnelActionSlot {
   type: FunnelActionType | '';
@@ -36,6 +45,7 @@ export interface CommercialFunnelEntry {
   contactId: string;
   clientSource: FunnelClientSource;
   owner: string;
+  stage: FunnelStage;
   actions: FunnelActionSlot[];
   lostReason: string;
   createdAt: string;

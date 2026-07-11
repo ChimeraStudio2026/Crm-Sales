@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import Link from 'next/link';
 import { getFunnelEntriesForClient } from '@/lib/commercial-funnel/campaigns';
-import { isFunnelTerminalLost, resolveFunnelStatus } from '@/lib/commercial-funnel/index';
+import { isFunnelTerminalLost, resolveFunnelStageDisplay } from '@/lib/commercial-funnel/index';
 import { formatActionDateDisplay } from '@/lib/crm/utils';
 import { useCrm } from '@/providers/crm-provider';
 
@@ -18,7 +18,7 @@ export function ClientMailCampaignsTab({ clientId }: ClientMailCampaignsTabProps
     const entries = getFunnelEntriesForClient(commercialFunnelEntries, clientId);
     return entries.map((entry) => {
       const campaign = mailCampaigns.find((item) => item.id === entry.campaignId);
-      const status = resolveFunnelStatus(entry.actions);
+      const status = resolveFunnelStageDisplay(entry);
       return {
         entry,
         campaign,
@@ -42,7 +42,7 @@ export function ClientMailCampaignsTab({ clientId }: ClientMailCampaignsTabProps
         <thead>
           <tr>
             <th>Campagna</th>
-            <th>Status funnel</th>
+            <th>Stage funnel</th>
             <th>Data ultima azione</th>
             <th>Stato</th>
             <th>Azioni</th>

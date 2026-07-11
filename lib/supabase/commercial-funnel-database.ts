@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { DEFAULT_WORKSPACE_ID } from '@/lib/constants/workspaces';
-import { normalizeFunnelActions } from '@/lib/commercial-funnel/index';
+import { buildPersistedFunnelEntry, normalizeFunnelActions, normalizeFunnelStage } from '@/lib/commercial-funnel/index';
 import type {
   CommercialFunnelEntry,
   FunnelBrandSearchResult,
@@ -15,6 +15,7 @@ interface CommercialFunnelEntryRow {
   contact_id: string | null;
   client_source: string | null;
   owner: string | null;
+  stage: string | null;
   actions: unknown;
   lost_reason: string;
   created_at: string;
@@ -25,7 +26,9 @@ function normalizeClientSource(value: string | null | undefined): FunnelClientSo
 }
 
 function rowToEntry(row: CommercialFunnelEntryRow): CommercialFunnelEntry {
-  return {
+  const actions = normalizeFunnelActions(row.actions);
+  const lostReason = row.lost_reason || '';
+  const entry: CommercialFunnelEntry = {
     id: row.id,
     workspaceId: row.workspace_id || DEFAULT_WORKSPACE_ID,
     campaignId: row.campaign_id,
@@ -33,23 +36,27 @@ function rowToEntry(row: CommercialFunnelEntryRow): CommercialFunnelEntry {
     contactId: row.contact_id || '',
     clientSource: normalizeClientSource(row.client_source),
     owner: row.owner || '',
-    actions: normalizeFunnelActions(row.actions),
-    lostReason: row.lost_reason || '',
+    stage: normalizeFunnelStage(row.stage),
+    actions,
+    lostReason,
     createdAt: row.created_at || '',
   };
+  return buildPersistedFunnelEntry(entry);
 }
 
 function entryToRow(entry: CommercialFunnelEntry): Record<string, unknown> {
+  const persisted = buildPersistedFunnelEntry(entry);
   return {
-    id: entry.id,
-    workspace_id: entry.workspaceId || DEFAULT_WORKSPACE_ID,
-    campaign_id: entry.campaignId,
-    client_id: entry.clientId,
-    contact_id: entry.contactId || '',
-    client_source: entry.clientSource,
-    owner: entry.owner || '',
-    actions: entry.actions,
-    lost_reason: entry.lostReason || '',
+    id: persisted.id,
+    workspace_id: persisted.workspaceId || DEFAULT_WORKSPACE_ID,
+    campaign_id: persisted.campaignId,
+    client_id: persisted.clientId,
+    contact_id: persisted.contactId || '',
+    client_source: persisted.clientSource,
+    owner: persisted.owner || '',
+    stage: persisted.stage,
+    actions: persisted.actions,
+    lost_reason: persisted.lostReason || '',
     updated_at: new Date().toISOString(),
   };
 }

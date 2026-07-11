@@ -1,0 +1,240 @@
+import { ANALYSIS_YEARS, EXCEL_REV_EPSILON, isAnalysisYear } from '@/lib/constants/crm';
+import { normalizeOkrClientName } from '@/lib/analysis/okr-timeline';
+import { resolveCanonicalClientBrandName } from '@/lib/crm/client-brand-aliases';
+import { isClientInActiveSection } from '@/lib/crm/utils';
+import type { Client, OkrRecord } from '@/lib/types/crm';
+
+export type RetentionBucket = 'gained' | 'lost' | 'retained' | 'inactive';
+
+export interface ClientYearRevenue {
+  key: string;
+  clientId: string | null;
+  displayName: string;
+  revenueByYear: Record<number, number>;
+}
+
+export interface RetentionClientRow {
+  displayName: string;
+  previousRevenue: number;
+  currentRevenue: number;
+  delta: number;
+  bucket: RetentionBucket;
+}
+
+export interface RetentionYearTransition {
+  previousYear: number;
+  currentYear: number;
+  gainedCount: number;
+  gainedRevenue: number;
+  lostCount: number;
+  lostRevenue: number;
+  retainedCount: number;
+  retainedPreviousRevenue: number;
+  retainedCurrentRevenue: number;
+  netClientChange: number;
+  netRevenueChange: number;
+  retentionRate: number;
+  rows: RetentionClientRow[];
+}
+
+const REVENUE_FIELD_BY_YEAR: Record<number, 'rev2023' | 'rev2024' | 'rev2025' | 'rev2026'> = {
+  2023: 'rev2023',
+  2024: 'rev2024',
+  2025: 'rev2025',
+  2026: 'rev2026',
+};
+
+function hasRevenue(amount: number): boolean {
+  return amount > EXCEL_REV_EPSILON;
+}
+
+function createEmptyRevenueByYear(): Record<number, number> {
+  return ANALYSIS_YEARS.reduce<Record<number, number>>((acc, year) => {
+    acc[year] = 0;
+    return acc;
+  }, {});
+}
+
+function getClientRevForYear(client: Client, year: number): number {
+  const field = REVENUE_FIELD_BY_YEAR[year];
+  if (!field) return 0;
+  return Number(client[field]) || 0;
+}
+
+function resolveOkrGroupKey(
+  record: OkrRecord,
+  clients: Client[],
+): { key: string; displayName: string; clientId: string | null } {
+  if (record.clientId) {
+    const linkedClient = clients.find((client) => client.id === record.clientId);
+    if (linkedClient) {
+      return { key: linkedClient.id, displayName: linkedClient.name, clientId: linkedClient.id };
+    }
+    return {
+      key: record.clientId,
+      displayName: resolveCanonicalClientBrandName(record.clientName),
+      clientId: record.clientId,
+    };
+  }
+  const matchedClient = clients.find(
+    (client) => normalizeOkrClientName(client.name) === normalizeOkrClientName(record.clientName),
+  );
+  if (matchedClient) {
+    return { key: matchedClient.id, displayName: matchedClient.name, clientId: matchedClient.id };
+  }
+  const canonicalName = resolveCanonicalClientBrandName(record.clientName);
+  return {
+    key: `name:${normalizeOkrClientName(canonicalName)}`,
+    displayName: canonicalName,
+    clientId: null,
+  };
+}
+
+function ensureClientYearRevenue(
+  map: Map<string, ClientYearRevenue>,
+  key: string,
+  displayName: string,
+  clientId: string | null,
+): ClientYearRevenue {
+  const existing = map.get(key);
+  if (existing) {
+    if (displayName.length > existing.displayName.length) {
+      existing.displayName = displayName;
+    }
+    if (!existing.clientId && clientId) existing.clientId = clientId;
+    return existing;
+  }
+  const entry: ClientYearRevenue = {
+    key,
+    clientId,
+    displayName,
+    revenueByYear: createEmptyRevenueByYear(),
+  };
+  map.set(key, entry);
+  return entry;
+}
+
+export function buildClientYearRevenueMap(
+  okrRecords: OkrRecord[],
+  clients: Client[],
+): Map<string, ClientYearRevenue> {
+  const map = new Map<string, ClientYearRevenue>();
+  okrRecords.forEach((record) => {
+    if (!isAnalysisYear(record.year)) return;
+    const { key, displayName, clientId } = resolveOkrGroupKey(record, clients);
+    const entry = ensureClientYearRevenue(map, key, displayName, clientId);
+    entry.revenueByYear[record.year] += Number(record.amount) || 0;
+  });
+  clients
+    .filter((client) => isClientInActiveSection(client))
+    .forEach((client) => {
+      const entry = ensureClientYearRevenue(map, client.id, client.name, client.id);
+      ANALYSIS_YEARS.forEach((year) => {
+        const okrRevenue = entry.revenueByYear[year] || 0;
+        if (!hasRevenue(okrRevenue)) {
+          entry.revenueByYear[year] = getClientRevForYear(client, year);
+        }
+      });
+    });
+  return map;
+}
+
+function classifyRetentionBucket(previousRevenue: number, currentRevenue: number): RetentionBucket {
+  const hadPrevious = hasRevenue(previousRevenue);
+  const hasCurrent = hasRevenue(currentRevenue);
+  if (!hadPrevious && hasCurrent) return 'gained';
+  if (hadPrevious && !hasCurrent) return 'lost';
+  if (hadPrevious && hasCurrent) return 'retained';
+  return 'inactive';
+}
+
+export function buildRetentionYearTransition(
+  clientYearRevenue: Iterable<ClientYearRevenue>,
+  previousYear: number,
+  currentYear: number,
+): RetentionYearTransition {
+  const rows: RetentionClientRow[] = [];
+  let gainedCount = 0;
+  let gainedRevenue = 0;
+  let lostCount = 0;
+  let lostRevenue = 0;
+  let retainedCount = 0;
+  let retainedPreviousRevenue = 0;
+  let retainedCurrentRevenue = 0;
+  for (const client of clientYearRevenue) {
+    const previousRevenue = client.revenueByYear[previousYear] || 0;
+    const currentRevenue = client.revenueByYear[currentYear] || 0;
+    const bucket = classifyRetentionBucket(previousRevenue, currentRevenue);
+    if (bucket === 'inactive') continue;
+    rows.push({
+      displayName: client.displayName,
+      previousRevenue,
+      currentRevenue,
+      delta: currentRevenue - previousRevenue,
+      bucket,
+    });
+    if (bucket === 'gained') {
+      gainedCount += 1;
+      gainedRevenue += currentRevenue;
+      continue;
+    }
+    if (bucket === 'lost') {
+      lostCount += 1;
+      lostRevenue += previousRevenue;
+      continue;
+    }
+    retainedCount += 1;
+    retainedPreviousRevenue += previousRevenue;
+    retainedCurrentRevenue += currentRevenue;
+  }
+  rows.sort((left, right) => {
+    const bucketOrder: Record<RetentionBucket, number> = {
+      lost: 0,
+      gained: 1,
+      retained: 2,
+      inactive: 3,
+    };
+    const bucketDelta = bucketOrder[left.bucket] - bucketOrder[right.bucket];
+    if (bucketDelta !== 0) return bucketDelta;
+    return Math.abs(right.delta) - Math.abs(left.delta);
+  });
+  const activePreviousCount = retainedCount + lostCount;
+  const retentionRate = activePreviousCount > 0
+    ? (retainedCount / activePreviousCount) * 100
+    : 0;
+  const netRevenueChange = rows.reduce((acc, row) => acc + row.delta, 0);
+  return {
+    previousYear,
+    currentYear,
+    gainedCount,
+    gainedRevenue,
+    lostCount,
+    lostRevenue,
+    retainedCount,
+    retainedPreviousRevenue,
+    retainedCurrentRevenue,
+    netClientChange: gainedCount - lostCount,
+    netRevenueChange,
+    retentionRate,
+    rows,
+  };
+}
+
+export function buildRetentionYearTransitions(
+  okrRecords: OkrRecord[],
+  clients: Client[],
+): RetentionYearTransition[] {
+  const clientYearRevenue = buildClientYearRevenueMap(okrRecords, clients);
+  const entries = Array.from(clientYearRevenue.values());
+  const transitions: RetentionYearTransition[] = [];
+  for (let index = 1; index < ANALYSIS_YEARS.length; index += 1) {
+    const previousYear = ANALYSIS_YEARS[index - 1];
+    const currentYear = ANALYSIS_YEARS[index];
+    transitions.push(buildRetentionYearTransition(entries, previousYear, currentYear));
+  }
+  return transitions;
+}
+
+export function getRetentionYearPairLabel(previousYear: number, currentYear: number): string {
+  return `${previousYear} → ${currentYear}`;
+}

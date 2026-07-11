@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from 'react';
 import { Mail, PlusCircle } from 'lucide-react';
-import { MAIL_CAMPAIGN_STATUS_LABELS } from '@/lib/constants/mail-campaigns';
 import { buildCampaignDashboardRow } from '@/lib/mail-campaigns/index';
 import { CampaignNameCell } from '@/components/mail-campaigns/campaign-name-cell';
+import { CampaignStatusSelect } from '@/components/mail-campaigns/campaign-status-select';
 import { CampaignTableActions } from '@/components/mail-campaigns/campaign-table-actions';
 import { useCrm } from '@/providers/crm-provider';
 import { TopHeader } from '@/components/layout/top-header';
@@ -17,6 +17,7 @@ export function MailCampaignsSection() {
     mailCampaignContacts,
     mailCampaignSendTracking,
     saveMailCampaign,
+    updateMailCampaignStatus,
     deleteMailCampaignById,
   } = useCrm();
   const [showForm, setShowForm] = useState(false);
@@ -66,6 +67,13 @@ export function MailCampaignsSection() {
       endDate: campaign.endDate,
       createdAt: campaign.createdAt,
     });
+  };
+
+  const handleStatusChange = async (
+    campaignId: string,
+    nextStatus: MailCampaignStatus,
+  ): Promise<void> => {
+    await updateMailCampaignStatus(campaignId, nextStatus);
   };
 
   const handleDeleteCampaign = async (campaignId: string, campaignName: string): Promise<void> => {
@@ -118,9 +126,10 @@ export function MailCampaignsSection() {
                         <CampaignNameCell campaign={campaign} onSaveName={handleRenameCampaign} />
                       </td>
                       <td>
-                        <span className={`mail-campaign-status mail-campaign-status-${campaign.status.toLowerCase()}`}>
-                          {MAIL_CAMPAIGN_STATUS_LABELS[campaign.status]}
-                        </span>
+                        <CampaignStatusSelect
+                          value={campaign.status}
+                          onChange={(nextStatus) => void handleStatusChange(campaign.id, nextStatus)}
+                        />
                       </td>
                       <td>{campaign.startDate || '—'}</td>
                       <td className="analysis-num">{totalContacts}</td>
@@ -159,11 +168,11 @@ export function MailCampaignsSection() {
                 <div className="form-row">
                   <div className="form-group">
                     <label>Stato</label>
-                    <select className="form-select" value={status} onChange={(e) => setStatus(e.target.value as MailCampaignStatus)}>
-                      <option value="Bozza">Bozza</option>
-                      <option value="Attiva">Attiva</option>
-                      <option value="Conclusa">Conclusa</option>
-                    </select>
+                    <CampaignStatusSelect
+                      className="form-select"
+                      value={status}
+                      onChange={setStatus}
+                    />
                   </div>
                   <div className="form-group">
                     <label>Data Inizio</label>

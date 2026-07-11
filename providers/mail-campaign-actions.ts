@@ -141,6 +141,30 @@ export function createMailCampaignActions(
     }
   };
 
+  const updateMailCampaignStatus = async (
+    campaignId: string,
+    status: MailCampaign['status'],
+  ): Promise<void> => {
+    const state = getState();
+    const campaign = state.mailCampaigns.find((item) => item.id === campaignId);
+    if (!campaign || campaign.status === status) return;
+    const updatedCampaign: MailCampaign = { ...campaign, status };
+    deps.setMailCampaigns(state.mailCampaigns.map((item) => (
+      item.id === campaignId ? updatedCampaign : item
+    )));
+    if (!deps.db) return;
+    try {
+      await persistSingleMailCampaign(deps.db, updatedCampaign);
+      deps.showToast('Stato campagna aggiornato.', 'success');
+    } catch (error) {
+      deps.showToast(
+        `Errore salvataggio stato: ${error instanceof Error ? error.message : 'errore'}`,
+        'danger',
+      );
+      throw error;
+    }
+  };
+
   const saveMailCampaign = async (
     input: Partial<MailCampaign> & { name: string },
     steps?: MailCampaignStep[],
@@ -315,6 +339,7 @@ export function createMailCampaignActions(
   return {
     saveMailCampaign,
     updateMailCampaignOwner,
+    updateMailCampaignStatus,
     deleteMailCampaignById,
     addContactsToCampaign,
     removeContactFromCampaign,

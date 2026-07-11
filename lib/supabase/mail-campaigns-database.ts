@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { DEFAULT_WORKSPACE_ID } from '@/lib/constants/workspaces';
+import { normalizeMailCampaignStatus } from '@/lib/constants/mail-campaigns';
 import {
   embedCampaignOwnerInDescription,
   resolveCampaignOwner,
@@ -45,7 +46,7 @@ function buildMailCampaignRows(
       workspace_id: campaign.workspaceId || DEFAULT_WORKSPACE_ID,
       name: campaign.name,
       description,
-      status: campaign.status,
+      status: normalizeMailCampaignStatus(campaign.status),
       start_date: campaign.startDate || null,
       end_date: campaign.endDate || null,
       updated_at: new Date().toISOString(),
@@ -104,7 +105,7 @@ function rowToCampaign(row: MailCampaignRow): MailCampaign {
     workspaceId: row.workspace_id || DEFAULT_WORKSPACE_ID,
     name: row.name,
     description: resolved.description,
-    status: row.status as MailCampaign['status'],
+    status: normalizeMailCampaignStatus(row.status || 'Bozza'),
     startDate: row.start_date || '',
     endDate: row.end_date || '',
     owner: resolved.owner,

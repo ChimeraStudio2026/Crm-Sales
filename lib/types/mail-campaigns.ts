@@ -1,4 +1,4 @@
-export type MailCampaignStatus = 'Bozza' | 'Attiva' | 'Conclusa';
+export type MailCampaignStatus = 'Bozza' | 'Attiva' | 'Chiusa';
 
 export type MailCampaignContactStatus = 'In Corso' | 'Convertito' | 'Perso';
 

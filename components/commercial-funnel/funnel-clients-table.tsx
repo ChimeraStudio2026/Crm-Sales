@@ -19,20 +19,31 @@ import {
 } from '@/lib/commercial-funnel/contacts';
 import { filterCampaignsByWorkspace } from '@/lib/commercial-funnel/campaigns';
 import { formatActionDateDisplay } from '@/lib/crm/utils';
+import { getOwnersForWorkspace } from '@/lib/crm/workspace-clients';
+import { isOwner } from '@/lib/constants/crm';
+import { DEFAULT_WORKSPACE_ID } from '@/lib/constants/workspaces';
 import { FUNNEL_ACTION_TYPES } from '@/lib/types/commercial-funnel';
 import type { CommercialFunnelEntry, FunnelActionType } from '@/lib/types/commercial-funnel';
+import type { Client } from '@/lib/types/crm';
 import { useCrm } from '@/providers/crm-provider';
 
 interface PersoModalState {
   entryId: string;
   clientName: string;
   initialReason: string;
+  slotIndex?: number;
 }
 
 interface FunnelClientsTableProps {
   campaignId: string;
   entries: CommercialFunnelEntry[];
   showAddButton?: boolean;
+}
+
+function resolveDisplayOwner(entry: CommercialFunnelEntry, client?: Client): string {
+  if (entry.owner && isOwner(entry.owner)) return entry.owner;
+  if (client?.owner && isOwner(client.owner)) return client.owner;
+  return '';
 }
 
 export function FunnelClientsTable({
@@ -46,12 +57,20 @@ export function FunnelClientsTable({
     addClientsToFunnel,
     updateFunnelAction,
     updateFunnelLostReason,
+    markFunnelEntryLost,
+    updateFunnelEntryOwner,
     removeFunnelEntry,
     moveFunnelEntryToCampaign,
   } = useCrm();
   const [showPicker, setShowPicker] = useState(false);
   const [expandedEntries, setExpandedEntries] = useState<Set<string>>(new Set());
   const [persoModal, setPersoModal] = useState<PersoModalState | null>(null);
+
+  const workspaceId = useMemo(
+    () => mailCampaigns.find((campaign) => campaign.id === campaignId)?.workspaceId || DEFAULT_WORKSPACE_ID,
+    [campaignId, mailCampaigns],
+  );
+  const availableOwners = useMemo(() => getOwnersForWorkspace(workspaceId), [workspaceId]);
 
   const clientById = useMemo(
     () => new Map(clients.map((client) => [client.id, client])),
@@ -99,11 +118,11 @@ export function FunnelClientsTable({
     const actionType = value as FunnelActionType | '';
     if (actionType === 'Perso') {
       const client = clientById.get(entry.clientId);
-      await updateFunnelAction(entry.id, slotIndex, 'Perso');
       setPersoModal({
         entryId: entry.id,
         clientName: client?.name || 'Cliente',
         initialReason: entry.lostReason,
+        slotIndex,
       });
       return;
     }
@@ -111,8 +130,12 @@ export function FunnelClientsTable({
   };
 
   const handlePersoSave = async (reason: string): Promise<void> => {
-    if (!persoModal) return;
-    await updateFunnelLostReason(persoModal.entryId, reason);
+    if (!persoModal || !reason.trim()) return;
+    if (persoModal.slotIndex !== undefined) {
+      await markFunnelEntryLost(persoModal.entryId, persoModal.slotIndex, reason);
+    } else {
+      await updateFunnelLostReason(persoModal.entryId, reason);
+    }
     setPersoModal(null);
   };
 
@@ -171,6 +194,7 @@ export function FunnelClientsTable({
               <tr>
                 <th className="funnel-col-semaforo">Semaforo</th>
                 <th className="funnel-col-client">Cliente</th>
+                <th className="funnel-col-owner">Owner</th>
                 <th className="funnel-col-status">Status</th>
                 {Array.from({ length: FUNNEL_SLOT_COUNT }, (_, index) => (
                   <th key={`action-header-${index}`} className="funnel-col-action">
@@ -183,7 +207,7 @@ export function FunnelClientsTable({
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={FUNNEL_SLOT_COUNT + 4} className="mail-campaigns-empty">
+                  <td colSpan={FUNNEL_SLOT_COUNT + 5} className="mail-campaigns-empty">
                     Nessun cliente in questa campagna. Usa + per aggiungere clienti freddi.
                   </td>
                 </tr>
@@ -192,6 +216,7 @@ export function FunnelClientsTable({
                   const isExpanded = expandedEntries.has(entry.id);
                   const clientName = client?.name || 'Cliente non trovato';
                   const contactLabel = resolveFunnelContactLabel(client, entry.contactId);
+                  const displayOwner = resolveDisplayOwner(entry, client);
                   const displaySemaforo = isConverted ? 'green' : semaforo;
                   return (
                     <Fragment key={entry.id}>
@@ -223,11 +248,28 @@ export function FunnelClientsTable({
                                 {isConverted && <span className="funnel-converted-badge">Convertito</span>}
                           </button>
                         </td>
+                        <td className="funnel-col-owner">
+                          <select
+                            className="table-cell-select funnel-owner-select"
+                            value={displayOwner}
+                            onChange={(event) => void updateFunnelEntryOwner(entry.id, event.target.value)}
+                          >
+                            <option value="">—</option>
+                            {availableOwners.map((owner) => (
+                              <option key={owner} value={owner}>{owner}</option>
+                            ))}
+                          </select>
+                        </td>
                         <td className="funnel-col-status">
                           <div className="funnel-status-cell">
                             <span className="funnel-status-label">{status.label}</span>
                             {status.date && (
                               <small>{formatActionDateDisplay(status.date)}</small>
+                            )}
+                            {isLost && entry.lostReason && (
+                              <small className="funnel-lost-reason-preview" title={entry.lostReason}>
+                                {entry.lostReason}
+                              </small>
                             )}
                           </div>
                         </td>
@@ -329,7 +371,7 @@ export function FunnelClientsTable({
                       </tr>
                       {isExpanded && client && (
                         <tr className="funnel-row-expanded">
-                          <td colSpan={FUNNEL_SLOT_COUNT + 4}>
+                          <td colSpan={FUNNEL_SLOT_COUNT + 5}>
                             <div className="funnel-expanded-body">
                               <div className="funnel-expanded-block">
                                 <span className="funnel-expanded-label">Tipo cliente</span>
@@ -372,7 +414,7 @@ export function FunnelClientsTable({
                                       slotIndex={slotIndex}
                                       action={action}
                                       clientId={entry.clientId}
-                                      defaultAssignee={client.owner}
+                                      defaultAssignee={isOwner(displayOwner) ? displayOwner : client.owner}
                                       isLocked={isLocked && action.type !== 'Perso'}
                                     />
                                   ))}
@@ -401,6 +443,7 @@ export function FunnelClientsTable({
         <FunnelPersoModal
           clientName={persoModal.clientName}
           initialReason={persoModal.initialReason}
+          isNewLost={persoModal.slotIndex !== undefined}
           onClose={() => setPersoModal(null)}
           onSave={(reason) => void handlePersoSave(reason)}
         />

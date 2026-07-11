@@ -35,6 +35,7 @@ export interface CommercialFunnelEntry {
   clientId: string;
   contactId: string;
   clientSource: FunnelClientSource;
+  owner: string;
   actions: FunnelActionSlot[];
   lostReason: string;
   createdAt: string;

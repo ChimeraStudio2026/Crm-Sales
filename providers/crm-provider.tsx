@@ -205,6 +205,8 @@ interface CrmContextValue {
   addClientsToFunnel: (campaignId: string, clientRefs: FunnelClientRef[]) => Promise<void>;
   updateFunnelAction: (entryId: string, slotIndex: number, actionType: FunnelActionType | '') => Promise<void>;
   updateFunnelLostReason: (entryId: string, lostReason: string) => Promise<void>;
+  markFunnelEntryLost: (entryId: string, slotIndex: number, lostReason: string) => Promise<void>;
+  updateFunnelEntryOwner: (entryId: string, owner: string) => Promise<void>;
   updateFunnelActionNote: (entryId: string, slotIndex: number, note: string) => Promise<void>;
   addTaskToFunnelAction: (entryId: string, slotIndex: number, taskId: string) => Promise<void>;
   removeFunnelEntry: (entryId: string) => Promise<void>;
@@ -360,6 +362,9 @@ export function CrmProvider({ children }: CrmProviderProps) {
         showToast,
         getCampaignById: (campaignId) => (
           mailCampaignStateRef.current.mailCampaigns.find((campaign) => campaign.id === campaignId)
+        ),
+        getClientById: (clientId) => (
+          clientsRef.current.find((client) => client.id === clientId)
         ),
       },
       () => commercialFunnelStateRef.current.commercialFunnelEntries,
@@ -1318,6 +1323,8 @@ export function CrmProvider({ children }: CrmProviderProps) {
     addClientsToFunnel: commercialFunnelActions.addClientsToFunnel,
     updateFunnelAction: commercialFunnelActions.updateFunnelAction,
     updateFunnelLostReason: commercialFunnelActions.updateFunnelLostReason,
+    markFunnelEntryLost: commercialFunnelActions.markFunnelEntryLost,
+    updateFunnelEntryOwner: commercialFunnelActions.updateFunnelEntryOwner,
     updateFunnelActionNote: commercialFunnelActions.updateFunnelActionNote,
     addTaskToFunnelAction: commercialFunnelActions.addTaskToFunnelAction,
     removeFunnelEntry: commercialFunnelActions.removeFunnelEntry,

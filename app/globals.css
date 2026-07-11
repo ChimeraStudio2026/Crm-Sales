@@ -6483,8 +6483,29 @@ body:has(.drawer.open) .jonny-chat-root {
     background: var(--bg-card);
 }
 
+.funnel-col-owner {
+    min-width: 110px;
+}
+
+.funnel-owner-select {
+    min-width: 100px;
+    font-size: 0.8125rem;
+}
+
 .funnel-col-status {
     min-width: 150px;
+}
+
+.funnel-lost-reason-preview {
+    display: block;
+    margin-top: 4px;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    line-height: 1.35;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .funnel-col-action {

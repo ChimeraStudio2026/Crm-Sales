@@ -3,6 +3,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createEmptyFunnelActions } from '@/lib/commercial-funnel/index';
 import { buildFunnelEntryKey } from '@/lib/commercial-funnel/contacts';
 import { DEFAULT_WORKSPACE_ID } from '@/lib/constants/workspaces';
+import { isOwner } from '@/lib/constants/crm';
+import { getDefaultOwnerForWorkspace } from '@/lib/crm/workspace-clients';
 import { createUniqueId } from '@/lib/crm/utils';
 import {
   deleteCommercialFunnelEntry,
@@ -12,12 +14,14 @@ import {
 } from '@/lib/supabase/commercial-funnel-database';
 import type { CommercialFunnelEntry, FunnelActionType, FunnelClientRef } from '@/lib/types/commercial-funnel';
 import type { MailCampaign } from '@/lib/types/mail-campaigns';
+import type { Client } from '@/lib/types/crm';
 
 interface CommercialFunnelPersistDeps {
   db: SupabaseClient | null;
   setCommercialFunnelEntries: Dispatch<SetStateAction<CommercialFunnelEntry[]>>;
   showToast: (message: string, type?: 'info' | 'success' | 'warning' | 'danger') => void;
   getCampaignById: (campaignId: string) => MailCampaign | undefined;
+  getClientById: (clientId: string) => Client | undefined;
 }
 
 export function createCommercialFunnelActions(
@@ -57,6 +61,17 @@ export function createCommercialFunnelActions(
     return mutationQueue;
   };
 
+  const resolveEntryOwner = (
+    clientId: string,
+    campaign: MailCampaign | undefined,
+    workspaceId: string,
+  ): string => {
+    const client = deps.getClientById(clientId);
+    if (client?.owner && isOwner(client.owner)) return client.owner;
+    if (campaign?.owner && isOwner(campaign.owner)) return campaign.owner;
+    return getDefaultOwnerForWorkspace(workspaceId);
+  };
+
   const addClientsToFunnel = async (
     campaignId: string,
     clientRefs: FunnelClientRef[],
@@ -79,6 +94,7 @@ export function createCommercialFunnelActions(
           clientId: ref.clientId,
           contactId: ref.contactId || '',
           clientSource: ref.clientSource,
+          owner: resolveEntryOwner(ref.clientId, campaign, workspaceId),
           actions: createEmptyFunnelActions(),
           lostReason: '',
           createdAt: new Date().toISOString(),
@@ -144,6 +160,53 @@ export function createCommercialFunnelActions(
       await applyEntries(
         state.map((item) => (item.id === entryId ? updatedEntry : item)),
         [updatedEntry],
+      );
+    });
+  };
+
+  const markFunnelEntryLost = async (
+    entryId: string,
+    slotIndex: number,
+    lostReason: string,
+  ): Promise<void> => {
+    const trimmedReason = lostReason.trim();
+    if (!trimmedReason) {
+      deps.showToast('Inserisci il motivo della perdita.', 'warning');
+      return;
+    }
+    await runMutation(async () => {
+      const state = getEntries();
+      const entry = state.find((item) => item.id === entryId);
+      if (!entry) return;
+      const nextActions = entry.actions.map((action, index) => {
+        if (index !== slotIndex) return action;
+        return {
+          ...action,
+          type: 'Perso' as const,
+          date: new Date().toISOString().slice(0, 10),
+        };
+      });
+      const nextEntry: CommercialFunnelEntry = {
+        ...entry,
+        actions: nextActions,
+        lostReason: trimmedReason,
+      };
+      await applyEntries(
+        state.map((item) => (item.id === entryId ? nextEntry : item)),
+        [nextEntry],
+      );
+    });
+  };
+
+  const updateFunnelEntryOwner = async (entryId: string, owner: string): Promise<void> => {
+    await runMutation(async () => {
+      const state = getEntries();
+      const entry = state.find((item) => item.id === entryId);
+      if (!entry) return;
+      const nextEntry: CommercialFunnelEntry = { ...entry, owner };
+      await applyEntries(
+        state.map((item) => (item.id === entryId ? nextEntry : item)),
+        [nextEntry],
       );
     });
   };
@@ -260,6 +323,8 @@ export function createCommercialFunnelActions(
     addClientsToFunnel,
     updateFunnelAction,
     updateFunnelLostReason,
+    markFunnelEntryLost,
+    updateFunnelEntryOwner,
     updateFunnelActionNote,
     addTaskToFunnelAction,
     removeFunnelEntry,

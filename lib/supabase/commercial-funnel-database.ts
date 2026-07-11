@@ -14,6 +14,7 @@ interface CommercialFunnelEntryRow {
   client_id: string;
   contact_id: string | null;
   client_source: string | null;
+  owner: string | null;
   actions: unknown;
   lost_reason: string;
   created_at: string;
@@ -31,6 +32,7 @@ function rowToEntry(row: CommercialFunnelEntryRow): CommercialFunnelEntry {
     clientId: row.client_id,
     contactId: row.contact_id || '',
     clientSource: normalizeClientSource(row.client_source),
+    owner: row.owner || '',
     actions: normalizeFunnelActions(row.actions),
     lostReason: row.lost_reason || '',
     createdAt: row.created_at || '',
@@ -45,6 +47,7 @@ function entryToRow(entry: CommercialFunnelEntry): Record<string, unknown> {
     client_id: entry.clientId,
     contact_id: entry.contactId || '',
     client_source: entry.clientSource,
+    owner: entry.owner || '',
     actions: entry.actions,
     lost_reason: entry.lostReason || '',
     updated_at: new Date().toISOString(),

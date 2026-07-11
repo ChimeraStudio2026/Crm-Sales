@@ -103,14 +103,6 @@ export type AnalysisForecasts = Record<string, AnalysisForecastScope>;
 
 export type AnalysisForecastsByYear = Record<number, AnalysisForecasts>;
 
-export interface RecallItem {
-  clientId: string;
-  relationship: Relationship;
-  slotLabel: string;
-  slotClass: string;
-  status: 'To do' | 'Done';
-}
-
 export interface ParsedExcelClient {
   name: string;
   revenue: number;

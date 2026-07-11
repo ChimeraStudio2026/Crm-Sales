@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     id: '/',
     name: 'CRM Sales',
     short_name: 'CRM Sales',
-    description: 'Gestione clienti, OKR, task, idee e recall.',
+    description: 'Gestione clienti, OKR e task.',
     start_url: '/analysis',
     scope: '/',
     display: 'standalone',

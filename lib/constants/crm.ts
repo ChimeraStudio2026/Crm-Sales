@@ -71,35 +71,6 @@ export const IDEA_CATEGORIES: IdeaCategory[] = [
   'Prod',
 ];
 
-export const RECALL_QUOTAS = [
-  {
-    relationship: 'Top 20%' as Relationship,
-    count: 1,
-    slotLabel: '⭐⭐⭐ Top 20%',
-    slotClass: 'recall-slot-top20',
-  },
-  {
-    relationship: 'Ricorrente' as Relationship,
-    count: 2,
-    slotLabel: '⭐⭐ Ricorrente',
-    slotClass: 'recall-slot-ricorrente',
-  },
-  {
-    relationship: 'Nuovo Cliente' as Relationship,
-    count: 2,
-    slotLabel: '⭐ Nuovo Cliente',
-    slotClass: 'recall-slot-nuovo',
-  },
-];
-
-export const RECALL_TOTAL_COUNT = RECALL_QUOTAS.reduce(
-  (sum, quota) => sum + quota.count,
-  0,
-);
-
-export const RECALL_STATUS_TODO = 'To do';
-export const RECALL_STATUS_DONE = 'Done';
-
 export const COLD_CLIENT_CATEGORIES = [
   { id: 'agenzia', label: 'Agenzie', type: 'Agenzia' as ClientType },
   { id: 'agenzia-eventi', label: 'Agenzie Eventi', type: 'Agenzia Eventi' as ClientType },
@@ -144,7 +115,6 @@ export const NAV_ITEMS = [
   { href: '/clients', label: 'Lista Clienti', icon: 'Users' },
   { href: '/funnel', label: 'Funnel Commerciale', icon: 'GitBranch' },
   { href: '/ideas', label: 'Task', icon: 'CheckSquare' },
-  { href: '/recall', label: 'Random Recall', icon: 'PhoneCall' },
   { href: '/cold', label: 'Clienti Freddi', icon: 'Snowflake' },
   { href: '/import', label: 'Importa Excel', icon: 'FileSpreadsheet' },
   { href: '/settings', label: 'Impostazioni', icon: 'Settings' },
@@ -156,7 +126,6 @@ export const PAGE_META: Record<string, { title: string; subtitle: string }> = {
   '/funnel': { title: 'Funnel Commerciale', subtitle: 'Campagne commerciali con pipeline clienti, azioni, status e semaforo tempi.' },
   '/ideas': { title: 'Task', subtitle: 'Gestione task con deadline, owner, subtask e viste Righe, Kanban e Clienti.' },
   '/tasks': { title: 'Task', subtitle: 'Gestione task con deadline, owner, subtask e viste Righe, Kanban e Clienti.' },
-  '/recall': { title: 'Random Recall', subtitle: '5 clienti al giorno da ricontattare, scelti a caso per rapporto.' },
   '/cold': { title: 'Clienti Freddi', subtitle: 'Prospect con cui non hai mai lavorato. I clienti importati da OKR restano in Lista Clienti.' },
   '/import': { title: 'Importazione Dati', subtitle: 'Carica fatturati 2023–2026 da foglio di calcolo.' },
   '/settings': { title: 'Impostazioni', subtitle: 'Manutenzione database e regole.' },

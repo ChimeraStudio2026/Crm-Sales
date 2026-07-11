@@ -88,7 +88,7 @@ export function isClientInMainList(client: Client): boolean {
   return !client.isColdClient;
 }
 
-/** Clienti attivi per analisi, recall e totali fatturato (esclusi Eliminato). */
+/** Clienti attivi per analisi e totali fatturato (esclusi Eliminato). */
 export function isClientInActiveSection(client: Client): boolean {
   return !client.isColdClient && client.relationship !== 'Eliminato';
 }

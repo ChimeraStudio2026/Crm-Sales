@@ -8,7 +8,6 @@ import type {
   ClientTask,
   Idea,
   OkrRecord,
-  RecallItem,
   TaskAttachment,
   TaskSubtask,
 } from '@/lib/types/crm';
@@ -299,31 +298,6 @@ export async function persistIdeasReplace(db: SupabaseClient, allIdeas: Idea[]):
   const { error: upsertError } = await db.from('ideas').upsert(rows, { onConflict: 'id' });
   if (upsertError) throw upsertError;
   await removeOrphanRows(db, 'ideas', rows.map((row) => row.id as string));
-}
-
-export async function fetchDailyRecall(
-  db: SupabaseClient,
-  recallDate: string,
-): Promise<RecallItem[] | null> {
-  const { data, error } = await db
-    .from('daily_recall')
-    .select('items')
-    .eq('recall_date', recallDate)
-    .maybeSingle();
-  if (error) throw error;
-  return data ? (data.items as RecallItem[]) : null;
-}
-
-export async function saveDailyRecall(
-  db: SupabaseClient,
-  recallDate: string,
-  items: RecallItem[],
-): Promise<void> {
-  const { error } = await db.from('daily_recall').upsert(
-    { recall_date: recallDate, items },
-    { onConflict: 'recall_date' },
-  );
-  if (error) throw error;
 }
 
 export async function fetchClientTasks(db: SupabaseClient): Promise<ClientTask[]> {

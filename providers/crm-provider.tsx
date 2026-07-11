@@ -20,7 +20,6 @@ import type {
   OkrRecord,
   Owner,
   ParsedExcelClient,
-  RecallItem,
   Relationship,
   TaskAttachment,
 } from '@/lib/types/crm';
@@ -80,14 +79,6 @@ import {
   resolveClientProductOffers,
 } from '@/lib/crm/product-offers';
 import type { ProductOfferId } from '@/lib/constants/product-offers';
-import {
-  filterValidRecallItems,
-  generateRandomRecallSelection,
-  isRecallSelectionValid,
-  normalizeStoredRecallItems,
-  refreshRecallSelectionPreservingDone,
-  RECALL_SELECTION_VERSION,
-} from '@/lib/crm/recall';
 import { createBrowserSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import {
   clearAllData,
@@ -96,7 +87,6 @@ import {
   fetchClientTasks,
   fetchClients,
   assertClientsHistoricalRevenueSchema,
-  fetchDailyRecall,
   fetchIdeas,
   fetchAllOkrRecords,
   fetchOkrRecords,
@@ -114,7 +104,6 @@ import {
   deleteIdeaRecord,
   upsertOkrRecords,
   persistOkrRecords,
-  saveDailyRecall,
   testSupabaseConnection,
 } from '@/lib/supabase/database';
 
@@ -148,8 +137,6 @@ interface CrmContextValue {
   analysisYear: number;
   analysisForecasts: AnalysisForecasts;
   analysisExpanded: Set<string>;
-  dailyRecallItems: RecallItem[];
-  recallFilterStatus: string;
   totalRevenue2026: number;
   currentOwner: Owner | null;
   showToast: (message: string, type?: ToastType) => void;
@@ -175,9 +162,6 @@ interface CrmContextValue {
   setAnalysisForecast: (scope: string, field: 'totalForecast' | 'productPct', value: number, product?: string) => Promise<void>;
   setAnalysisYear: (year: number) => void;
   toggleAnalysisScope: (scope: string) => void;
-  refreshRecall: () => Promise<void>;
-  updateRecallStatus: (clientId: string, status: RecallItem['status']) => Promise<void>;
-  completeRecallWithAction: (clientId: string, action: string) => Promise<void>;
   processExcelImport: (
     parsedClients: ParsedExcelClient[],
     okrRecords: OkrRecord[],
@@ -194,8 +178,6 @@ interface CrmContextValue {
   setClients: React.Dispatch<React.SetStateAction<Client[]>>;
   setIdeas: React.Dispatch<React.SetStateAction<Idea[]>>;
   setClientTasks: React.Dispatch<React.SetStateAction<ClientTask[]>>;
-  setDailyRecallItems: React.Dispatch<React.SetStateAction<RecallItem[]>>;
-  setRecallFilterStatus: React.Dispatch<React.SetStateAction<string>>;
   persistClientsNow: (nextClients?: Client[]) => Promise<void>;
   persistIdeasNow: (nextIdeas?: Idea[]) => Promise<void>;
   persistTasksNow: (nextTasks?: ClientTask[]) => Promise<void>;
@@ -204,7 +186,6 @@ interface CrmContextValue {
     nextForecasts?: AnalysisForecasts,
     forecastYear?: number,
   ) => Promise<void>;
-  loadDailyRecall: () => Promise<RecallItem[]>;
   mailCampaigns: MailCampaign[];
   mailCampaignSteps: MailCampaignStep[];
   mailCampaignContacts: MailCampaignContact[];
@@ -256,8 +237,6 @@ export function CrmProvider({ children }: CrmProviderProps) {
     [analysisYear, forecastsByYear],
   );
   const [analysisExpanded, setAnalysisExpanded] = useState<Set<string>>(new Set());
-  const [dailyRecallItems, setDailyRecallItems] = useState<RecallItem[]>([]);
-  const [recallFilterStatus, setRecallFilterStatus] = useState('');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [currentOwner, setCurrentOwner] = useState<Owner | null>(null);
   const [mailCampaigns, setMailCampaigns] = useState<MailCampaign[]>([]);
@@ -467,48 +446,6 @@ export function CrmProvider({ children }: CrmProviderProps) {
     setIsSupabaseConnected(true);
   }, [analysisYear, db]);
 
-  const loadDailyRecall = useCallback(async (): Promise<RecallItem[]> => {
-    const today = getTodayString();
-    if (db && isSupabaseConnected) {
-      const stored = await fetchDailyRecall(db, today);
-      if (stored && isRecallSelectionValid(stored)) {
-        const normalized = normalizeStoredRecallItems(stored);
-        setDailyRecallItems(normalized);
-        return normalized;
-      }
-      const generated = generateRandomRecallSelection(clients);
-      await saveDailyRecall(db, today, generated);
-      setDailyRecallItems(generated);
-      return generated;
-    }
-    const storedRaw = localStorage.getItem('crm_sales_daily_recall');
-    if (storedRaw) {
-      try {
-        const parsed = JSON.parse(storedRaw);
-        if (
-          parsed.date === today &&
-          parsed.version === RECALL_SELECTION_VERSION &&
-          Array.isArray(parsed.items) &&
-          isRecallSelectionValid(parsed.items)
-        ) {
-          const normalized = normalizeStoredRecallItems(parsed.items);
-          setDailyRecallItems(normalized);
-          return normalized;
-        }
-      } catch {
-        /* regenerate */
-      }
-    }
-    const generated = generateRandomRecallSelection(clients);
-    localStorage.setItem('crm_sales_daily_recall', JSON.stringify({
-      date: today,
-      version: RECALL_SELECTION_VERSION,
-      items: generated,
-    }));
-    setDailyRecallItems(generated);
-    return generated;
-  }, [clients, db, isSupabaseConnected]);
-
   const refreshApolloStatus = useCallback(async () => {
     if (!db) {
       setApolloStatus({ ok: false, configured: false, message: 'Supabase non configurato' });
@@ -650,12 +587,6 @@ export function CrmProvider({ children }: CrmProviderProps) {
     }
     loadState();
   }, [db, refreshApolloStatus, showToast, supabaseConfigured]);
-
-  useEffect(() => {
-    if (!isLoading && clients.length >= 0) {
-      loadDailyRecall().catch(console.error);
-    }
-  }, [isLoading, clients.length, loadDailyRecall]);
 
   const totalRevenue2026 = useMemo(
     () => clients.filter(isClientInActiveSection).reduce((sum, c) => sum + (c.rev2026 || 0), 0),
@@ -1097,68 +1028,6 @@ export function CrmProvider({ children }: CrmProviderProps) {
     });
   }, []);
 
-  const refreshRecall = useCallback(async () => {
-    const doneCount = dailyRecallItems.filter((item) => item.status === 'Done').length;
-    const generated = refreshRecallSelectionPreservingDone(clients, dailyRecallItems);
-    setDailyRecallItems(generated);
-    const today = getTodayString();
-    if (db && isSupabaseConnected) {
-      await saveDailyRecall(db, today, generated);
-    } else {
-      localStorage.setItem('crm_sales_daily_recall', JSON.stringify({
-        date: today,
-        version: RECALL_SELECTION_VERSION,
-        items: generated,
-      }));
-    }
-    const refreshedCount = generated.length - doneCount;
-    showToast(
-      refreshedCount > 0
-        ? `Aggiornati ${refreshedCount} clienti To do. I Done restano fissi.`
-        : 'Nessun cliente To do da aggiornare.',
-      'success',
-    );
-  }, [clients, dailyRecallItems, db, isSupabaseConnected, showToast]);
-
-  const persistDailyRecallItems = useCallback(async (items: RecallItem[]) => {
-    const today = getTodayString();
-    if (db && isSupabaseConnected) {
-      await saveDailyRecall(db, today, items);
-    } else {
-      localStorage.setItem('crm_sales_daily_recall', JSON.stringify({
-        date: today,
-        version: RECALL_SELECTION_VERSION,
-        items,
-      }));
-    }
-  }, [db, isSupabaseConnected]);
-
-  const updateRecallStatus = useCallback(async (clientId: string, status: RecallItem['status']) => {
-    const next = dailyRecallItems.map((item) =>
-      item.clientId === clientId ? { ...item, status } : item,
-    );
-    setDailyRecallItems(next);
-    await persistDailyRecallItems(next);
-  }, [dailyRecallItems, persistDailyRecallItems]);
-
-  const completeRecallWithAction = useCallback(async (clientId: string, action: string) => {
-    const trimmedAction = action.trim();
-    if (!trimmedAction) return;
-    await mutateClients((prev) => prev.map((c) => {
-      if (c.id !== clientId) return c;
-      return {
-        ...c,
-        action: trimmedAction,
-        actionDate: resolveActionDateOnTextChange(c.action || '', trimmedAction, c.actionDate),
-      };
-    }), { recalculate: false });
-    const nextRecall = dailyRecallItems.map((item) =>
-      item.clientId === clientId ? { ...item, status: 'Done' as const } : item,
-    );
-    setDailyRecallItems(nextRecall);
-    await persistDailyRecallItems(nextRecall);
-  }, [dailyRecallItems, mutateClients, persistDailyRecallItems]);
-
   const processExcelImport = useCallback(async (
     parsedClients: ParsedExcelClient[],
     newOkrRecords: OkrRecord[],
@@ -1240,7 +1109,6 @@ export function CrmProvider({ children }: CrmProviderProps) {
     setMailCampaignSendTracking([]);
     setForecastsByYear(createEmptyForecastsByYear());
     setAnalysisYear(ANALYSIS_YEAR);
-    setDailyRecallItems([]);
     showToast('Gestionale azzerato.', 'warning');
   }, [db, showToast]);
 
@@ -1391,8 +1259,6 @@ export function CrmProvider({ children }: CrmProviderProps) {
     analysisYear,
     analysisForecasts,
     analysisExpanded,
-    dailyRecallItems: filterValidRecallItems(dailyRecallItems, clients),
-    recallFilterStatus,
     totalRevenue2026,
     currentOwner,
     showToast,
@@ -1418,9 +1284,6 @@ export function CrmProvider({ children }: CrmProviderProps) {
     setAnalysisForecast,
     setAnalysisYear: handleSetAnalysisYear,
     toggleAnalysisScope,
-    refreshRecall,
-    updateRecallStatus,
-    completeRecallWithAction,
     processExcelImport,
     parseExcelBuffer,
     resetAllData,
@@ -1431,13 +1294,10 @@ export function CrmProvider({ children }: CrmProviderProps) {
     setClients,
     setIdeas,
     setClientTasks,
-    setDailyRecallItems,
-    setRecallFilterStatus,
     persistClientsNow,
     persistIdeasNow,
     persistTasksNow,
     persistAnalysisNow,
-    loadDailyRecall,
     mailCampaigns,
     mailCampaignSteps,
     mailCampaignContacts,

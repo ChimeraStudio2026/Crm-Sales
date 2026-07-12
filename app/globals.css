@@ -6869,6 +6869,12 @@ body:has(.drawer.open) .jonny-chat-root {
     line-height: 1.2;
 }
 
+.funnel-stage-filter-btn.is-active {
+    color: #fff;
+    background: var(--funnel-stage-color, var(--accent-primary));
+    border-color: transparent;
+}
+
 .funnel-stage-filter-btn.is-excluded {
     opacity: 0.45;
     text-decoration: line-through;

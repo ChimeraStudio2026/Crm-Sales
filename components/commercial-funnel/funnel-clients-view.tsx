@@ -10,8 +10,6 @@ import { FUNNEL_STAGES, type CommercialFunnelEntry, type FunnelStage } from '@/l
 import type { Client } from '@/lib/types/crm';
 import type { MailCampaign } from '@/lib/types/mail-campaigns';
 
-type FunnelClientsViewMode = 'list' | 'board';
-
 interface FunnelClientsViewProps {
   entries: CommercialFunnelEntry[];
   clients: Client[];
@@ -54,9 +52,8 @@ export function FunnelClientsView({
   mailCampaigns,
   showCampaignColumn = false,
 }: FunnelClientsViewProps) {
-  const [viewMode, setViewMode] = useState<FunnelClientsViewMode>('list');
   const [search, setSearch] = useState('');
-  const [hiddenStages, setHiddenStages] = useState<FunnelStage[]>([]);
+  const [selectedStage, setSelectedStage] = useState<FunnelStage | null>(null);
   const [expandedEntries, setExpandedEntries] = useState<Set<string>>(new Set());
 
   const clientById = useMemo(
@@ -67,7 +64,6 @@ export function FunnelClientsView({
     () => new Map(mailCampaigns.map((campaign) => [campaign.id, campaign])),
     [mailCampaigns],
   );
-  const hiddenStageSet = useMemo(() => new Set(hiddenStages), [hiddenStages]);
 
   const rows = useMemo((): FunnelClientRow[] => entries
     .map((entry) => {
@@ -90,7 +86,7 @@ export function FunnelClientsView({
   const filteredRows = useMemo(() => {
     const query = search.trim().toLowerCase();
     return rows.filter((row) => {
-      if (hiddenStageSet.has(row.entry.stage)) return false;
+      if (selectedStage && row.entry.stage !== selectedStage) return false;
       if (!query) return true;
       const clientName = row.client?.name || '';
       const campaignName = row.campaign?.name || '';
@@ -99,14 +95,10 @@ export function FunnelClientsView({
         || row.entry.owner.toLowerCase().includes(query)
         || row.entry.stage.toLowerCase().includes(query);
     });
-  }, [hiddenStageSet, rows, search]);
+  }, [rows, search, selectedStage]);
 
-  const toggleHiddenStage = (stage: FunnelStage): void => {
-    setHiddenStages((current) => (
-      current.includes(stage)
-        ? current.filter((item) => item !== stage)
-        : [...current, stage]
-    ));
+  const toggleStageFilter = (stage: FunnelStage): void => {
+    setSelectedStage((current) => (current === stage ? null : stage));
   };
 
   const toggleExpanded = (entryId: string): void => {
@@ -185,38 +177,6 @@ export function FunnelClientsView({
     );
   };
 
-  const renderBoardCard = (row: FunnelClientRow): React.ReactNode => {
-    const clientName = row.client?.name || 'Cliente non trovato';
-    return (
-      <div key={row.entry.id} className="funnel-client-board-card">
-        <div className="funnel-client-board-card-head">
-          <strong>{clientName}</strong>
-          <span
-            className={`funnel-semaforo funnel-semaforo-${row.semaforo}`}
-            title={row.semaforo === 'red' ? 'Fuori tempo' : 'Nei tempi'}
-          />
-        </div>
-        {showCampaignColumn && (
-          <span className="funnel-client-board-campaign">{row.campaign?.name || '—'}</span>
-        )}
-        <div className="funnel-client-board-meta">
-          <span>{entryOwnerLabel(row)}</span>
-          {row.stageDisplay.date && (
-            <span>{formatActionDateDisplay(row.stageDisplay.date)}</span>
-          )}
-        </div>
-        {row.entry.lostReason && row.entry.stage === 'Perso' && (
-          <p className="funnel-client-board-note">{row.entry.lostReason}</p>
-        )}
-        {row.campaign && (
-          <Link href={`/funnel/${row.campaign.id}`} className="funnel-client-board-link">
-            Apri campagna
-          </Link>
-        )}
-      </div>
-    );
-  };
-
   return (
     <div className="funnel-client-view">
       <div className="table-filter-bar funnel-client-view-toolbar">
@@ -231,47 +191,30 @@ export function FunnelClientsView({
             />
           </div>
         </div>
-        <div className="filter-right">
-          <div className="task-view-toggle" role="group" aria-label="Vista clienti funnel">
-            <button
-              type="button"
-              className={`task-view-toggle-btn${viewMode === 'list' ? ' is-active' : ''}`}
-              onClick={() => setViewMode('list')}
-            >
-              Righe
-            </button>
-            <button
-              type="button"
-              className={`task-view-toggle-btn${viewMode === 'board' ? ' is-active' : ''}`}
-              onClick={() => setViewMode('board')}
-            >
-              Kanban
-            </button>
-          </div>
-        </div>
       </div>
       <div className="tasks-list-toolbar glass-card funnel-client-view-filters">
         <div className="tasks-status-filters" role="group" aria-label="Filtra per stage">
-          <span className="tasks-filter-label">Nascondi stage:</span>
+          <span className="tasks-filter-label">Stage:</span>
           {FUNNEL_STAGES.map((stage) => {
-            const isHidden = hiddenStageSet.has(stage);
+            const isSelected = selectedStage === stage;
             return (
               <button
                 key={stage}
                 type="button"
-                aria-pressed={isHidden}
-                className={`tasks-filter-btn funnel-stage-filter-btn${isHidden ? ' is-excluded' : ''}`}
-                onClick={() => toggleHiddenStage(stage)}
+                aria-pressed={isSelected}
+                className={`tasks-filter-btn funnel-stage-filter-btn${isSelected ? ' is-active' : ''}`}
+                style={{ ['--funnel-stage-color' as string]: STAGE_META[stage].color }}
+                onClick={() => toggleStageFilter(stage)}
               >
                 {STAGE_META[stage].label}
               </button>
             );
           })}
-          {hiddenStages.length > 0 && (
+          {selectedStage && (
             <button
               type="button"
               className="tasks-filter-reset"
-              onClick={() => setHiddenStages([])}
+              onClick={() => setSelectedStage(null)}
             >
               Mostra tutti
             </button>
@@ -283,35 +226,6 @@ export function FunnelClientsView({
         <p className="mail-campaigns-empty glass-card funnel-client-view-empty-state">
           Nessun cliente corrisponde ai filtri selezionati.
         </p>
-      ) : viewMode === 'board' ? (
-        <div className="kanban-board funnel-client-board">
-          {FUNNEL_STAGES.filter((stage) => !hiddenStageSet.has(stage)).map((stage) => {
-            const columnRows = filteredRows.filter((row) => row.entry.stage === stage);
-            const meta = STAGE_META[stage];
-            return (
-              <div key={stage} className="kanban-column funnel-client-board-column">
-                <div className="kanban-column-header">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: '50%',
-                        background: meta.color,
-                        display: 'inline-block',
-                      }}
-                    />
-                    <h3>{meta.label}</h3>
-                  </div>
-                  <span className="badge">{columnRows.length}</span>
-                </div>
-                <div className="kanban-cards-container">
-                  {columnRows.map((row) => renderBoardCard(row))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
       ) : (
         <div className={`funnel-client-view-list glass-card${showCampaignColumn ? ' has-campaign-column' : ''}`}>
           <div className="funnel-client-view-header">

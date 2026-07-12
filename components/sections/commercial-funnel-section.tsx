@@ -6,10 +6,13 @@ import { useRouter } from 'next/navigation';
 import { GitBranch, Plus, Search } from 'lucide-react';
 import { buildFunnelCampaignDashboardRow, filterCampaignsByWorkspace, filterFunnelEntriesByWorkspace, searchFunnelEntriesByBrandName } from '@/lib/commercial-funnel/campaigns';
 import { resolveFunnelSemaforo, resolveFunnelStageDisplay } from '@/lib/commercial-funnel/index';
+import { buildFunnelStatsSummary } from '@/lib/commercial-funnel/stats';
 import { formatActionDateDisplay } from '@/lib/crm/utils';
 import { CampaignNameCell } from '@/components/mail-campaigns/campaign-name-cell';
 import { CampaignStatusSelect } from '@/components/mail-campaigns/campaign-status-select';
 import { CampaignTableActions } from '@/components/mail-campaigns/campaign-table-actions';
+import { FunnelStatsCharts } from '@/components/commercial-funnel/funnel-stats-charts';
+import { FunnelClientsView } from '@/components/commercial-funnel/funnel-clients-view';
 import { OWNERS } from '@/lib/constants/crm';
 import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
@@ -18,6 +21,7 @@ import type { MailCampaignStatus } from '@/lib/types/mail-campaigns';
 import type { Owner } from '@/lib/types/crm';
 
 const BRAND_SEARCH_MIN_LENGTH = 2;
+type FunnelPageView = 'campaigns' | 'clients';
 
 export function CommercialFunnelSection() {
   const router = useRouter();
@@ -39,6 +43,7 @@ export function CommercialFunnelSection() {
   const [endDate, setEndDate] = useState('');
   const [owner, setOwner] = useState<Owner | ''>('');
   const [brandSearch, setBrandSearch] = useState('');
+  const [pageView, setPageView] = useState<FunnelPageView>('campaigns');
 
   const scopedCampaigns = useMemo(
     () => filterCampaignsByWorkspace(mailCampaigns, workspaceId),
@@ -47,6 +52,10 @@ export function CommercialFunnelSection() {
   const scopedEntries = useMemo(
     () => filterFunnelEntriesByWorkspace(commercialFunnelEntries, workspaceId),
     [commercialFunnelEntries, workspaceId],
+  );
+  const workspaceStats = useMemo(
+    () => buildFunnelStatsSummary(scopedEntries),
+    [scopedEntries],
   );
 
   const rows = useMemo(
@@ -155,12 +164,38 @@ export function CommercialFunnelSection() {
               </div>
             </div>
             <div className="filter-right">
+              <div className="task-view-toggle" role="group" aria-label="Vista funnel">
+                <button
+                  type="button"
+                  className={`task-view-toggle-btn${pageView === 'campaigns' ? ' is-active' : ''}`}
+                  onClick={() => setPageView('campaigns')}
+                >
+                  Campagne
+                </button>
+                <button
+                  type="button"
+                  className={`task-view-toggle-btn${pageView === 'clients' ? ' is-active' : ''}`}
+                  onClick={() => setPageView('clients')}
+                >
+                  Clienti
+                </button>
+              </div>
               <button type="button" className="btn btn-primary" onClick={() => setShowForm(true)}>
                 <Plus size={16} />
                 <span>Nuova campagna</span>
               </button>
             </div>
           </div>
+          <FunnelStatsCharts title="Totali funnel" stats={workspaceStats} />
+          {pageView === 'clients' ? (
+            <FunnelClientsView
+              entries={scopedEntries}
+              clients={clients}
+              mailCampaigns={scopedCampaigns}
+              showCampaignColumn
+            />
+          ) : (
+            <>
           {isBrandSearchActive && (
             <div className="funnel-brand-search-panel glass-card">
               {brandSearchResults.length === 0 ? (
@@ -291,6 +326,8 @@ export function CommercialFunnelSection() {
               </tbody>
             </table>
           </div>
+            </>
+          )}
         </section>
       </div>
       {showForm && (

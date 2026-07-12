@@ -1,12 +1,14 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { FunnelClientsTable } from '@/components/commercial-funnel/funnel-clients-table';
+import { FunnelClientsView } from '@/components/commercial-funnel/funnel-clients-view';
+import { FunnelStatsCharts } from '@/components/commercial-funnel/funnel-stats-charts';
 import { CampaignStatusSelect } from '@/components/mail-campaigns/campaign-status-select';
 import { getFunnelEntriesForCampaign } from '@/lib/commercial-funnel/campaigns';
-import { isFunnelTerminalConvertedEntry, isFunnelTerminalLost } from '@/lib/commercial-funnel/index';
+import { buildFunnelStatsSummary } from '@/lib/commercial-funnel/stats';
 import { filterCampaignsByWorkspace } from '@/lib/commercial-funnel/campaigns';
 import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
@@ -16,9 +18,12 @@ interface FunnelCampaignDetailSectionProps {
   campaignId: string;
 }
 
+type CampaignDetailView = 'table' | 'clients';
+
 export function FunnelCampaignDetailSection({ campaignId }: FunnelCampaignDetailSectionProps) {
-  const { mailCampaigns, commercialFunnelEntries, updateMailCampaignStatus } = useCrm();
+  const { clients, mailCampaigns, commercialFunnelEntries, updateMailCampaignStatus } = useCrm();
   const { workspaceId } = useWorkspace();
+  const [detailView, setDetailView] = useState<CampaignDetailView>('table');
 
   const campaign = mailCampaigns.find((item) => item.id === campaignId);
   const isCampaignInWorkspace = campaign
@@ -29,16 +34,10 @@ export function FunnelCampaignDetailSection({ campaignId }: FunnelCampaignDetail
     [commercialFunnelEntries, campaignId],
   );
 
-  const stats = useMemo(() => {
-    const lostCount = entries.filter(isFunnelTerminalLost).length;
-    const convertedCount = entries.filter(isFunnelTerminalConvertedEntry).length;
-    return {
-      total: entries.length,
-      active: entries.length - lostCount - convertedCount,
-      converted: convertedCount,
-      lost: lostCount,
-    };
-  }, [entries]);
+  const stats = useMemo(
+    () => buildFunnelStatsSummary(entries),
+    [entries],
+  );
 
   if (!campaign || !isCampaignInWorkspace) {
     return (
@@ -79,13 +78,36 @@ export function FunnelCampaignDetailSection({ campaignId }: FunnelCampaignDetail
               </span>
               {campaign.startDate && <span>Inizio: <strong>{campaign.startDate}</strong></span>}
               {campaign.endDate && <span>Fine: <strong>{campaign.endDate}</strong></span>}
-              <span>Clienti: <strong>{stats.total}</strong></span>
-              <span>Attivi: <strong>{stats.active}</strong></span>
-              <span className="funnel-stat-converted">Convertiti: <strong>{stats.converted}</strong></span>
-              <span>Persi: <strong>{stats.lost}</strong></span>
             </div>
           </div>
-          <FunnelClientsTable campaignId={campaignId} entries={entries} />
+          <FunnelStatsCharts title="Totali campagna" stats={stats} />
+          <div className="funnel-campaign-view-toolbar">
+            <div className="task-view-toggle" role="group" aria-label="Vista campagna">
+              <button
+                type="button"
+                className={`task-view-toggle-btn${detailView === 'table' ? ' is-active' : ''}`}
+                onClick={() => setDetailView('table')}
+              >
+                Tabella azioni
+              </button>
+              <button
+                type="button"
+                className={`task-view-toggle-btn${detailView === 'clients' ? ' is-active' : ''}`}
+                onClick={() => setDetailView('clients')}
+              >
+                Clienti
+              </button>
+            </div>
+          </div>
+          {detailView === 'clients' ? (
+            <FunnelClientsView
+              entries={entries}
+              clients={clients}
+              mailCampaigns={mailCampaigns}
+            />
+          ) : (
+            <FunnelClientsTable campaignId={campaignId} entries={entries} />
+          )}
         </section>
       </div>
     </>

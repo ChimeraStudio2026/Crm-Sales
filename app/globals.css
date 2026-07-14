@@ -7126,6 +7126,13 @@ body:has(.drawer.open) .jonny-chat-root {
     min-width: 120px;
 }
 
+.funnel-action-select.is-positive {
+    background: #dcfce7;
+    color: #166534;
+    border-color: rgba(22, 163, 74, 0.35);
+    font-weight: 600;
+}
+
 .funnel-action-date {
     color: var(--text-secondary);
     font-size: 0.72rem;

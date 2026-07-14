@@ -5,12 +5,27 @@ export const FUNNEL_ACTION_TYPES = [
   'Instagram',
   'Messaggio',
   'Fissato appuntamento',
+  'Da scaldare',
+  'Presentazione Mandata',
   'Quotazione richiesta',
   'Convertito',
   'Perso',
 ] as const;
 
 export type FunnelActionType = typeof FUNNEL_ACTION_TYPES[number];
+
+export const POSITIVE_FUNNEL_ACTION_TYPES = [
+  'Quotazione richiesta',
+  'Presentazione Mandata',
+  'Convertito',
+  'Da scaldare',
+] as const;
+
+export type PositiveFunnelActionType = typeof POSITIVE_FUNNEL_ACTION_TYPES[number];
+
+export function isPositiveFunnelActionType(value: string): value is PositiveFunnelActionType {
+  return (POSITIVE_FUNNEL_ACTION_TYPES as readonly string[]).includes(value);
+}
 
 export const FUNNEL_STAGES = [
   'In contatto',

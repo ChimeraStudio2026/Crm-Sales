@@ -29,6 +29,11 @@ export {
   withComputedStage,
 } from '@/lib/commercial-funnel/stage';
 
+export {
+  isPositiveFunnelActionType,
+  POSITIVE_FUNNEL_ACTION_TYPES,
+} from '@/lib/types/commercial-funnel';
+
 export function createEmptyFunnelActionSlot(): FunnelActionSlot {
   return {
     type: '',

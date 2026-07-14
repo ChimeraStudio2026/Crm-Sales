@@ -10,6 +10,7 @@ import {
   isFunnelActionLocked,
   isFunnelTerminalLost,
   isFunnelTerminalConvertedEntry,
+  isPositiveFunnelActionType,
   padDisplayActions,
   resolveFunnelSemaforo,
   resolveFunnelStageDisplay,
@@ -288,7 +289,7 @@ export function FunnelClientsTable({
                           <td key={`${entry.id}-action-${slotIndex}`} className="funnel-col-action">
                             <div className="funnel-action-cell">
                               <select
-                                className="table-cell-select funnel-action-select"
+                                className={`table-cell-select funnel-action-select${isPositiveFunnelActionType(action.type) ? ' is-positive' : ''}`}
                                 value={action.type}
                                 disabled={isLocked && action.type !== 'Perso'}
                                 onChange={(e) => void handleActionChange(entry, slotIndex, e.target.value)}

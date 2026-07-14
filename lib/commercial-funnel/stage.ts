@@ -25,6 +25,7 @@ function getLastFilledActionIndex(actions: FunnelActionSlot[]): number {
 function getActionProgressionLevel(actionType: string): number | null {
   switch (actionType) {
     case 'Quotazione richiesta':
+    case 'Presentazione Mandata':
       return 2;
     case 'Incontro in presenza':
     case 'Fissato appuntamento':
@@ -33,6 +34,7 @@ function getActionProgressionLevel(actionType: string): number | null {
     case 'Instagram':
     case 'Call':
     case 'Messaggio':
+    case 'Da scaldare':
       return 0;
     default:
       return null;
@@ -127,6 +129,8 @@ export function mapLegacyActionType(actionType: string): string {
   const normalized = actionType.trim();
   if (!normalized) return '';
   if (normalized === 'Riscrivere') return 'Mail Di contatto';
+  if (normalized === 'Quotazione Richiesta') return 'Quotazione richiesta';
+  if (normalized === 'Da scladare') return 'Da scaldare';
   return normalized;
 }
 

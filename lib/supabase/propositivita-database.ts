@@ -14,9 +14,12 @@ interface CreativeProposalRow {
   client_id: string;
   workspace_id: string | null;
   title: string;
+  description: string | null;
+  reference: string | null;
   owner: string | null;
   stage: string;
   progress_pct: number;
+  deadline: string | null;
   born_at: string | null;
   assigned_at: string | null;
   sent_at: string | null;
@@ -58,9 +61,12 @@ function rowToCreativeProposal(row: CreativeProposalRow): CreativeProposal {
     clientId: row.client_id,
     workspaceId: row.workspace_id || DEFAULT_WORKSPACE_ID,
     title: row.title,
+    description: row.description || '',
+    reference: row.reference || '',
     owner: row.owner || '',
     stage: normalizeStage(row.stage),
     progressPct: Number(row.progress_pct) || 0,
+    deadline: row.deadline || '',
     bornAt: row.born_at || '',
     assignedAt: row.assigned_at || '',
     sentAt: row.sent_at || '',
@@ -79,9 +85,12 @@ function creativeProposalToRow(proposal: CreativeProposal): Record<string, unkno
     client_id: proposal.clientId,
     workspace_id: proposal.workspaceId || DEFAULT_WORKSPACE_ID,
     title: proposal.title,
+    description: proposal.description || '',
+    reference: proposal.reference || '',
     owner: proposal.owner || '',
     stage: proposal.stage,
     progress_pct: proposal.progressPct,
+    deadline: proposal.deadline || null,
     born_at: proposal.bornAt || new Date().toISOString(),
     assigned_at: proposal.assignedAt || null,
     sent_at: proposal.sentAt || null,

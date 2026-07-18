@@ -20,6 +20,7 @@ export type SpecialDiscountType = typeof SPECIAL_DISCOUNT_TYPES[number];
 
 export interface CreativeProposalAction {
   stage: CreativeProposalStage;
+  date: string;
   timestamp: string;
   note: string;
 }
@@ -29,9 +30,12 @@ export interface CreativeProposal {
   clientId: string;
   workspaceId: string;
   title: string;
+  description: string;
+  reference: string;
   owner: string;
   stage: CreativeProposalStage;
   progressPct: number;
+  deadline: string;
   bornAt: string;
   assignedAt: string;
   sentAt: string;

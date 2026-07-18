@@ -7687,6 +7687,107 @@ body:has(.drawer.open) .jonny-chat-root {
     margin: 0;
 }
 
+.propositivita-filters-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 16px;
+}
+
+.propositivita-filters-grid--discounts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.propositivita-filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.propositivita-filter-field > span {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.propositivita-filter-reset {
+    display: flex;
+    align-items: flex-end;
+}
+
+.propositivita-card-description {
+    margin: 0 0 10px;
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    line-height: 1.45;
+}
+
+.propositivita-card-reference {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 10px;
+}
+
+.propositivita-reference-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.propositivita-reference-link,
+.propositivita-reference-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.84rem;
+    color: var(--primary);
+    word-break: break-all;
+}
+
+.propositivita-reference-text {
+    color: var(--text-primary);
+}
+
+.propositivita-card-deadline {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 12px;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.propositivita-stage-badge {
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.propositivita-stage-actions {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.creative-stage-modal-subtitle {
+    margin: 0 0 8px;
+    color: var(--text-muted);
+}
+
+.creative-stage-modal-hint {
+    margin: 0 0 16px;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
 .propositivita-filters .filter-left {
     flex-wrap: wrap;
     gap: 8px;
@@ -7725,6 +7826,7 @@ body:has(.drawer.open) .jonny-chat-root {
     align-items: center;
     gap: 8px;
     margin-bottom: 12px;
+    flex-wrap: wrap;
 }
 
 .propositivita-stage-select {
@@ -7851,5 +7953,10 @@ body:has(.drawer.open) .jonny-chat-root {
 @media (max-width: 768px) {
     .propositivita-summary {
         flex-direction: column;
+    }
+
+    .propositivita-filters-grid,
+    .propositivita-filters-grid--discounts {
+        grid-template-columns: 1fr;
     }
 }

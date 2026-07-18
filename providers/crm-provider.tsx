@@ -223,14 +223,22 @@ interface CrmContextValue {
     clientId: string;
     workspaceId: string;
     title: string;
+    description?: string;
+    reference?: string;
+    deadline?: string;
     owner?: string;
     stage?: CreativeProposalStage;
     notes?: string;
   }) => Promise<string>;
-  updateCreativeProposalStage: (proposalId: string, nextStage: CreativeProposalStage, note?: string) => Promise<void>;
+  updateCreativeProposalStage: (
+    proposalId: string,
+    nextStage: CreativeProposalStage,
+    actionDate: string,
+    note?: string,
+  ) => Promise<void>;
   updateCreativeProposalFields: (
     proposalId: string,
-    patch: Partial<Pick<CreativeProposal, 'title' | 'owner' | 'notes' | 'clientFeedback'>>,
+    patch: Partial<Pick<CreativeProposal, 'title' | 'owner' | 'notes' | 'clientFeedback' | 'description' | 'reference' | 'deadline'>>,
   ) => Promise<void>;
   removeCreativeProposal: (proposalId: string) => Promise<void>;
   createSpecialDiscount: (input: {

@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { applyCreativeProposalStageChange, resolveProgressPctForStage } from '@/lib/propositivita/index';
+import { applyCreativeProposalStageChange, buildCreativeActionTimestamp, resolveProgressPctForStage } from '@/lib/propositivita/index';
 import { isOwner } from '@/lib/constants/crm';
 import { getDefaultOwnerForWorkspace } from '@/lib/crm/workspace-clients';
 import { createUniqueId, getTodayString } from '@/lib/crm/utils';
@@ -31,6 +31,9 @@ export interface CreateCreativeProposalInput {
   clientId: string;
   workspaceId: string;
   title: string;
+  description?: string;
+  reference?: string;
+  deadline?: string;
   owner?: string;
   stage?: CreativeProposalStage;
   notes?: string;
@@ -77,9 +80,11 @@ export function createPropositivitaActions(
 
   const createCreativeProposal = async (input: CreateCreativeProposalInput): Promise<string> => {
     const stage = input.stage || 'idea_nata';
-    const timestamp = new Date().toISOString();
+    const actionDate = getTodayString();
+    const timestamp = buildCreativeActionTimestamp(actionDate);
     const initialAction: CreativeProposalAction = {
       stage,
+      date: actionDate,
       timestamp,
       note: 'Creatività registrata',
     };
@@ -88,9 +93,12 @@ export function createPropositivitaActions(
       clientId: input.clientId,
       workspaceId: input.workspaceId,
       title: input.title.trim(),
+      description: input.description?.trim() || '',
+      reference: input.reference?.trim() || '',
       owner: resolveOwner(input.clientId, input.workspaceId, input.owner),
       stage,
       progressPct: resolveProgressPctForStage(stage),
+      deadline: input.deadline || '',
       bornAt: timestamp,
       assignedAt: stage === 'assegnata' ? timestamp : '',
       sentAt: stage === 'inviata_cliente' ? timestamp : '',
@@ -120,12 +128,13 @@ export function createPropositivitaActions(
   const updateCreativeProposalStage = async (
     proposalId: string,
     nextStage: CreativeProposalStage,
+    actionDate: string,
     note = '',
   ): Promise<void> => {
     await runMutation(async () => {
       const current = getState().creativeProposals.find((item) => item.id === proposalId);
       if (!current) return;
-      const updated = applyCreativeProposalStageChange(current, nextStage, note);
+      const updated = applyCreativeProposalStageChange(current, nextStage, actionDate, note);
       updated.updatedAt = new Date().toISOString();
       deps.setCreativeProposals((prev) => prev.map((item) => (item.id === proposalId ? updated : item)));
       try {
@@ -143,7 +152,7 @@ export function createPropositivitaActions(
 
   const updateCreativeProposalFields = async (
     proposalId: string,
-    patch: Partial<Pick<CreativeProposal, 'title' | 'owner' | 'notes' | 'clientFeedback'>>,
+    patch: Partial<Pick<CreativeProposal, 'title' | 'owner' | 'notes' | 'clientFeedback' | 'description' | 'reference' | 'deadline'>>,
   ): Promise<void> => {
     await runMutation(async () => {
       const current = getState().creativeProposals.find((item) => item.id === proposalId);

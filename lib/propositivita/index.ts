@@ -47,6 +47,16 @@ export function getNextCreativeProposalStage(stage: CreativeProposalStage): Crea
   return CREATIVE_PROPOSAL_STAGES[index + 1];
 }
 
+export function getPreviousCreativeProposalStage(stage: CreativeProposalStage): CreativeProposalStage | null {
+  const index = CREATIVE_PROPOSAL_STAGES.indexOf(stage);
+  if (index <= 0) return null;
+  return CREATIVE_PROPOSAL_STAGES[index - 1];
+}
+
+export function buildCreativeActionTimestamp(actionDate: string): string {
+  return `${actionDate}T12:00:00.000Z`;
+}
+
 export function normalizeCreativeProposalActions(value: unknown): CreativeProposalAction[] {
   if (!Array.isArray(value)) return [];
   return value
@@ -55,9 +65,16 @@ export function normalizeCreativeProposalActions(value: unknown): CreativePropos
       const stage = typeof item.stage === 'string' && CREATIVE_PROPOSAL_STAGES.includes(item.stage as CreativeProposalStage)
         ? item.stage as CreativeProposalStage
         : 'idea_nata';
+      const timestamp = typeof item.timestamp === 'string'
+        ? item.timestamp
+        : new Date().toISOString();
+      const date = typeof item.date === 'string'
+        ? item.date
+        : timestamp.slice(0, 10);
       return {
         stage,
-        timestamp: typeof item.timestamp === 'string' ? item.timestamp : new Date().toISOString(),
+        date,
+        timestamp,
         note: typeof item.note === 'string' ? item.note : '',
       };
     });
@@ -91,12 +108,14 @@ export function isCreativeProposalStale(
 export function applyCreativeProposalStageChange(
   proposal: CreativeProposal,
   nextStage: CreativeProposalStage,
+  actionDate: string,
   note = '',
 ): CreativeProposal {
   if (proposal.stage === nextStage) return proposal;
-  const timestamp = new Date().toISOString();
+  const timestamp = buildCreativeActionTimestamp(actionDate);
   const nextAction: CreativeProposalAction = {
     stage: nextStage,
+    date: actionDate,
     timestamp,
     note: note.trim(),
   };

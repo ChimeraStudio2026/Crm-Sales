@@ -1,9 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { FilterX, PlusCircle, Sparkles, Trash2, User } from 'lucide-react';
+import { Calendar, ExternalLink, FilterX, PlusCircle, Sparkles, Trash2, User } from 'lucide-react';
 import { TopHeader } from '@/components/layout/top-header';
 import { ClientSearchSelect } from '@/components/clients/client-search-select';
+import { CreativeStageModal } from '@/components/propositivita/creative-stage-modal';
 import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
 import { isClientInWorkspace } from '@/lib/crm/workspace-access';
@@ -23,26 +24,49 @@ import {
   getCreativeStageBadgeClass,
   getDiscountTypeBadgeClass,
   getNextCreativeProposalStage,
+  getPreviousCreativeProposalStage,
   getStaleCreativeProposals,
 } from '@/lib/propositivita/index';
 
 const STALE_DAY_OPTIONS = [0, 7, 15, 30] as const;
 
+interface StageChangeRequest {
+  proposalId: string;
+  nextStage: CreativeProposalStage;
+  direction: 'forward' | 'backward';
+}
+
 interface CreativeProposalCardProps {
   proposal: CreativeProposal;
   clientName: string;
-  onStageChange: (proposalId: string, stage: CreativeProposalStage) => Promise<void>;
+  onRequestStageChange: (request: StageChangeRequest) => void;
   onDelete: (proposalId: string) => Promise<void>;
+}
+
+function renderReference(reference: string): React.ReactNode {
+  if (!reference.trim()) return null;
+  const trimmed = reference.trim();
+  const isUrl = /^https?:\/\//i.test(trimmed);
+  if (isUrl) {
+    return (
+      <a href={trimmed} target="_blank" rel="noreferrer" className="propositivita-reference-link">
+        <ExternalLink size={14} />
+        {trimmed}
+      </a>
+    );
+  }
+  return <span className="propositivita-reference-text">{trimmed}</span>;
 }
 
 function CreativeProposalCard({
   proposal,
   clientName,
-  onStageChange,
+  onRequestStageChange,
   onDelete,
 }: CreativeProposalCardProps) {
   const idleDays = getCreativeProposalIdleDays(proposal);
   const nextStage = getNextCreativeProposalStage(proposal.stage);
+  const previousStage = getPreviousCreativeProposalStage(proposal.stage);
   return (
     <article className="propositivita-card glass-card">
       <div className="propositivita-card-head">
@@ -63,30 +87,53 @@ function CreativeProposalCard({
           <Trash2 size={14} />
         </button>
       </div>
+      {proposal.description ? (
+        <p className="propositivita-card-description">{proposal.description}</p>
+      ) : null}
+      {proposal.reference ? (
+        <div className="propositivita-card-reference">
+          <span className="propositivita-reference-label">Reference</span>
+          {renderReference(proposal.reference)}
+        </div>
+      ) : null}
+      {proposal.deadline ? (
+        <p className="propositivita-card-deadline">
+          <Calendar size={14} />
+          Deadline {proposal.deadline}
+        </p>
+      ) : null}
       <div className="propositivita-card-stage-row">
-        <select
-          className={`propositivita-stage-select ${getCreativeStageBadgeClass(proposal.stage)}`}
-          value={proposal.stage}
-          onChange={(event) => {
-            void onStageChange(proposal.id, event.target.value as CreativeProposalStage);
-          }}
-          aria-label="Stadio creatività"
-        >
-          {CREATIVE_PROPOSAL_STAGES.map((stage) => (
-            <option key={stage} value={stage}>
-              {CREATIVE_PROPOSAL_STAGE_LABELS[stage]}
-            </option>
-          ))}
-        </select>
-        {nextStage && (
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={() => void onStageChange(proposal.id, nextStage)}
-          >
-            Avanza
-          </button>
-        )}
+        <span className={`propositivita-stage-badge ${getCreativeStageBadgeClass(proposal.stage)}`}>
+          {CREATIVE_PROPOSAL_STAGE_LABELS[proposal.stage]}
+        </span>
+        <div className="propositivita-stage-actions">
+          {previousStage ? (
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => onRequestStageChange({
+                proposalId: proposal.id,
+                nextStage: previousStage,
+                direction: 'backward',
+              })}
+            >
+              Indietro
+            </button>
+          ) : null}
+          {nextStage ? (
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={() => onRequestStageChange({
+                proposalId: proposal.id,
+                nextStage,
+                direction: 'forward',
+              })}
+            >
+              Avanza
+            </button>
+          ) : null}
+        </div>
       </div>
       <div className="propositivita-progress-wrap">
         <div className="propositivita-progress-track">
@@ -155,8 +202,12 @@ export function PropositivitaSection() {
   const [discountDateTo, setDiscountDateTo] = useState('');
   const [showCreativeForm, setShowCreativeForm] = useState(false);
   const [showDiscountForm, setShowDiscountForm] = useState(false);
+  const [stageChangeRequest, setStageChangeRequest] = useState<StageChangeRequest | null>(null);
   const [creativeClientId, setCreativeClientId] = useState('');
   const [creativeTitle, setCreativeTitle] = useState('');
+  const [creativeDescription, setCreativeDescription] = useState('');
+  const [creativeReference, setCreativeReference] = useState('');
+  const [creativeDeadline, setCreativeDeadline] = useState('');
   const [creativeOwner, setCreativeOwner] = useState(currentOwner || '');
   const [creativeStage, setCreativeStage] = useState<CreativeProposalStage>('idea_nata');
   const [discountClientId, setDiscountClientId] = useState('');
@@ -200,6 +251,10 @@ export function PropositivitaSection() {
       .sort((left, right) => right.date.localeCompare(left.date));
   }, [workspaceDiscounts, discountFilterClientId, discountDateFrom, discountDateTo]);
 
+  const stageChangeProposal = stageChangeRequest
+    ? workspaceProposals.find((proposal) => proposal.id === stageChangeRequest.proposalId)
+    : undefined;
+
   const resetCreativeFilters = (): void => {
     setFilterClientId('');
     setFilterOwner('');
@@ -213,20 +268,30 @@ export function PropositivitaSection() {
     setDiscountDateTo('');
   };
 
+  const resetCreativeForm = (): void => {
+    setCreativeClientId('');
+    setCreativeTitle('');
+    setCreativeDescription('');
+    setCreativeReference('');
+    setCreativeDeadline('');
+    setCreativeStage('idea_nata');
+  };
+
   const handleCreateCreative = async (event: React.FormEvent): Promise<void> => {
     event.preventDefault();
-    if (!creativeClientId || !creativeTitle.trim()) return;
+    if (!creativeClientId || !creativeTitle.trim() || !creativeDeadline) return;
     await createCreativeProposal({
       clientId: creativeClientId,
       workspaceId,
       title: creativeTitle,
+      description: creativeDescription,
+      reference: creativeReference,
+      deadline: creativeDeadline,
       owner: creativeOwner,
       stage: creativeStage,
     });
     setShowCreativeForm(false);
-    setCreativeClientId('');
-    setCreativeTitle('');
-    setCreativeStage('idea_nata');
+    resetCreativeForm();
   };
 
   const handleCreateDiscount = async (event: React.FormEvent): Promise<void> => {
@@ -246,6 +311,17 @@ export function PropositivitaSection() {
     setDiscountAmount('');
     setDiscountReason('');
     setDiscountDate(getTodayString());
+  };
+
+  const handleConfirmStageChange = async (actionDate: string, note: string): Promise<void> => {
+    if (!stageChangeRequest) return;
+    await updateCreativeProposalStage(
+      stageChangeRequest.proposalId,
+      stageChangeRequest.nextStage,
+      actionDate,
+      note,
+    );
+    setStageChangeRequest(null);
   };
 
   const formatDiscountAmount = (type: SpecialDiscountType, amount: number): string => {
@@ -285,26 +361,36 @@ export function PropositivitaSection() {
                 </button>
               </div>
             </div>
-            <div className="table-filter-bar propositivita-filters">
-              <div className="filter-left">
+            <div className="propositivita-filters-grid glass-card">
+              <label className="propositivita-filter-field">
+                <span>Cliente</span>
                 <select className="form-select" value={filterClientId} onChange={(e) => setFilterClientId(e.target.value)}>
                   <option value="">Tutti i clienti</option>
                   {workspaceClients.map((client) => (
                     <option key={client.id} value={client.id}>{client.name}</option>
                   ))}
                 </select>
+              </label>
+              <label className="propositivita-filter-field">
+                <span>Owner</span>
                 <select className="form-select" value={filterOwner} onChange={(e) => setFilterOwner(e.target.value)}>
                   <option value="">Tutti gli owner</option>
                   {availableOwners.map((owner) => (
                     <option key={owner} value={owner}>{owner}</option>
                   ))}
                 </select>
+              </label>
+              <label className="propositivita-filter-field">
+                <span>Stadio</span>
                 <select className="form-select" value={filterStage} onChange={(e) => setFilterStage(e.target.value)}>
                   <option value="">Tutti gli stadi</option>
                   {CREATIVE_PROPOSAL_STAGES.map((stage) => (
                     <option key={stage} value={stage}>{CREATIVE_PROPOSAL_STAGE_LABELS[stage]}</option>
                   ))}
                 </select>
+              </label>
+              <label className="propositivita-filter-field">
+                <span>Inattività</span>
                 <select
                   className="form-select"
                   value={String(filterStaleDays)}
@@ -312,17 +398,19 @@ export function PropositivitaSection() {
                 >
                   {STALE_DAY_OPTIONS.map((days) => (
                     <option key={days} value={days}>
-                      {days === 0 ? 'Qualsiasi inattività' : `Ferme da ${days}+ giorni`}
+                      {days === 0 ? 'Qualsiasi' : `${days}+ giorni`}
                     </option>
                   ))}
                 </select>
-                {(filterClientId || filterOwner || filterStage || filterStaleDays > 0) && (
+              </label>
+              {(filterClientId || filterOwner || filterStage || filterStaleDays > 0) && (
+                <div className="propositivita-filter-reset">
                   <button type="button" className="btn btn-secondary" onClick={resetCreativeFilters}>
                     <FilterX size={14} />
-                    Reset
+                    Reset filtri
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
             {filteredProposals.length === 0 ? (
               <div className="glass-card propositivita-empty">Nessuna creatività trovata.</div>
@@ -333,7 +421,7 @@ export function PropositivitaSection() {
                     key={proposal.id}
                     proposal={proposal}
                     clientName={clientNameById.get(proposal.clientId) || 'Cliente sconosciuto'}
-                    onStageChange={(proposalId, stage) => updateCreativeProposalStage(proposalId, stage)}
+                    onRequestStageChange={setStageChangeRequest}
                     onDelete={removeCreativeProposal}
                   />
                 ))}
@@ -353,8 +441,9 @@ export function PropositivitaSection() {
                 </button>
               </div>
             </div>
-            <div className="table-filter-bar propositivita-filters">
-              <div className="filter-left">
+            <div className="propositivita-filters-grid propositivita-filters-grid--discounts glass-card">
+              <label className="propositivita-filter-field">
+                <span>Cliente</span>
                 <select
                   className="form-select"
                   value={discountFilterClientId}
@@ -365,27 +454,33 @@ export function PropositivitaSection() {
                     <option key={client.id} value={client.id}>{client.name}</option>
                   ))}
                 </select>
+              </label>
+              <label className="propositivita-filter-field">
+                <span>Data da</span>
                 <input
                   type="date"
                   className="form-input"
                   value={discountDateFrom}
                   onChange={(e) => setDiscountDateFrom(e.target.value)}
-                  aria-label="Data da"
                 />
+              </label>
+              <label className="propositivita-filter-field">
+                <span>Data a</span>
                 <input
                   type="date"
                   className="form-input"
                   value={discountDateTo}
                   onChange={(e) => setDiscountDateTo(e.target.value)}
-                  aria-label="Data a"
                 />
-                {(discountFilterClientId || discountDateFrom || discountDateTo) && (
+              </label>
+              {(discountFilterClientId || discountDateFrom || discountDateTo) && (
+                <div className="propositivita-filter-reset">
                   <button type="button" className="btn btn-secondary" onClick={resetDiscountFilters}>
                     <FilterX size={14} />
-                    Reset
+                    Reset filtri
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
             <div className="glass-card propositivita-table-wrap">
               <table className="data-table">
@@ -465,6 +560,35 @@ export function PropositivitaSection() {
                 <label className="form-label">
                   Titolo
                   <input className="form-input" value={creativeTitle} onChange={(e) => setCreativeTitle(e.target.value)} required />
+                </label>
+                <label className="form-label">
+                  Descrizione
+                  <textarea
+                    className="form-textarea"
+                    rows={4}
+                    value={creativeDescription}
+                    onChange={(e) => setCreativeDescription(e.target.value)}
+                    placeholder="Descrivi l'idea creativa proposta al cliente..."
+                  />
+                </label>
+                <label className="form-label">
+                  Reference
+                  <input
+                    className="form-input"
+                    value={creativeReference}
+                    onChange={(e) => setCreativeReference(e.target.value)}
+                    placeholder="Link o riferimento (es. Figma, Drive, moodboard...)"
+                  />
+                </label>
+                <label className="form-label">
+                  Deadline *
+                  <input
+                    className="form-input"
+                    type="date"
+                    value={creativeDeadline}
+                    onChange={(e) => setCreativeDeadline(e.target.value)}
+                    required
+                  />
                 </label>
                 <label className="form-label">
                   Owner
@@ -563,6 +687,18 @@ export function PropositivitaSection() {
           </div>
         </>
       )}
+
+      {stageChangeRequest && stageChangeProposal ? (
+        <CreativeStageModal
+          clientName={clientNameById.get(stageChangeProposal.clientId) || 'Cliente sconosciuto'}
+          proposalTitle={stageChangeProposal.title}
+          currentStage={stageChangeProposal.stage}
+          nextStage={stageChangeRequest.nextStage}
+          direction={stageChangeRequest.direction}
+          onClose={() => setStageChangeRequest(null)}
+          onConfirm={(actionDate, note) => void handleConfirmStageChange(actionDate, note)}
+        />
+      ) : null}
     </>
   );
 }

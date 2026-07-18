@@ -231,3 +231,9 @@ export function isCreativeProposalDeadlineOverdue(proposal: CreativeProposal): b
   const day = String(today.getDate()).padStart(2, '0');
   return proposal.deadline < `${year}-${month}-${day}`;
 }
+
+export function getCreativeProgressFillClass(progressPct: number): string {
+  if (progressPct >= 75) return 'is-green';
+  if (progressPct >= 50) return 'is-orange';
+  return 'is-red';
+}

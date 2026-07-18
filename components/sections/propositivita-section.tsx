@@ -30,6 +30,7 @@ import {
   isCreativeProposalDeadlineOverdue,
   resolveCreativeProposalActionsChronological,
   resolveLastCreativeActionAt,
+  getCreativeProgressFillClass,
 } from '@/lib/propositivita/index';
 
 const STALE_DAY_OPTIONS = [0, 7, 15, 30] as const;
@@ -154,7 +155,7 @@ function CreativeProposalCard({
       <div className="propositivita-progress-wrap">
         <div className="propositivita-progress-track">
           <div
-            className="propositivita-progress-fill"
+            className={`propositivita-progress-fill ${getCreativeProgressFillClass(proposal.progressPct)}`}
             style={{ width: `${Math.min(Math.max(proposal.progressPct, 0), 100)}%` }}
           />
         </div>

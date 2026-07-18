@@ -7982,7 +7982,19 @@ body:has(.drawer.open) .jonny-chat-root {
     height: 100%;
     border-radius: inherit;
     background: var(--primary);
-    transition: width 0.25s ease;
+    transition: width 0.25s ease, background-color 0.25s ease;
+}
+
+.propositivita-progress-fill.is-red {
+    background: #dc2626;
+}
+
+.propositivita-progress-fill.is-orange {
+    background: #ea580c;
+}
+
+.propositivita-progress-fill.is-green {
+    background: #16a34a;
 }
 
 .propositivita-progress-meta {

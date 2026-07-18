@@ -7730,6 +7730,27 @@ body:has(.drawer.open) .jonny-chat-root {
     font-size: 0.82rem;
 }
 
+.propositivita-company-badge {
+    display: inline-flex;
+    align-items: center;
+    margin-top: 8px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.propositivita-company-badge.is-chimera {
+    background: rgba(59, 130, 246, 0.12);
+    color: #1d4ed8;
+}
+
+.propositivita-company-badge.is-tinytoast {
+    background: rgba(234, 88, 12, 0.12);
+    color: #c2410c;
+}
+
 .propositivita-section-title {
     display: flex;
     align-items: center;
@@ -7765,7 +7786,7 @@ body:has(.drawer.open) .jonny-chat-root {
 
 .propositivita-filters-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 12px;
     margin-bottom: 16px;
     padding: 16px;

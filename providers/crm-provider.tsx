@@ -239,7 +239,7 @@ interface CrmContextValue {
   ) => Promise<void>;
   updateCreativeProposalFields: (
     proposalId: string,
-    patch: Partial<Pick<CreativeProposal, 'clientId' | 'contactId' | 'title' | 'owner' | 'notes' | 'clientFeedback' | 'description' | 'reference' | 'deadline'>>,
+    patch: Partial<Pick<CreativeProposal, 'clientId' | 'contactId' | 'workspaceId' | 'title' | 'owner' | 'notes' | 'clientFeedback' | 'description' | 'reference' | 'deadline'>>,
   ) => Promise<void>;
   removeCreativeProposal: (proposalId: string) => Promise<void>;
   createSpecialDiscount: (input: {

@@ -155,7 +155,7 @@ export function createPropositivitaActions(
 
   const updateCreativeProposalFields = async (
     proposalId: string,
-    patch: Partial<Pick<CreativeProposal, 'clientId' | 'contactId' | 'title' | 'owner' | 'notes' | 'clientFeedback' | 'description' | 'reference' | 'deadline'>>,
+    patch: Partial<Pick<CreativeProposal, 'clientId' | 'contactId' | 'workspaceId' | 'title' | 'owner' | 'notes' | 'clientFeedback' | 'description' | 'reference' | 'deadline'>>,
   ): Promise<void> => {
     await runMutation(async () => {
       const current = getState().creativeProposals.find((item) => item.id === proposalId);

@@ -8,7 +8,8 @@ import { CreativeStageModal } from '@/components/propositivita/creative-stage-mo
 import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
 import { isClientInWorkspace } from '@/lib/crm/workspace-access';
-import { getOwnersForWorkspace } from '@/lib/crm/workspace-clients';
+import { getDefaultOwnerForWorkspace, getOwnersForWorkspace } from '@/lib/crm/workspace-clients';
+import { CRM_WORKSPACES, resolveWorkspaceLabel, type WorkspaceId } from '@/lib/constants/workspaces';
 import { formatCurrency, getTodayString, isClientInActiveSection, isClientInColdSection } from '@/lib/crm/utils';
 import {
   CREATIVE_PROPOSAL_STAGES,
@@ -18,7 +19,6 @@ import type { CreativeProposal, CreativeProposalStage, SpecialDiscountType } fro
 import {
   CREATIVE_PROPOSAL_STAGE_LABELS,
   SPECIAL_DISCOUNT_TYPE_LABELS,
-  filterCreativeProposalsByWorkspace,
   filterSpecialDiscountsByWorkspace,
   getCreativeProposalIdleDays,
   getCreativeStageBadgeClass,
@@ -99,6 +99,9 @@ function CreativeProposalCard({
         <div>
           <strong className="propositivita-creative-title">{proposal.title}</strong>
           <p className="propositivita-client-subtitle">{clientName}</p>
+          <span className={`propositivita-company-badge is-${proposal.workspaceId || 'chimera'}`}>
+            {resolveWorkspaceLabel(proposal.workspaceId)}
+          </span>
           {contactLabel ? (
             <p className="propositivita-contact-subtitle">
               <Mail size={13} />
@@ -264,29 +267,35 @@ export function PropositivitaSection() {
     currentOwner,
   } = useCrm();
   const { workspaceId } = useWorkspace();
-  const availableOwners = useMemo(() => getOwnersForWorkspace(workspaceId), [workspaceId]);
+  const allOwners = useMemo(() => {
+    const ownerSet = new Set<string>();
+    CRM_WORKSPACES.forEach((workspace) => {
+      getOwnersForWorkspace(workspace.id).forEach((owner) => ownerSet.add(owner));
+    });
+    return [...ownerSet];
+  }, []);
+  const allClients = useMemo(
+    () => [...clients].sort((left, right) => left.name.localeCompare(right.name, 'it')),
+    [clients],
+  );
+  const clientsForCompany = (companyId: WorkspaceId) => clients
+    .filter((client) => isClientInWorkspace(client, companyId))
+    .sort((left, right) => left.name.localeCompare(right.name, 'it'));
+  const activeClientsForCompany = (companyId: WorkspaceId) => clients
+    .filter((client) => isClientInActiveSection(client) && isClientInWorkspace(client, companyId))
+    .sort((left, right) => left.name.localeCompare(right.name, 'it'));
+  const coldClientsForCompany = (companyId: WorkspaceId) => clients
+    .filter((client) => isClientInColdSection(client) && isClientInWorkspace(client, companyId))
+    .sort((left, right) => left.name.localeCompare(right.name, 'it'));
   const workspaceClients = useMemo(
-    () => clients
-      .filter((client) => isClientInWorkspace(client, workspaceId))
-      .sort((left, right) => left.name.localeCompare(right.name, 'it')),
-    [clients, workspaceId],
-  );
-  const activeClients = useMemo(
-    () => clients
-      .filter((client) => isClientInActiveSection(client) && isClientInWorkspace(client, workspaceId))
-      .sort((left, right) => left.name.localeCompare(right.name, 'it')),
-    [clients, workspaceId],
-  );
-  const coldClients = useMemo(
-    () => clients
-      .filter((client) => isClientInColdSection(client) && isClientInWorkspace(client, workspaceId))
-      .sort((left, right) => left.name.localeCompare(right.name, 'it')),
+    () => clientsForCompany(workspaceId),
     [clients, workspaceId],
   );
   const clientNameById = useMemo(
-    () => new Map(workspaceClients.map((client) => [client.id, client.name])),
-    [workspaceClients],
+    () => new Map(allClients.map((client) => [client.id, client.name])),
+    [allClients],
   );
+  const [filterCompanyId, setFilterCompanyId] = useState<WorkspaceId | ''>('');
   const [filterClientId, setFilterClientId] = useState('');
   const [filterOwner, setFilterOwner] = useState('');
   const [filterStage, setFilterStage] = useState('');
@@ -303,6 +312,7 @@ export function PropositivitaSection() {
   const [budgetDate, setBudgetDate] = useState(getTodayString());
   const [budgetNotes, setBudgetNotes] = useState('');
   const [budgetType, setBudgetType] = useState<SpecialDiscountType>('spesa_extra');
+  const [creativeWorkspaceId, setCreativeWorkspaceId] = useState<WorkspaceId>(workspaceId);
   const [creativeClientId, setCreativeClientId] = useState('');
   const [creativeContactId, setCreativeContactId] = useState('');
   const [creativeTitle, setCreativeTitle] = useState('');
@@ -318,24 +328,36 @@ export function PropositivitaSection() {
   const [discountDate, setDiscountDate] = useState(getTodayString());
   const [discountOwner, setDiscountOwner] = useState(currentOwner || '');
 
-  const workspaceProposals = useMemo(
-    () => filterCreativeProposalsByWorkspace(creativeProposals, workspaceId),
-    [creativeProposals, workspaceId],
+  const formActiveClients = useMemo(
+    () => activeClientsForCompany(creativeWorkspaceId),
+    [clients, creativeWorkspaceId],
   );
-  const workspaceDiscounts = useMemo(
-    () => filterSpecialDiscountsByWorkspace(specialDiscounts, workspaceId),
-    [specialDiscounts, workspaceId],
+  const formColdClients = useMemo(
+    () => coldClientsForCompany(creativeWorkspaceId),
+    [clients, creativeWorkspaceId],
   );
+  const formOwners = useMemo(
+    () => getOwnersForWorkspace(creativeWorkspaceId),
+    [creativeWorkspaceId],
+  );
+  const discountOwners = useMemo(
+    () => getOwnersForWorkspace(workspaceId),
+    [workspaceId],
+  );
+  const filterableClients = useMemo(() => {
+    if (!filterCompanyId) return allClients;
+    return clientsForCompany(filterCompanyId);
+  }, [allClients, clients, filterCompanyId]);
   const staleCount = useMemo(
-    () => getStaleCreativeProposals(workspaceProposals, 15).length,
-    [workspaceProposals],
+    () => getStaleCreativeProposals(creativeProposals, 15).length,
+    [creativeProposals],
   );
   const creativeReport = useMemo(
-    () => buildCreativeProposalsReport(workspaceProposals, workspaceDiscounts),
-    [workspaceProposals, workspaceDiscounts],
+    () => buildCreativeProposalsReport(creativeProposals, specialDiscounts),
+    [creativeProposals, specialDiscounts],
   );
   const budgetProposal = budgetProposalId
-    ? workspaceProposals.find((proposal) => proposal.id === budgetProposalId)
+    ? creativeProposals.find((proposal) => proposal.id === budgetProposalId)
     : undefined;
   const selectedCreativeClient = useMemo(
     () => clients.find((client) => client.id === creativeClientId),
@@ -350,8 +372,9 @@ export function PropositivitaSection() {
     [clients],
   );
   const filteredProposals = useMemo(() => {
-    return workspaceProposals
+    return creativeProposals
       .filter((proposal) => {
+        if (filterCompanyId && proposal.workspaceId !== filterCompanyId) return false;
         if (filterClientId && proposal.clientId !== filterClientId) return false;
         if (filterOwner && proposal.owner !== filterOwner) return false;
         if (filterStage && proposal.stage !== filterStage) return false;
@@ -359,7 +382,11 @@ export function PropositivitaSection() {
         return true;
       })
       .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
-  }, [workspaceProposals, filterClientId, filterOwner, filterStage, filterStaleDays]);
+  }, [creativeProposals, filterCompanyId, filterClientId, filterOwner, filterStage, filterStaleDays]);
+  const workspaceDiscounts = useMemo(
+    () => filterSpecialDiscountsByWorkspace(specialDiscounts, workspaceId),
+    [specialDiscounts, workspaceId],
+  );
   const filteredDiscounts = useMemo(() => {
     return workspaceDiscounts
       .filter((discount) => {
@@ -372,10 +399,11 @@ export function PropositivitaSection() {
   }, [workspaceDiscounts, discountFilterClientId, discountDateFrom, discountDateTo]);
 
   const stageChangeProposal = stageChangeRequest
-    ? workspaceProposals.find((proposal) => proposal.id === stageChangeRequest.proposalId)
+    ? creativeProposals.find((proposal) => proposal.id === stageChangeRequest.proposalId)
     : undefined;
 
   const resetCreativeFilters = (): void => {
+    setFilterCompanyId('');
     setFilterClientId('');
     setFilterOwner('');
     setFilterStage('');
@@ -389,6 +417,7 @@ export function PropositivitaSection() {
   };
 
   const resetCreativeForm = (): void => {
+    setCreativeWorkspaceId(workspaceId);
     setCreativeClientId('');
     setCreativeContactId('');
     setCreativeTitle('');
@@ -396,7 +425,14 @@ export function PropositivitaSection() {
     setCreativeReference('');
     setCreativeDeadline('');
     setCreativeStage('idea_nata');
-    setCreativeOwner(currentOwner || '');
+    setCreativeOwner(getDefaultOwnerForWorkspace(workspaceId));
+  };
+
+  const handleCreativeWorkspaceChange = (companyId: WorkspaceId): void => {
+    setCreativeWorkspaceId(companyId);
+    setCreativeClientId('');
+    setCreativeContactId('');
+    setCreativeOwner(getDefaultOwnerForWorkspace(companyId));
   };
 
   const handleCreativeClientChange = (clientId: string): void => {
@@ -418,6 +454,9 @@ export function PropositivitaSection() {
 
   const openEditCreativeForm = (proposal: CreativeProposal): void => {
     setEditingProposalId(proposal.id);
+    setCreativeWorkspaceId(
+      proposal.workspaceId === 'tinytoast' ? 'tinytoast' : 'chimera',
+    );
     setCreativeClientId(proposal.clientId);
     setCreativeContactId(proposal.contactId);
     setCreativeTitle(proposal.title);
@@ -439,6 +478,7 @@ export function PropositivitaSection() {
     if (!creativeClientId || !creativeTitle.trim() || !creativeDeadline) return;
     if (editingProposalId) {
       await updateCreativeProposalFields(editingProposalId, {
+        workspaceId: creativeWorkspaceId,
         clientId: creativeClientId,
         contactId: creativeContactId,
         title: creativeTitle.trim(),
@@ -451,7 +491,7 @@ export function PropositivitaSection() {
       await createCreativeProposal({
         clientId: creativeClientId,
         contactId: creativeContactId,
-        workspaceId,
+        workspaceId: creativeWorkspaceId,
         title: creativeTitle,
         description: creativeDescription,
         reference: creativeReference,
@@ -533,11 +573,11 @@ export function PropositivitaSection() {
             <div>
               <h3 className="propositivita-section-title"><Sparkles size={20} /> Propositività</h3>
               <p className="propositivita-section-subtitle">
-                Creatività proposte ai clienti e sconti/extra concessi nel workspace.
+                Creatività proposte ai clienti e sconti/extra concessi per Chimera e TinyToast.
               </p>
             </div>
             <div className="propositivita-summary-stats">
-              <span>{workspaceProposals.length} creatività</span>
+              <span>{creativeProposals.length} creatività</span>
               <span>{workspaceDiscounts.length} voci sconti/extra</span>
               {staleCount > 0 && <span className="is-warning">{staleCount} ferme da 15+ giorni</span>}
             </div>
@@ -580,10 +620,26 @@ export function PropositivitaSection() {
             </div>
             <div className="propositivita-filters-grid glass-card">
               <label className="propositivita-filter-field">
+                <span>Company</span>
+                <select
+                  className="form-select"
+                  value={filterCompanyId}
+                  onChange={(event) => {
+                    setFilterCompanyId(event.target.value as WorkspaceId | '');
+                    setFilterClientId('');
+                  }}
+                >
+                  <option value="">Tutte</option>
+                  {CRM_WORKSPACES.map((workspace) => (
+                    <option key={workspace.id} value={workspace.id}>{workspace.shortLabel}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="propositivita-filter-field">
                 <span>Cliente</span>
                 <select className="form-select" value={filterClientId} onChange={(e) => setFilterClientId(e.target.value)}>
                   <option value="">Tutti i clienti</option>
-                  {workspaceClients.map((client) => (
+                  {filterableClients.map((client) => (
                     <option key={client.id} value={client.id}>{client.name}</option>
                   ))}
                 </select>
@@ -592,7 +648,7 @@ export function PropositivitaSection() {
                 <span>Owner</span>
                 <select className="form-select" value={filterOwner} onChange={(e) => setFilterOwner(e.target.value)}>
                   <option value="">Tutti gli owner</option>
-                  {availableOwners.map((owner) => (
+                  {allOwners.map((owner) => (
                     <option key={owner} value={owner}>{owner}</option>
                   ))}
                 </select>
@@ -620,7 +676,7 @@ export function PropositivitaSection() {
                   ))}
                 </select>
               </label>
-              {(filterClientId || filterOwner || filterStage || filterStaleDays > 0) && (
+              {(filterCompanyId || filterClientId || filterOwner || filterStage || filterStaleDays > 0) && (
                 <div className="propositivita-filter-reset">
                   <button type="button" className="btn btn-secondary" onClick={resetCreativeFilters}>
                     <FilterX size={14} />
@@ -642,7 +698,7 @@ export function PropositivitaSection() {
                       clientById.get(proposal.clientId),
                       proposal.contactId,
                     )}
-                    budgetTotal={resolveCreativeProposalBudgetTotal(proposal.id, workspaceDiscounts)}
+                    budgetTotal={resolveCreativeProposalBudgetTotal(proposal.id, specialDiscounts)}
                     onRequestStageChange={setStageChangeRequest}
                     onAddBudget={openBudgetModal}
                     onEdit={openEditCreativeForm}
@@ -773,10 +829,23 @@ export function PropositivitaSection() {
             <form onSubmit={(event) => void handleSaveCreative(event)}>
               <div className="drawer-body">
                 <label className="form-label">
+                  Company *
+                  <select
+                    className="form-select"
+                    value={creativeWorkspaceId}
+                    onChange={(event) => handleCreativeWorkspaceChange(event.target.value as WorkspaceId)}
+                    required
+                  >
+                    {CRM_WORKSPACES.map((workspace) => (
+                      <option key={workspace.id} value={workspace.id}>{workspace.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="form-label">
                   Cliente
                   <ClientSearchSelect
-                    activeClients={activeClients}
-                    coldClients={coldClients}
+                    activeClients={formActiveClients}
+                    coldClients={formColdClients}
                     value={creativeClientId}
                     onChange={handleCreativeClientChange}
                     required
@@ -838,7 +907,7 @@ export function PropositivitaSection() {
                   Owner
                   <select className="form-select" value={creativeOwner} onChange={(e) => setCreativeOwner(e.target.value)}>
                     <option value="">—</option>
-                    {availableOwners.map((owner) => (
+                    {formOwners.map((owner) => (
                       <option key={owner} value={owner}>{owner}</option>
                     ))}
                   </select>
@@ -921,7 +990,7 @@ export function PropositivitaSection() {
                   Owner
                   <select className="form-select" value={discountOwner} onChange={(e) => setDiscountOwner(e.target.value)}>
                     <option value="">—</option>
-                    {availableOwners.map((owner) => (
+                    {discountOwners.map((owner) => (
                       <option key={owner} value={owner}>{owner}</option>
                     ))}
                   </select>

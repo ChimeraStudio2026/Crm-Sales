@@ -1,5 +1,12 @@
-import type { CommercialFunnelEntry, FunnelActionSlot } from '@/lib/types/commercial-funnel';
+import type { CommercialFunnelEntry, FunnelActionSlot, FunnelActionType } from '@/lib/types/commercial-funnel';
 import { isFunnelTerminalConvertedEntry, isFunnelTerminalLost } from '@/lib/commercial-funnel/index';
+
+export const FUNNEL_QUOTATION_ACTION_TYPES = ['Quotazione richiesta'] as const satisfies readonly FunnelActionType[];
+
+export const FUNNEL_MEETING_ACTION_TYPES = [
+  'Incontro in presenza',
+  'Fissato appuntamento',
+] as const satisfies readonly FunnelActionType[];
 
 export interface FunnelStatsSummary {
   total: number;
@@ -7,6 +14,10 @@ export interface FunnelStatsSummary {
   lost: number;
   active: number;
   conversionRate: number;
+  quotationRequestRate: number;
+  quotationRequestCount: number;
+  meetingFixedRate: number;
+  meetingFixedCount: number;
   averageConversionDays: number | null;
   averageConversionSampleSize: number;
 }
@@ -45,12 +56,28 @@ export function getEntryConversionDays(entry: CommercialFunnelEntry): number | n
   return Math.max(elapsedDays, 0);
 }
 
+function entryHasAnyActionType(
+  entry: CommercialFunnelEntry,
+  actionTypes: readonly FunnelActionType[],
+): boolean {
+  const allowedTypes = new Set<string>(actionTypes);
+  return entry.actions.some((action) => action.type && allowedTypes.has(action.type));
+}
+
 export function buildFunnelStatsSummary(entries: CommercialFunnelEntry[]): FunnelStatsSummary {
   const converted = entries.filter(isFunnelTerminalConvertedEntry).length;
   const lost = entries.filter(isFunnelTerminalLost).length;
   const total = entries.length;
   const active = Math.max(total - converted - lost, 0);
   const conversionRate = total > 0 ? (converted / total) * 100 : 0;
+  const quotationRequestCount = entries.filter(
+    (entry) => entryHasAnyActionType(entry, FUNNEL_QUOTATION_ACTION_TYPES),
+  ).length;
+  const meetingFixedCount = entries.filter(
+    (entry) => entryHasAnyActionType(entry, FUNNEL_MEETING_ACTION_TYPES),
+  ).length;
+  const quotationRequestRate = total > 0 ? (quotationRequestCount / total) * 100 : 0;
+  const meetingFixedRate = total > 0 ? (meetingFixedCount / total) * 100 : 0;
   const conversionDays = entries
     .map(getEntryConversionDays)
     .filter((value): value is number => value !== null);
@@ -63,6 +90,10 @@ export function buildFunnelStatsSummary(entries: CommercialFunnelEntry[]): Funne
     lost,
     active,
     conversionRate,
+    quotationRequestRate,
+    quotationRequestCount,
+    meetingFixedRate,
+    meetingFixedCount,
     averageConversionDays,
     averageConversionSampleSize: conversionDays.length,
   };

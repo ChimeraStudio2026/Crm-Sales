@@ -79,6 +79,16 @@ export function FunnelStatsCharts({ title = 'Totali', stats }: FunnelStatsCharts
               : 'Nessuna conversione con date disponibili'}
           </small>
         </article>
+        <article className="funnel-stat-card funnel-stat-card-quotation">
+          <span className="funnel-stat-label">Quotazioni richieste</span>
+          <strong className="funnel-stat-value">{stats.quotationRequestRate.toFixed(1)}%</strong>
+          <small>{stats.quotationRequestCount} lead su {stats.total}</small>
+        </article>
+        <article className="funnel-stat-card funnel-stat-card-meeting">
+          <span className="funnel-stat-label">Incontro fissato</span>
+          <strong className="funnel-stat-value">{stats.meetingFixedRate.toFixed(1)}%</strong>
+          <small>{stats.meetingFixedCount} lead con incontro o appuntamento</small>
+        </article>
       </div>
       <div className="funnel-stats-composition">
         <div className="funnel-stats-composition-head">

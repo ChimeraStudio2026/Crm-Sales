@@ -6517,7 +6517,7 @@ body:has(.drawer.open) .jonny-chat-root {
 
 .funnel-stats-grid {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
     gap: 12px;
     margin-bottom: 18px;
 }
@@ -6560,6 +6560,14 @@ body:has(.drawer.open) .jonny-chat-root {
 
 .funnel-stat-card-time .funnel-stat-value {
     font-size: 1.25rem;
+}
+
+.funnel-stat-card-quotation .funnel-stat-value {
+    color: #d97706;
+}
+
+.funnel-stat-card-meeting .funnel-stat-value {
+    color: #7c3aed;
 }
 
 .funnel-stat-rate-body {

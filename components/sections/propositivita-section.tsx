@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Calendar, ChevronDown, ChevronUp, ExternalLink, FilterX, PlusCircle, Sparkles, Trash2, User } from 'lucide-react';
+import { Calendar, ChevronDown, ChevronUp, Edit, ExternalLink, FilterX, Mail, PlusCircle, Sparkles, Trash2, User, Wallet } from 'lucide-react';
 import { TopHeader } from '@/components/layout/top-header';
 import { ClientSearchSelect } from '@/components/clients/client-search-select';
 import { CreativeStageModal } from '@/components/propositivita/creative-stage-modal';
@@ -31,7 +31,13 @@ import {
   resolveCreativeProposalActionsChronological,
   resolveLastCreativeActionAt,
   getCreativeProgressFillClass,
+  buildCreativeProposalsReport,
+  resolveCreativeProposalBudgetTotal,
 } from '@/lib/propositivita/index';
+import {
+  getCreativeProposalContacts,
+  resolveCreativeProposalContactLabel,
+} from '@/lib/propositivita/contacts';
 
 const STALE_DAY_OPTIONS = [0, 7, 15, 30] as const;
 
@@ -44,7 +50,11 @@ interface StageChangeRequest {
 interface CreativeProposalCardProps {
   proposal: CreativeProposal;
   clientName: string;
+  contactLabel: string;
+  budgetTotal: number;
   onRequestStageChange: (request: StageChangeRequest) => void;
+  onAddBudget: (proposalId: string) => void;
+  onEdit: (proposal: CreativeProposal) => void;
   onDelete: (proposalId: string) => Promise<void>;
 }
 
@@ -66,7 +76,11 @@ function renderReference(reference: string): React.ReactNode {
 function CreativeProposalCard({
   proposal,
   clientName,
+  contactLabel,
+  budgetTotal,
   onRequestStageChange,
+  onAddBudget,
+  onEdit,
   onDelete,
 }: CreativeProposalCardProps) {
   const [isTimelineOpen, setIsTimelineOpen] = useState(false);
@@ -83,21 +97,37 @@ function CreativeProposalCard({
     <article className="propositivita-card glass-card">
       <div className="propositivita-card-head">
         <div>
-          <strong className="propositivita-client-name">{clientName}</strong>
-          <p className="propositivita-card-title">{proposal.title}</p>
+          <strong className="propositivita-creative-title">{proposal.title}</strong>
+          <p className="propositivita-client-subtitle">{clientName}</p>
+          {contactLabel ? (
+            <p className="propositivita-contact-subtitle">
+              <Mail size={13} />
+              {contactLabel}
+            </p>
+          ) : null}
         </div>
-        <button
-          type="button"
-          className="btn-table-action"
-          aria-label="Elimina creatività"
-          onClick={() => {
-            if (window.confirm(`Eliminare la creatività "${proposal.title}"?`)) {
-              void onDelete(proposal.id);
-            }
-          }}
-        >
-          <Trash2 size={14} />
-        </button>
+        <div className="propositivita-card-head-actions">
+          <button
+            type="button"
+            className="btn-table-action"
+            aria-label="Modifica creatività"
+            onClick={() => onEdit(proposal)}
+          >
+            <Edit size={14} />
+          </button>
+          <button
+            type="button"
+            className="btn-table-action"
+            aria-label="Elimina creatività"
+            onClick={() => {
+              if (window.confirm(`Eliminare la creatività "${proposal.title}"?`)) {
+                void onDelete(proposal.id);
+              }
+            }}
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
       </div>
       <div className="propositivita-card-dates">
         <span className={`propositivita-card-deadline${isDeadlineOverdue ? ' is-overdue' : ''}`}>
@@ -119,6 +149,19 @@ function CreativeProposalCard({
           {renderReference(proposal.reference)}
         </div>
       ) : null}
+      <div className="propositivita-card-budget">
+        <div className="propositivita-card-budget-meta">
+          <Wallet size={14} />
+          <span>Budget: {formatCurrency(budgetTotal)}</span>
+        </div>
+        <button
+          type="button"
+          className="btn btn-secondary btn-sm"
+          onClick={() => onAddBudget(proposal.id)}
+        >
+          Aggiungi budget
+        </button>
+      </div>
       <div className="propositivita-card-stage-row">
         <span className={`propositivita-stage-badge ${getCreativeStageBadgeClass(proposal.stage)}`}>
           {CREATIVE_PROPOSAL_STAGE_LABELS[proposal.stage]}
@@ -213,8 +256,10 @@ export function PropositivitaSection() {
     specialDiscounts,
     createCreativeProposal,
     updateCreativeProposalStage,
+    updateCreativeProposalFields,
     removeCreativeProposal,
     createSpecialDiscount,
+    registerCreativeProposalBudget,
     removeSpecialDiscount,
     currentOwner,
   } = useCrm();
@@ -250,9 +295,16 @@ export function PropositivitaSection() {
   const [discountDateFrom, setDiscountDateFrom] = useState('');
   const [discountDateTo, setDiscountDateTo] = useState('');
   const [showCreativeForm, setShowCreativeForm] = useState(false);
+  const [editingProposalId, setEditingProposalId] = useState('');
   const [showDiscountForm, setShowDiscountForm] = useState(false);
   const [stageChangeRequest, setStageChangeRequest] = useState<StageChangeRequest | null>(null);
+  const [budgetProposalId, setBudgetProposalId] = useState('');
+  const [budgetAmount, setBudgetAmount] = useState('');
+  const [budgetDate, setBudgetDate] = useState(getTodayString());
+  const [budgetNotes, setBudgetNotes] = useState('');
+  const [budgetType, setBudgetType] = useState<SpecialDiscountType>('spesa_extra');
   const [creativeClientId, setCreativeClientId] = useState('');
+  const [creativeContactId, setCreativeContactId] = useState('');
   const [creativeTitle, setCreativeTitle] = useState('');
   const [creativeDescription, setCreativeDescription] = useState('');
   const [creativeReference, setCreativeReference] = useState('');
@@ -277,6 +329,25 @@ export function PropositivitaSection() {
   const staleCount = useMemo(
     () => getStaleCreativeProposals(workspaceProposals, 15).length,
     [workspaceProposals],
+  );
+  const creativeReport = useMemo(
+    () => buildCreativeProposalsReport(workspaceProposals, workspaceDiscounts),
+    [workspaceProposals, workspaceDiscounts],
+  );
+  const budgetProposal = budgetProposalId
+    ? workspaceProposals.find((proposal) => proposal.id === budgetProposalId)
+    : undefined;
+  const selectedCreativeClient = useMemo(
+    () => clients.find((client) => client.id === creativeClientId),
+    [clients, creativeClientId],
+  );
+  const creativeContactOptions = useMemo(
+    () => (selectedCreativeClient ? getCreativeProposalContacts(selectedCreativeClient) : []),
+    [selectedCreativeClient],
+  );
+  const clientById = useMemo(
+    () => new Map(clients.map((client) => [client.id, client])),
+    [clients],
   );
   const filteredProposals = useMemo(() => {
     return workspaceProposals
@@ -319,28 +390,77 @@ export function PropositivitaSection() {
 
   const resetCreativeForm = (): void => {
     setCreativeClientId('');
+    setCreativeContactId('');
     setCreativeTitle('');
     setCreativeDescription('');
     setCreativeReference('');
     setCreativeDeadline('');
     setCreativeStage('idea_nata');
+    setCreativeOwner(currentOwner || '');
   };
 
-  const handleCreateCreative = async (event: React.FormEvent): Promise<void> => {
+  const handleCreativeClientChange = (clientId: string): void => {
+    setCreativeClientId(clientId);
+    const client = clients.find((item) => item.id === clientId);
+    if (!client) {
+      setCreativeContactId('');
+      return;
+    }
+    const contacts = getCreativeProposalContacts(client);
+    setCreativeContactId(contacts[0]?.id || '');
+  };
+
+  const openCreateCreativeForm = (): void => {
+    setEditingProposalId('');
+    resetCreativeForm();
+    setShowCreativeForm(true);
+  };
+
+  const openEditCreativeForm = (proposal: CreativeProposal): void => {
+    setEditingProposalId(proposal.id);
+    setCreativeClientId(proposal.clientId);
+    setCreativeContactId(proposal.contactId);
+    setCreativeTitle(proposal.title);
+    setCreativeDescription(proposal.description);
+    setCreativeReference(proposal.reference);
+    setCreativeDeadline(proposal.deadline);
+    setCreativeOwner(proposal.owner);
+    setShowCreativeForm(true);
+  };
+
+  const closeCreativeForm = (): void => {
+    setShowCreativeForm(false);
+    setEditingProposalId('');
+    resetCreativeForm();
+  };
+
+  const handleSaveCreative = async (event: React.FormEvent): Promise<void> => {
     event.preventDefault();
     if (!creativeClientId || !creativeTitle.trim() || !creativeDeadline) return;
-    await createCreativeProposal({
-      clientId: creativeClientId,
-      workspaceId,
-      title: creativeTitle,
-      description: creativeDescription,
-      reference: creativeReference,
-      deadline: creativeDeadline,
-      owner: creativeOwner,
-      stage: creativeStage,
-    });
-    setShowCreativeForm(false);
-    resetCreativeForm();
+    if (editingProposalId) {
+      await updateCreativeProposalFields(editingProposalId, {
+        clientId: creativeClientId,
+        contactId: creativeContactId,
+        title: creativeTitle.trim(),
+        description: creativeDescription.trim(),
+        reference: creativeReference.trim(),
+        deadline: creativeDeadline,
+        owner: creativeOwner,
+      });
+    } else {
+      await createCreativeProposal({
+        clientId: creativeClientId,
+        contactId: creativeContactId,
+        workspaceId,
+        title: creativeTitle,
+        description: creativeDescription,
+        reference: creativeReference,
+        deadline: creativeDeadline,
+        owner: creativeOwner,
+        stage: creativeStage,
+      });
+    }
+    closeCreativeForm();
   };
 
   const handleCreateDiscount = async (event: React.FormEvent): Promise<void> => {
@@ -373,6 +493,31 @@ export function PropositivitaSection() {
     setStageChangeRequest(null);
   };
 
+  const openBudgetModal = (proposalId: string): void => {
+    setBudgetProposalId(proposalId);
+    setBudgetAmount('');
+    setBudgetDate(getTodayString());
+    setBudgetNotes('');
+    setBudgetType('spesa_extra');
+  };
+
+  const handleRegisterBudget = async (event: React.FormEvent): Promise<void> => {
+    event.preventDefault();
+    if (!budgetProposalId || !budgetAmount.trim()) return;
+    await registerCreativeProposalBudget(
+      budgetProposalId,
+      Number(budgetAmount),
+      {
+        type: budgetType,
+        date: budgetDate,
+        notes: budgetNotes,
+      },
+    );
+    setBudgetProposalId('');
+    setBudgetAmount('');
+    setBudgetNotes('');
+  };
+
   const formatDiscountAmount = (type: SpecialDiscountType, amount: number): string => {
     const formatted = formatCurrency(amount);
     if (type === 'sconto') return `−${formatted}`;
@@ -398,13 +543,36 @@ export function PropositivitaSection() {
             </div>
           </div>
 
+          <div className="propositivita-report-grid glass-card">
+            <article className="propositivita-report-card">
+              <span className="propositivita-report-label">Proposte al cliente</span>
+              <strong className="propositivita-report-value">{creativeReport.sentToClientCount}</strong>
+              <small>su {creativeReport.totalProposals} totali</small>
+            </article>
+            <article className="propositivita-report-card">
+              <span className="propositivita-report-label">Spesa totale</span>
+              <strong className="propositivita-report-value">{formatCurrency(creativeReport.totalSpent)}</strong>
+              <small>Budget registrati dalle creatività</small>
+            </article>
+            <article className="propositivita-report-card is-converted">
+              <span className="propositivita-report-label">Convertite</span>
+              <strong className="propositivita-report-value">{creativeReport.convertedCount}</strong>
+              <small>Chiusa approvata</small>
+            </article>
+            <article className="propositivita-report-card is-rejected">
+              <span className="propositivita-report-label">Rifiutate</span>
+              <strong className="propositivita-report-value">{creativeReport.rejectedCount}</strong>
+              <small>Chiusa rifiutata</small>
+            </article>
+          </div>
+
           <div className="propositivita-block">
             <div className="table-filter-bar">
               <div className="filter-left">
                 <h4>Creatività propositive</h4>
               </div>
               <div className="filter-right">
-                <button type="button" className="btn btn-primary" onClick={() => setShowCreativeForm(true)}>
+                <button type="button" className="btn btn-primary" onClick={openCreateCreativeForm}>
                   <PlusCircle size={16} />
                   <span>Nuova creatività</span>
                 </button>
@@ -470,7 +638,14 @@ export function PropositivitaSection() {
                     key={proposal.id}
                     proposal={proposal}
                     clientName={clientNameById.get(proposal.clientId) || 'Cliente sconosciuto'}
+                    contactLabel={resolveCreativeProposalContactLabel(
+                      clientById.get(proposal.clientId),
+                      proposal.contactId,
+                    )}
+                    budgetTotal={resolveCreativeProposalBudgetTotal(proposal.id, workspaceDiscounts)}
                     onRequestStageChange={setStageChangeRequest}
+                    onAddBudget={openBudgetModal}
+                    onEdit={openEditCreativeForm}
                     onDelete={removeCreativeProposal}
                   />
                 ))}
@@ -590,10 +765,12 @@ export function PropositivitaSection() {
 
       {showCreativeForm && (
         <>
-          <div className="drawer-overlay open" onClick={() => setShowCreativeForm(false)} />
+          <div className="drawer-overlay open" onClick={closeCreativeForm} />
           <div className="drawer open">
-            <div className="drawer-header"><h3>Nuova creatività</h3></div>
-            <form onSubmit={(event) => void handleCreateCreative(event)}>
+            <div className="drawer-header">
+              <h3>{editingProposalId ? 'Modifica creatività' : 'Nuova creatività'}</h3>
+            </div>
+            <form onSubmit={(event) => void handleSaveCreative(event)}>
               <div className="drawer-body">
                 <label className="form-label">
                   Cliente
@@ -601,11 +778,29 @@ export function PropositivitaSection() {
                     activeClients={activeClients}
                     coldClients={coldClients}
                     value={creativeClientId}
-                    onChange={setCreativeClientId}
+                    onChange={handleCreativeClientChange}
                     required
                     placeholder="Cerca cliente per nome..."
                   />
                 </label>
+                {creativeClientId && creativeContactOptions.length > 0 ? (
+                  <label className="form-label">
+                    Contatto mail
+                    <select
+                      className="form-select"
+                      value={creativeContactId}
+                      onChange={(event) => setCreativeContactId(event.target.value)}
+                    >
+                      {creativeContactOptions.map((contact) => (
+                        <option key={contact.id || 'default'} value={contact.id}>
+                          {contact.name.trim() || selectedCreativeClient?.name || 'Contatto'}
+                          {contact.email ? ` · ${contact.email}` : ''}
+                          {contact.role ? ` · ${contact.role}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
                 <label className="form-label">
                   Titolo
                   <input className="form-input" value={creativeTitle} onChange={(e) => setCreativeTitle(e.target.value)} required />
@@ -648,22 +843,26 @@ export function PropositivitaSection() {
                     ))}
                   </select>
                 </label>
-                <label className="form-label">
-                  Stadio iniziale
-                  <select
-                    className="form-select"
-                    value={creativeStage}
-                    onChange={(e) => setCreativeStage(e.target.value as CreativeProposalStage)}
-                  >
-                    {CREATIVE_PROPOSAL_STAGES.map((stage) => (
-                      <option key={stage} value={stage}>{CREATIVE_PROPOSAL_STAGE_LABELS[stage]}</option>
-                    ))}
-                  </select>
-                </label>
+                {!editingProposalId ? (
+                  <label className="form-label">
+                    Stadio iniziale
+                    <select
+                      className="form-select"
+                      value={creativeStage}
+                      onChange={(e) => setCreativeStage(e.target.value as CreativeProposalStage)}
+                    >
+                      {CREATIVE_PROPOSAL_STAGES.map((stage) => (
+                        <option key={stage} value={stage}>{CREATIVE_PROPOSAL_STAGE_LABELS[stage]}</option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
               </div>
               <div className="drawer-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowCreativeForm(false)}>Annulla</button>
-                <button type="submit" className="btn btn-primary">Salva</button>
+                <button type="button" className="btn btn-secondary" onClick={closeCreativeForm}>Annulla</button>
+                <button type="submit" className="btn btn-primary">
+                  {editingProposalId ? 'Salva modifiche' : 'Salva'}
+                </button>
               </div>
             </form>
           </div>
@@ -747,6 +946,77 @@ export function PropositivitaSection() {
           onClose={() => setStageChangeRequest(null)}
           onConfirm={(actionDate, note) => void handleConfirmStageChange(actionDate, note)}
         />
+      ) : null}
+
+      {budgetProposalId && budgetProposal ? (
+        <>
+          <div className="drawer-overlay open" onClick={() => setBudgetProposalId('')} />
+          <div className="drawer open">
+            <div className="drawer-header">
+              <h3>Budget creatività — {budgetProposal.title}</h3>
+            </div>
+            <form onSubmit={(event) => void handleRegisterBudget(event)}>
+              <div className="drawer-body">
+                <p className="creative-stage-modal-subtitle">
+                  Cliente: {clientNameById.get(budgetProposal.clientId) || 'Cliente sconosciuto'}
+                </p>
+                <p className="creative-stage-modal-hint">
+                  La voce verrà registrata automaticamente in Sconti ed extra.
+                </p>
+                <label className="form-label">
+                  Tipo
+                  <select
+                    className="form-select"
+                    value={budgetType}
+                    onChange={(event) => setBudgetType(event.target.value as SpecialDiscountType)}
+                  >
+                    <option value="spesa_extra">Spesa extra</option>
+                    <option value="sconto">Sconto</option>
+                    <option value="omaggio">Omaggio</option>
+                  </select>
+                </label>
+                <label className="form-label">
+                  Importo *
+                  <input
+                    className="form-input"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={budgetAmount}
+                    onChange={(event) => setBudgetAmount(event.target.value)}
+                    required
+                  />
+                </label>
+                <label className="form-label">
+                  Data *
+                  <input
+                    className="form-input"
+                    type="date"
+                    value={budgetDate}
+                    onChange={(event) => setBudgetDate(event.target.value)}
+                    required
+                  />
+                </label>
+                <label className="form-label">
+                  Note
+                  <textarea
+                    className="form-textarea"
+                    rows={3}
+                    value={budgetNotes}
+                    onChange={(event) => setBudgetNotes(event.target.value)}
+                    placeholder="Dettagli sul costo della creatività..."
+                  />
+                </label>
+              </div>
+              <div className="drawer-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setBudgetProposalId('')}>
+                  Annulla
+                </button>
+                <button type="submit" className="btn btn-primary">Registra in Sconti ed extra</button>
+              </div>
+            </form>
+          </div>
+        </>
       ) : null}
     </>
   );

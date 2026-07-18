@@ -29,6 +29,7 @@ interface PropositivitaPersistDeps {
 
 export interface CreateCreativeProposalInput {
   clientId: string;
+  contactId?: string;
   workspaceId: string;
   title: string;
   description?: string;
@@ -42,6 +43,7 @@ export interface CreateCreativeProposalInput {
 export interface CreateSpecialDiscountInput {
   clientId: string;
   workspaceId: string;
+  creativeProposalId?: string;
   owner?: string;
   type: SpecialDiscountType;
   amount: number;
@@ -91,6 +93,7 @@ export function createPropositivitaActions(
     const proposal: CreativeProposal = {
       id: createUniqueId('creative'),
       clientId: input.clientId,
+      contactId: input.contactId || '',
       workspaceId: input.workspaceId,
       title: input.title.trim(),
       description: input.description?.trim() || '',
@@ -152,7 +155,7 @@ export function createPropositivitaActions(
 
   const updateCreativeProposalFields = async (
     proposalId: string,
-    patch: Partial<Pick<CreativeProposal, 'title' | 'owner' | 'notes' | 'clientFeedback' | 'description' | 'reference' | 'deadline'>>,
+    patch: Partial<Pick<CreativeProposal, 'clientId' | 'contactId' | 'title' | 'owner' | 'notes' | 'clientFeedback' | 'description' | 'reference' | 'deadline'>>,
   ): Promise<void> => {
     await runMutation(async () => {
       const current = getState().creativeProposals.find((item) => item.id === proposalId);
@@ -202,6 +205,7 @@ export function createPropositivitaActions(
       id: createUniqueId('discount'),
       clientId: input.clientId,
       workspaceId: input.workspaceId,
+      creativeProposalId: input.creativeProposalId || '',
       owner: resolveOwner(input.clientId, input.workspaceId, input.owner),
       type: input.type,
       amount: Math.abs(input.amount),
@@ -225,6 +229,32 @@ export function createPropositivitaActions(
       }
     });
     return discount.id;
+  };
+
+  const registerCreativeProposalBudget = async (
+    proposalId: string,
+    amount: number,
+    options?: {
+      type?: SpecialDiscountType;
+      date?: string;
+      notes?: string;
+    },
+  ): Promise<string> => {
+    const proposal = getState().creativeProposals.find((item) => item.id === proposalId);
+    if (!proposal) {
+      throw new Error('Creatività non trovata');
+    }
+    return createSpecialDiscount({
+      clientId: proposal.clientId,
+      workspaceId: proposal.workspaceId,
+      creativeProposalId: proposalId,
+      owner: proposal.owner,
+      type: options?.type || 'spesa_extra',
+      amount,
+      reason: `Budget creatività: ${proposal.title}`,
+      date: options?.date || getTodayString(),
+      notes: options?.notes,
+    });
   };
 
   const removeSpecialDiscount = async (discountId: string): Promise<void> => {
@@ -253,6 +283,7 @@ export function createPropositivitaActions(
     updateCreativeProposalFields,
     removeCreativeProposal,
     createSpecialDiscount,
+    registerCreativeProposalBudget,
     removeSpecialDiscount,
   };
 }

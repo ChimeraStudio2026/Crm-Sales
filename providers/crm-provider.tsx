@@ -221,6 +221,7 @@ interface CrmContextValue {
   specialDiscounts: SpecialDiscount[];
   createCreativeProposal: (input: {
     clientId: string;
+    contactId?: string;
     workspaceId: string;
     title: string;
     description?: string;
@@ -238,12 +239,13 @@ interface CrmContextValue {
   ) => Promise<void>;
   updateCreativeProposalFields: (
     proposalId: string,
-    patch: Partial<Pick<CreativeProposal, 'title' | 'owner' | 'notes' | 'clientFeedback' | 'description' | 'reference' | 'deadline'>>,
+    patch: Partial<Pick<CreativeProposal, 'clientId' | 'contactId' | 'title' | 'owner' | 'notes' | 'clientFeedback' | 'description' | 'reference' | 'deadline'>>,
   ) => Promise<void>;
   removeCreativeProposal: (proposalId: string) => Promise<void>;
   createSpecialDiscount: (input: {
     clientId: string;
     workspaceId: string;
+    creativeProposalId?: string;
     owner?: string;
     type: SpecialDiscountType;
     amount: number;
@@ -251,6 +253,15 @@ interface CrmContextValue {
     date?: string;
     notes?: string;
   }) => Promise<string>;
+  registerCreativeProposalBudget: (
+    proposalId: string,
+    amount: number,
+    options?: {
+      type?: SpecialDiscountType;
+      date?: string;
+      notes?: string;
+    },
+  ) => Promise<string>;
   removeSpecialDiscount: (discountId: string) => Promise<void>;
 }
 
@@ -1426,6 +1437,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
     updateCreativeProposalFields: propositivitaActions.updateCreativeProposalFields,
     removeCreativeProposal: propositivitaActions.removeCreativeProposal,
     createSpecialDiscount: propositivitaActions.createSpecialDiscount,
+    registerCreativeProposalBudget: propositivitaActions.registerCreativeProposalBudget,
     removeSpecialDiscount: propositivitaActions.removeSpecialDiscount,
   };
 

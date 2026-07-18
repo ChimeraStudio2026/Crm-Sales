@@ -28,6 +28,7 @@ export interface CreativeProposalAction {
 export interface CreativeProposal {
   id: string;
   clientId: string;
+  contactId: string;
   workspaceId: string;
   title: string;
   description: string;
@@ -51,6 +52,7 @@ export interface SpecialDiscount {
   id: string;
   clientId: string;
   workspaceId: string;
+  creativeProposalId: string;
   owner: string;
   type: SpecialDiscountType;
   amount: number;

@@ -7651,7 +7651,83 @@ body:has(.drawer.open) .jonny-chat-root {
     justify-content: space-between;
     align-items: flex-start;
     gap: 16px;
+    margin-bottom: 16px;
+}
+
+.propositivita-report-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
     margin-bottom: 20px;
+    padding: 16px;
+}
+
+.propositivita-report-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: rgba(148, 163, 184, 0.06);
+}
+
+.propositivita-report-label {
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.propositivita-report-value {
+    font-size: 1.35rem;
+    line-height: 1.2;
+}
+
+.propositivita-report-card small {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+.propositivita-report-card.is-converted .propositivita-report-value {
+    color: #15803d;
+}
+
+.propositivita-report-card.is-rejected .propositivita-report-value {
+    color: #b91c1c;
+}
+
+.propositivita-card-budget {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding: 10px 12px;
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-md);
+}
+
+.propositivita-card-budget-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.propositivita-creative-title {
+    display: block;
+    font-size: 1rem;
+    line-height: 1.3;
+}
+
+.propositivita-client-subtitle {
+    margin: 4px 0 0;
+    color: var(--text-muted);
+    font-size: 0.82rem;
 }
 
 .propositivita-section-title {
@@ -7890,6 +7966,22 @@ body:has(.drawer.open) .jonny-chat-root {
     margin-bottom: 12px;
 }
 
+.propositivita-card-head-actions {
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.propositivita-contact-subtitle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 4px 0 0;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+}
+
 .propositivita-client-name {
     display: block;
     font-size: 1rem;
@@ -8047,8 +8139,17 @@ body:has(.drawer.open) .jonny-chat-root {
         flex-direction: column;
     }
 
+    .propositivita-report-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .propositivita-filters-grid,
     .propositivita-filters-grid--discounts {
         grid-template-columns: 1fr;
+    }
+
+    .propositivita-card-budget {
+        flex-direction: column;
+        align-items: stretch;
     }
 }

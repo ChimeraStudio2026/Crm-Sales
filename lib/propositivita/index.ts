@@ -37,6 +37,21 @@ export const TERMINAL_CREATIVE_STAGES: readonly CreativeProposalStage[] = [
   'chiusa_rifiutata',
 ];
 
+export const CREATIVE_SENT_TO_CLIENT_STAGES: readonly CreativeProposalStage[] = [
+  'inviata_cliente',
+  'feedback_ricevuto',
+  'chiusa_approvata',
+  'chiusa_rifiutata',
+];
+
+export interface CreativeProposalsReport {
+  totalProposals: number;
+  sentToClientCount: number;
+  totalSpent: number;
+  rejectedCount: number;
+  convertedCount: number;
+}
+
 export function resolveProgressPctForStage(stage: CreativeProposalStage): number {
   return CREATIVE_PROPOSAL_STAGE_PROGRESS[stage];
 }
@@ -236,4 +251,32 @@ export function getCreativeProgressFillClass(progressPct: number): string {
   if (progressPct >= 75) return 'is-green';
   if (progressPct >= 50) return 'is-orange';
   return 'is-red';
+}
+
+export function hasCreativeProposalBeenSentToClient(proposal: CreativeProposal): boolean {
+  if (CREATIVE_SENT_TO_CLIENT_STAGES.includes(proposal.stage)) return true;
+  return proposal.actions.some((action) => CREATIVE_SENT_TO_CLIENT_STAGES.includes(action.stage));
+}
+
+export function resolveCreativeProposalBudgetTotal(
+  proposalId: string,
+  discounts: SpecialDiscount[],
+): number {
+  return discounts
+    .filter((discount) => discount.creativeProposalId === proposalId)
+    .reduce((sum, discount) => sum + discount.amount, 0);
+}
+
+export function buildCreativeProposalsReport(
+  proposals: CreativeProposal[],
+  discounts: SpecialDiscount[],
+): CreativeProposalsReport {
+  const linkedDiscounts = discounts.filter((discount) => discount.creativeProposalId);
+  return {
+    totalProposals: proposals.length,
+    sentToClientCount: proposals.filter(hasCreativeProposalBeenSentToClient).length,
+    totalSpent: linkedDiscounts.reduce((sum, discount) => sum + discount.amount, 0),
+    rejectedCount: proposals.filter((proposal) => proposal.stage === 'chiusa_rifiutata').length,
+    convertedCount: proposals.filter((proposal) => proposal.stage === 'chiusa_approvata').length,
+  };
 }

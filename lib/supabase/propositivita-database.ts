@@ -12,6 +12,7 @@ import { isCreativeProposalStage, isSpecialDiscountType } from '@/lib/types/prop
 interface CreativeProposalRow {
   id: string;
   client_id: string;
+  contact_id: string | null;
   workspace_id: string | null;
   title: string;
   description: string | null;
@@ -35,6 +36,7 @@ interface SpecialDiscountRow {
   id: string;
   client_id: string;
   workspace_id: string | null;
+  creative_proposal_id: string | null;
   owner: string | null;
   type: string;
   amount: number | string;
@@ -59,6 +61,7 @@ function rowToCreativeProposal(row: CreativeProposalRow): CreativeProposal {
   return {
     id: row.id,
     clientId: row.client_id,
+    contactId: row.contact_id || '',
     workspaceId: row.workspace_id || DEFAULT_WORKSPACE_ID,
     title: row.title,
     description: row.description || '',
@@ -83,6 +86,7 @@ function creativeProposalToRow(proposal: CreativeProposal): Record<string, unkno
   return {
     id: proposal.id,
     client_id: proposal.clientId,
+    contact_id: proposal.contactId || '',
     workspace_id: proposal.workspaceId || DEFAULT_WORKSPACE_ID,
     title: proposal.title,
     description: proposal.description || '',
@@ -107,6 +111,7 @@ function rowToSpecialDiscount(row: SpecialDiscountRow): SpecialDiscount {
     id: row.id,
     clientId: row.client_id,
     workspaceId: row.workspace_id || DEFAULT_WORKSPACE_ID,
+    creativeProposalId: row.creative_proposal_id || '',
     owner: row.owner || '',
     type: normalizeDiscountType(row.type),
     amount: Number(row.amount) || 0,
@@ -123,6 +128,7 @@ function specialDiscountToRow(discount: SpecialDiscount): Record<string, unknown
     id: discount.id,
     client_id: discount.clientId,
     workspace_id: discount.workspaceId || DEFAULT_WORKSPACE_ID,
+    creative_proposal_id: discount.creativeProposalId || null,
     owner: discount.owner || '',
     type: discount.type,
     amount: discount.amount,

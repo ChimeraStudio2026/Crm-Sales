@@ -7755,13 +7755,93 @@ body:has(.drawer.open) .jonny-chat-root {
     color: var(--text-primary);
 }
 
+.propositivita-card-dates {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    margin-bottom: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: rgba(148, 163, 184, 0.08);
+}
+
 .propositivita-card-deadline {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    margin: 0 0 12px;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.propositivita-card-deadline.is-overdue {
+    color: #b91c1c;
+}
+
+.propositivita-card-last-action {
     font-size: 0.82rem;
     color: var(--text-muted);
+}
+
+.propositivita-card-timeline {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+}
+
+.propositivita-timeline-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--primary);
+    font-size: 0.84rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.propositivita-timeline-toggle:hover {
+    text-decoration: underline;
+}
+
+.propositivita-timeline-list {
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.propositivita-timeline-item {
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+}
+
+.propositivita-timeline-item-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.propositivita-timeline-date {
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.propositivita-timeline-note {
+    margin: 8px 0 0;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    line-height: 1.4;
 }
 
 .propositivita-stage-badge {

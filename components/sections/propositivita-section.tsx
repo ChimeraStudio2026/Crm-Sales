@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Calendar, ExternalLink, FilterX, PlusCircle, Sparkles, Trash2, User } from 'lucide-react';
+import { Calendar, ChevronDown, ChevronUp, ExternalLink, FilterX, PlusCircle, Sparkles, Trash2, User } from 'lucide-react';
 import { TopHeader } from '@/components/layout/top-header';
 import { ClientSearchSelect } from '@/components/clients/client-search-select';
 import { CreativeStageModal } from '@/components/propositivita/creative-stage-modal';
@@ -26,6 +26,10 @@ import {
   getNextCreativeProposalStage,
   getPreviousCreativeProposalStage,
   getStaleCreativeProposals,
+  formatCreativeProposalDate,
+  isCreativeProposalDeadlineOverdue,
+  resolveCreativeProposalActionsChronological,
+  resolveLastCreativeActionAt,
 } from '@/lib/propositivita/index';
 
 const STALE_DAY_OPTIONS = [0, 7, 15, 30] as const;
@@ -64,9 +68,16 @@ function CreativeProposalCard({
   onRequestStageChange,
   onDelete,
 }: CreativeProposalCardProps) {
+  const [isTimelineOpen, setIsTimelineOpen] = useState(false);
   const idleDays = getCreativeProposalIdleDays(proposal);
   const nextStage = getNextCreativeProposalStage(proposal.stage);
   const previousStage = getPreviousCreativeProposalStage(proposal.stage);
+  const isDeadlineOverdue = isCreativeProposalDeadlineOverdue(proposal);
+  const chronologicalActions = useMemo(
+    () => resolveCreativeProposalActionsChronological(proposal),
+    [proposal],
+  );
+  const lastActionDate = resolveLastCreativeActionAt(proposal).slice(0, 10);
   return (
     <article className="propositivita-card glass-card">
       <div className="propositivita-card-head">
@@ -87,6 +98,17 @@ function CreativeProposalCard({
           <Trash2 size={14} />
         </button>
       </div>
+      <div className="propositivita-card-dates">
+        <span className={`propositivita-card-deadline${isDeadlineOverdue ? ' is-overdue' : ''}`}>
+          <Calendar size={14} />
+          Deadline: {formatCreativeProposalDate(proposal.deadline)}
+        </span>
+        {lastActionDate ? (
+          <span className="propositivita-card-last-action">
+            Ultima azione: {formatCreativeProposalDate(lastActionDate)}
+          </span>
+        ) : null}
+      </div>
       {proposal.description ? (
         <p className="propositivita-card-description">{proposal.description}</p>
       ) : null}
@@ -95,12 +117,6 @@ function CreativeProposalCard({
           <span className="propositivita-reference-label">Reference</span>
           {renderReference(proposal.reference)}
         </div>
-      ) : null}
-      {proposal.deadline ? (
-        <p className="propositivita-card-deadline">
-          <Calendar size={14} />
-          Deadline {proposal.deadline}
-        </p>
       ) : null}
       <div className="propositivita-card-stage-row">
         <span className={`propositivita-stage-badge ${getCreativeStageBadgeClass(proposal.stage)}`}>
@@ -153,6 +169,38 @@ function CreativeProposalCard({
       {idleDays >= 15 && (
         <p className="propositivita-stale-hint">Ferma da {idleDays} giorni</p>
       )}
+      {chronologicalActions.length > 0 ? (
+        <div className="propositivita-card-timeline">
+          <button
+            type="button"
+            className="propositivita-timeline-toggle"
+            onClick={() => setIsTimelineOpen((prev) => !prev)}
+            aria-expanded={isTimelineOpen}
+          >
+            {isTimelineOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            {isTimelineOpen ? 'Nascondi cronologia date' : `Cronologia date (${chronologicalActions.length})`}
+          </button>
+          {isTimelineOpen ? (
+            <ul className="propositivita-timeline-list">
+              {chronologicalActions.map((action, index) => (
+                <li key={`${action.stage}-${action.date}-${index}`} className="propositivita-timeline-item">
+                  <div className="propositivita-timeline-item-head">
+                    <span className="propositivita-timeline-date">
+                      {formatCreativeProposalDate(action.date || action.timestamp.slice(0, 10))}
+                    </span>
+                    <span className={`propositivita-stage-badge ${getCreativeStageBadgeClass(action.stage)}`}>
+                      {CREATIVE_PROPOSAL_STAGE_LABELS[action.stage]}
+                    </span>
+                  </div>
+                  {action.note ? (
+                    <p className="propositivita-timeline-note">{action.note}</p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
     </article>
   );
 }

@@ -201,3 +201,33 @@ export function getDiscountTypeBadgeClass(type: SpecialDiscount['type']): string
   if (type === 'omaggio') return 'propositivita-badge is-gift';
   return 'propositivita-badge is-extra';
 }
+
+export function formatCreativeProposalDate(date: string): string {
+  if (!date) return '—';
+  const parsed = new Date(`${date.slice(0, 10)}T12:00:00`);
+  if (Number.isNaN(parsed.getTime())) return date;
+  return parsed.toLocaleDateString('it-IT', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+export function resolveCreativeProposalActionsChronological(
+  proposal: CreativeProposal,
+): CreativeProposal['actions'] {
+  return [...proposal.actions].sort((left, right) => {
+    const leftKey = left.date || left.timestamp.slice(0, 10);
+    const rightKey = right.date || right.timestamp.slice(0, 10);
+    return leftKey.localeCompare(rightKey);
+  });
+}
+
+export function isCreativeProposalDeadlineOverdue(proposal: CreativeProposal): boolean {
+  if (!proposal.deadline || TERMINAL_CREATIVE_STAGES.includes(proposal.stage)) return false;
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return proposal.deadline < `${year}-${month}-${day}`;
+}

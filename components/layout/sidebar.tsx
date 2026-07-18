@@ -13,6 +13,7 @@ import {
   Menu,
   Settings,
   Snowflake,
+  Sparkles,
   Users,
   type LucideIcon,
 } from 'lucide-react';
@@ -30,6 +31,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Mail,
   GitBranch,
   CheckSquare,
+  Sparkles,
   Lightbulb,
   Snowflake,
   FileSpreadsheet,

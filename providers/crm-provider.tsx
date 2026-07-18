@@ -52,6 +52,12 @@ import {
 } from '@/lib/supabase/commercial-funnel-database';
 import { createMailCampaignActions } from '@/providers/mail-campaign-actions';
 import { createCommercialFunnelActions } from '@/providers/commercial-funnel-actions';
+import { createPropositivitaActions } from '@/providers/propositivita-actions';
+import type { CreativeProposal, CreativeProposalStage, SpecialDiscount, SpecialDiscountType } from '@/lib/types/propositivita';
+import {
+  fetchCreativeProposals,
+  fetchSpecialDiscounts,
+} from '@/lib/supabase/propositivita-database';
 import {
   isRowPerOkrImportFormat,
   parseExcelImportBuffer,
@@ -211,6 +217,33 @@ interface CrmContextValue {
   addTaskToFunnelAction: (entryId: string, slotIndex: number, taskId: string) => Promise<void>;
   removeFunnelEntry: (entryId: string) => Promise<void>;
   moveFunnelEntryToCampaign: (entryId: string, targetCampaignId: string) => Promise<void>;
+  creativeProposals: CreativeProposal[];
+  specialDiscounts: SpecialDiscount[];
+  createCreativeProposal: (input: {
+    clientId: string;
+    workspaceId: string;
+    title: string;
+    owner?: string;
+    stage?: CreativeProposalStage;
+    notes?: string;
+  }) => Promise<string>;
+  updateCreativeProposalStage: (proposalId: string, nextStage: CreativeProposalStage, note?: string) => Promise<void>;
+  updateCreativeProposalFields: (
+    proposalId: string,
+    patch: Partial<Pick<CreativeProposal, 'title' | 'owner' | 'notes' | 'clientFeedback'>>,
+  ) => Promise<void>;
+  removeCreativeProposal: (proposalId: string) => Promise<void>;
+  createSpecialDiscount: (input: {
+    clientId: string;
+    workspaceId: string;
+    owner?: string;
+    type: SpecialDiscountType;
+    amount: number;
+    reason?: string;
+    date?: string;
+    notes?: string;
+  }) => Promise<string>;
+  removeSpecialDiscount: (discountId: string) => Promise<void>;
 }
 
 const CrmContext = createContext<CrmContextValue | null>(null);
@@ -247,6 +280,8 @@ export function CrmProvider({ children }: CrmProviderProps) {
   const [mailCampaignContacts, setMailCampaignContacts] = useState<MailCampaignContact[]>([]);
   const [mailCampaignSendTracking, setMailCampaignSendTracking] = useState<MailCampaignSendTracking[]>([]);
   const [commercialFunnelEntries, setCommercialFunnelEntries] = useState<CommercialFunnelEntry[]>([]);
+  const [creativeProposals, setCreativeProposals] = useState<CreativeProposal[]>([]);
+  const [specialDiscounts, setSpecialDiscounts] = useState<SpecialDiscount[]>([]);
 
   const mailCampaignStateRef = useRef({
     mailCampaigns,
@@ -263,6 +298,9 @@ export function CrmProvider({ children }: CrmProviderProps) {
 
   const commercialFunnelStateRef = useRef({ commercialFunnelEntries });
   commercialFunnelStateRef.current = { commercialFunnelEntries };
+
+  const propositivitaStateRef = useRef({ creativeProposals, specialDiscounts });
+  propositivitaStateRef.current = { creativeProposals, specialDiscounts };
 
   const supabaseConfigured = isSupabaseConfigured();
   const db = useMemo(() => createBrowserSupabaseClient(), []);
@@ -372,6 +410,22 @@ export function CrmProvider({ children }: CrmProviderProps) {
     [db, showToast],
   );
 
+  const propositivitaActions = useMemo(
+    () => createPropositivitaActions(
+      {
+        db,
+        setCreativeProposals,
+        setSpecialDiscounts,
+        showToast,
+        getClientById: (clientId) => (
+          clientsRef.current.find((client) => client.id === clientId)
+        ),
+      },
+      () => propositivitaStateRef.current,
+    ),
+    [db, showToast],
+  );
+
   const deleteMailCampaignById = useCallback(async (campaignId: string): Promise<void> => {
     await mailCampaignActions.deleteMailCampaignById(campaignId);
     await commercialFunnelActions.removeFunnelEntriesByCampaign(campaignId);
@@ -465,7 +519,17 @@ export function CrmProvider({ children }: CrmProviderProps) {
     if (!db) return;
     if (ideasMutationRef.current > 0 || clientsMutationRef.current > 0) return;
     try {
-      const [loadedClients, loadedIdeas, loadedTasks, loadedOkr, loadedForecasts, loadedMailCampaigns, loadedFunnelEntries] = await Promise.all([
+      const [
+        loadedClients,
+        loadedIdeas,
+        loadedTasks,
+        loadedOkr,
+        loadedForecasts,
+        loadedMailCampaigns,
+        loadedFunnelEntries,
+        loadedCreativeProposals,
+        loadedSpecialDiscounts,
+      ] = await Promise.all([
         fetchClients(db),
         fetchIdeas(db),
         fetchClientTasks(db),
@@ -473,6 +537,8 @@ export function CrmProvider({ children }: CrmProviderProps) {
         fetchAllAnalysisForecasts(db),
         fetchMailCampaignData(db),
         fetchCommercialFunnelEntries(db),
+        fetchCreativeProposals(db),
+        fetchSpecialDiscounts(db),
       ]);
       let normalized = normalizeClients(loadedClients);
       normalized = reconcileImportedClientsToMainList(normalized);
@@ -493,6 +559,8 @@ export function CrmProvider({ children }: CrmProviderProps) {
       setMailCampaignContacts(loadedMailCampaigns.contacts);
       setMailCampaignSendTracking(loadedMailCampaigns.tracking);
       setCommercialFunnelEntries(loadedFunnelEntries);
+      setCreativeProposals(loadedCreativeProposals);
+      setSpecialDiscounts(loadedSpecialDiscounts);
     } catch (reloadError) {
       console.error('Remote CRM reload failed:', reloadError);
     }
@@ -544,7 +612,17 @@ export function CrmProvider({ children }: CrmProviderProps) {
         if (db) {
           const status = await testSupabaseConnection(db);
           if (!status.ok) throw new Error(status.message);
-          const [loadedClients, loadedIdeas, loadedTasks, loadedOkr, loadedForecasts, loadedMailCampaigns, loadedFunnelEntries] = await Promise.all([
+          const [
+            loadedClients,
+            loadedIdeas,
+            loadedTasks,
+            loadedOkr,
+            loadedForecasts,
+            loadedMailCampaigns,
+            loadedFunnelEntries,
+            loadedCreativeProposals,
+            loadedSpecialDiscounts,
+          ] = await Promise.all([
             fetchClients(db),
             fetchIdeas(db),
             fetchClientTasks(db),
@@ -552,6 +630,8 @@ export function CrmProvider({ children }: CrmProviderProps) {
             fetchAllAnalysisForecasts(db),
             fetchMailCampaignData(db),
             fetchCommercialFunnelEntries(db),
+            fetchCreativeProposals(db),
+            fetchSpecialDiscounts(db),
           ]);
           let normalized = normalizeClients(loadedClients);
           normalized = reconcileImportedClientsToMainList(normalized);
@@ -572,6 +652,8 @@ export function CrmProvider({ children }: CrmProviderProps) {
           setMailCampaignContacts(loadedMailCampaigns.contacts);
           setMailCampaignSendTracking(loadedMailCampaigns.tracking);
           setCommercialFunnelEntries(loadedFunnelEntries);
+          setCreativeProposals(loadedCreativeProposals);
+          setSpecialDiscounts(loadedSpecialDiscounts);
           setIsSupabaseConnected(true);
           await refreshApolloStatus();
         } else {
@@ -1329,6 +1411,14 @@ export function CrmProvider({ children }: CrmProviderProps) {
     addTaskToFunnelAction: commercialFunnelActions.addTaskToFunnelAction,
     removeFunnelEntry: commercialFunnelActions.removeFunnelEntry,
     moveFunnelEntryToCampaign: commercialFunnelActions.moveFunnelEntryToCampaign,
+    creativeProposals,
+    specialDiscounts,
+    createCreativeProposal: propositivitaActions.createCreativeProposal,
+    updateCreativeProposalStage: propositivitaActions.updateCreativeProposalStage,
+    updateCreativeProposalFields: propositivitaActions.updateCreativeProposalFields,
+    removeCreativeProposal: propositivitaActions.removeCreativeProposal,
+    createSpecialDiscount: propositivitaActions.createSpecialDiscount,
+    removeSpecialDiscount: propositivitaActions.removeSpecialDiscount,
   };
 
   return <CrmContext.Provider value={value}>{children}</CrmContext.Provider>;

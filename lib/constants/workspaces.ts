@@ -20,7 +20,10 @@ export function isWorkspaceId(value: string): value is WorkspaceId {
 }
 
 export function isWorkspaceScopedPath(pathname: string): boolean {
-  return pathname === '/cold' || pathname === '/funnel' || pathname.startsWith('/funnel/');
+  return pathname === '/cold'
+    || pathname === '/funnel'
+    || pathname === '/propositivita'
+    || pathname.startsWith('/funnel/');
 }
 
 export function resolveWorkspaceLabel(workspaceId: string): string {

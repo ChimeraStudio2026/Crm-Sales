@@ -8116,7 +8116,76 @@ body:has(.drawer.open) .jonny-chat-root {
 
 .propositivita-table-wrap {
     padding: 0;
-    overflow: auto;
+    overflow-x: auto;
+}
+
+.propositivita-discounts-table {
+    table-layout: fixed;
+    width: 100%;
+    min-width: 720px;
+}
+
+.propositivita-discounts-table th:nth-child(1),
+.propositivita-discounts-table td:nth-child(1) {
+    width: 18%;
+}
+
+.propositivita-discounts-table th:nth-child(2),
+.propositivita-discounts-table td:nth-child(2) {
+    width: 12%;
+}
+
+.propositivita-discounts-table th:nth-child(3),
+.propositivita-discounts-table td:nth-child(3) {
+    width: 36%;
+}
+
+.propositivita-discounts-table th:nth-child(4),
+.propositivita-discounts-table td:nth-child(4) {
+    width: 12%;
+}
+
+.propositivita-discounts-table th:nth-child(5),
+.propositivita-discounts-table td:nth-child(5) {
+    width: 12%;
+}
+
+.propositivita-discounts-table th:nth-child(6),
+.propositivita-discounts-table td:nth-child(6) {
+    width: 10%;
+}
+
+.propositivita-discount-client {
+    font-weight: 600;
+    vertical-align: top;
+}
+
+.propositivita-discount-type {
+    vertical-align: top;
+    white-space: nowrap;
+}
+
+.propositivita-discount-reason {
+    vertical-align: top;
+    line-height: 1.45;
+    word-break: break-word;
+}
+
+.propositivita-discount-date {
+    vertical-align: top;
+    white-space: nowrap;
+}
+
+.propositivita-discount-actions-head,
+.propositivita-discount-actions {
+    text-align: center;
+    vertical-align: top;
+}
+
+.propositivita-discounts-empty {
+    text-align: center;
+    padding: 24px 16px;
+    color: var(--text-muted);
 }
 
 .propositivita-amount.is-discount {

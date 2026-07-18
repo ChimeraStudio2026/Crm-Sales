@@ -707,39 +707,41 @@ export function PropositivitaSection() {
               )}
             </div>
             <div className="glass-card propositivita-table-wrap">
-              <table className="data-table">
+              <table className="analysis-table propositivita-discounts-table">
                 <thead>
                   <tr>
                     <th>Cliente</th>
                     <th>Tipo</th>
                     <th>Motivo</th>
-                    <th>Valore</th>
+                    <th className="analysis-num">Valore</th>
                     <th>Data</th>
-                    <th />
+                    <th className="propositivita-discount-actions-head" aria-label="Azioni" />
                   </tr>
                 </thead>
                 <tbody>
                   {filteredDiscounts.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="table-empty">Nessuna voce registrata.</td>
+                      <td colSpan={6} className="propositivita-discounts-empty">Nessuna voce registrata.</td>
                     </tr>
                   ) : (
                     filteredDiscounts.map((discount) => (
                       <tr key={discount.id}>
-                        <td>{clientNameById.get(discount.clientId) || 'Cliente sconosciuto'}</td>
-                        <td>
+                        <td className="propositivita-discount-client">
+                          {clientNameById.get(discount.clientId) || 'Cliente sconosciuto'}
+                        </td>
+                        <td className="propositivita-discount-type">
                           <span className={getDiscountTypeBadgeClass(discount.type)}>
                             {SPECIAL_DISCOUNT_TYPE_LABELS[discount.type]}
                           </span>
                         </td>
-                        <td>{discount.reason || '—'}</td>
-                        <td>
+                        <td className="propositivita-discount-reason">{discount.reason || '—'}</td>
+                        <td className="analysis-num">
                           <span className={discount.type === 'sconto' ? 'propositivita-amount is-discount' : 'propositivita-amount is-extra'}>
                             {formatDiscountAmount(discount.type, discount.amount)}
                           </span>
                         </td>
-                        <td>{discount.date}</td>
-                        <td>
+                        <td className="propositivita-discount-date">{discount.date}</td>
+                        <td className="propositivita-discount-actions">
                           <button
                             type="button"
                             className="btn-table-action"

@@ -707,59 +707,57 @@ export function PropositivitaSection() {
               )}
             </div>
             <div className="glass-card propositivita-table-wrap">
-              <table className="analysis-table propositivita-discounts-table">
-                <thead>
-                  <tr>
-                    <th>Cliente</th>
-                    <th>Tipo</th>
-                    <th>Motivo</th>
-                    <th className="analysis-num">Valore</th>
-                    <th>Data</th>
-                    <th className="propositivita-discount-actions-head" aria-label="Azioni" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredDiscounts.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="propositivita-discounts-empty">Nessuna voce registrata.</td>
-                    </tr>
-                  ) : (
-                    filteredDiscounts.map((discount) => (
-                      <tr key={discount.id}>
-                        <td className="propositivita-discount-client">
-                          {clientNameById.get(discount.clientId) || 'Cliente sconosciuto'}
-                        </td>
-                        <td className="propositivita-discount-type">
-                          <span className={getDiscountTypeBadgeClass(discount.type)}>
-                            {SPECIAL_DISCOUNT_TYPE_LABELS[discount.type]}
-                          </span>
-                        </td>
-                        <td className="propositivita-discount-reason">{discount.reason || '—'}</td>
-                        <td className="analysis-num">
-                          <span className={discount.type === 'sconto' ? 'propositivita-amount is-discount' : 'propositivita-amount is-extra'}>
-                            {formatDiscountAmount(discount.type, discount.amount)}
-                          </span>
-                        </td>
-                        <td className="propositivita-discount-date">{discount.date}</td>
-                        <td className="propositivita-discount-actions">
-                          <button
-                            type="button"
-                            className="btn-table-action"
-                            aria-label="Elimina voce"
-                            onClick={() => {
-                              if (window.confirm('Eliminare questa voce?')) {
-                                void removeSpecialDiscount(discount.id);
-                              }
-                            }}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+              <div className="propositivita-discounts-list">
+                <div className="propositivita-discounts-header" role="row">
+                  <span role="columnheader">Cliente</span>
+                  <span role="columnheader">Tipo</span>
+                  <span role="columnheader">Motivo</span>
+                  <span role="columnheader" className="is-num">Valore</span>
+                  <span role="columnheader">Data</span>
+                  <span role="columnheader" className="is-actions" aria-label="Azioni" />
+                </div>
+                {filteredDiscounts.length === 0 ? (
+                  <div className="propositivita-discounts-empty">Nessuna voce registrata.</div>
+                ) : (
+                  filteredDiscounts.map((discount) => (
+                    <div key={discount.id} className="propositivita-discounts-row" role="row">
+                      <span className="propositivita-discount-client" role="cell">
+                        {clientNameById.get(discount.clientId) || 'Cliente sconosciuto'}
+                      </span>
+                      <span className="propositivita-discount-type" role="cell">
+                        <span className={getDiscountTypeBadgeClass(discount.type)}>
+                          {SPECIAL_DISCOUNT_TYPE_LABELS[discount.type]}
+                        </span>
+                      </span>
+                      <span className="propositivita-discount-reason" role="cell">
+                        {discount.reason || '—'}
+                      </span>
+                      <span className="propositivita-discount-value" role="cell">
+                        <span className={discount.type === 'sconto' ? 'propositivita-amount is-discount' : 'propositivita-amount is-extra'}>
+                          {formatDiscountAmount(discount.type, discount.amount)}
+                        </span>
+                      </span>
+                      <span className="propositivita-discount-date" role="cell">
+                        {discount.date}
+                      </span>
+                      <span className="propositivita-discount-actions" role="cell">
+                        <button
+                          type="button"
+                          className="btn-table-action"
+                          aria-label="Elimina voce"
+                          onClick={() => {
+                            if (window.confirm('Eliminare questa voce?')) {
+                              void removeSpecialDiscount(discount.id);
+                            }
+                          }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </section>

@@ -8116,70 +8116,86 @@ body:has(.drawer.open) .jonny-chat-root {
 
 .propositivita-table-wrap {
     padding: 0;
+    overflow: hidden;
+}
+
+.propositivita-discounts-list {
     overflow-x: auto;
 }
 
-.propositivita-discounts-table {
-    table-layout: fixed;
-    width: 100%;
-    min-width: 720px;
+.propositivita-discounts-header,
+.propositivita-discounts-row {
+    display: grid;
+    grid-template-columns:
+        minmax(160px, 1.25fr)
+        minmax(96px, 0.55fr)
+        minmax(200px, 2fr)
+        96px
+        108px
+        44px;
+    gap: 12px;
+    align-items: start;
+    padding: 10px 16px;
+    min-width: 760px;
 }
 
-.propositivita-discounts-table th:nth-child(1),
-.propositivita-discounts-table td:nth-child(1) {
-    width: 18%;
+.propositivita-discounts-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    align-items: center;
+    background: var(--bg-hover);
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.35px;
+    color: var(--text-secondary);
 }
 
-.propositivita-discounts-table th:nth-child(2),
-.propositivita-discounts-table td:nth-child(2) {
-    width: 12%;
+.propositivita-discounts-row {
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.84rem;
+    color: var(--text-primary);
 }
 
-.propositivita-discounts-table th:nth-child(3),
-.propositivita-discounts-table td:nth-child(3) {
-    width: 36%;
+.propositivita-discounts-row:last-child {
+    border-bottom: none;
 }
 
-.propositivita-discounts-table th:nth-child(4),
-.propositivita-discounts-table td:nth-child(4) {
-    width: 12%;
+.propositivita-discounts-header > span,
+.propositivita-discounts-row > span {
+    min-width: 0;
 }
 
-.propositivita-discounts-table th:nth-child(5),
-.propositivita-discounts-table td:nth-child(5) {
-    width: 12%;
+.propositivita-discounts-header .is-num,
+.propositivita-discount-value {
+    text-align: right;
+    white-space: nowrap;
 }
 
-.propositivita-discounts-table th:nth-child(6),
-.propositivita-discounts-table td:nth-child(6) {
-    width: 10%;
+.propositivita-discounts-header .is-actions,
+.propositivita-discount-actions {
+    display: flex;
+    justify-content: center;
 }
 
 .propositivita-discount-client {
     font-weight: 600;
-    vertical-align: top;
+    line-height: 1.35;
 }
 
 .propositivita-discount-type {
-    vertical-align: top;
     white-space: nowrap;
 }
 
 .propositivita-discount-reason {
-    vertical-align: top;
     line-height: 1.45;
     word-break: break-word;
 }
 
 .propositivita-discount-date {
-    vertical-align: top;
     white-space: nowrap;
-}
-
-.propositivita-discount-actions-head,
-.propositivita-discount-actions {
-    text-align: center;
-    vertical-align: top;
 }
 
 .propositivita-discounts-empty {

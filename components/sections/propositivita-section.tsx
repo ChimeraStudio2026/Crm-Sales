@@ -3,11 +3,12 @@
 import { useMemo, useState } from 'react';
 import { FilterX, PlusCircle, Sparkles, Trash2, User } from 'lucide-react';
 import { TopHeader } from '@/components/layout/top-header';
+import { ClientSearchSelect } from '@/components/clients/client-search-select';
 import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
 import { isClientInWorkspace } from '@/lib/crm/workspace-access';
 import { getOwnersForWorkspace } from '@/lib/crm/workspace-clients';
-import { formatCurrency, getTodayString } from '@/lib/crm/utils';
+import { formatCurrency, getTodayString, isClientInActiveSection, isClientInColdSection } from '@/lib/crm/utils';
 import {
   CREATIVE_PROPOSAL_STAGES,
   SPECIAL_DISCOUNT_TYPES,
@@ -126,6 +127,18 @@ export function PropositivitaSection() {
   const workspaceClients = useMemo(
     () => clients
       .filter((client) => isClientInWorkspace(client, workspaceId))
+      .sort((left, right) => left.name.localeCompare(right.name, 'it')),
+    [clients, workspaceId],
+  );
+  const activeClients = useMemo(
+    () => clients
+      .filter((client) => isClientInActiveSection(client) && isClientInWorkspace(client, workspaceId))
+      .sort((left, right) => left.name.localeCompare(right.name, 'it')),
+    [clients, workspaceId],
+  );
+  const coldClients = useMemo(
+    () => clients
+      .filter((client) => isClientInColdSection(client) && isClientInWorkspace(client, workspaceId))
       .sort((left, right) => left.name.localeCompare(right.name, 'it')),
     [clients, workspaceId],
   );
@@ -440,12 +453,14 @@ export function PropositivitaSection() {
               <div className="drawer-body">
                 <label className="form-label">
                   Cliente
-                  <select className="form-select" value={creativeClientId} onChange={(e) => setCreativeClientId(e.target.value)} required>
-                    <option value="">Seleziona cliente</option>
-                    {workspaceClients.map((client) => (
-                      <option key={client.id} value={client.id}>{client.name}</option>
-                    ))}
-                  </select>
+                  <ClientSearchSelect
+                    activeClients={activeClients}
+                    coldClients={coldClients}
+                    value={creativeClientId}
+                    onChange={setCreativeClientId}
+                    required
+                    placeholder="Cerca cliente per nome..."
+                  />
                 </label>
                 <label className="form-label">
                   Titolo

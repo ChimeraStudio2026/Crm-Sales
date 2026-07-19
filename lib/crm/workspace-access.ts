@@ -21,14 +21,11 @@ const TINYTOAST_EMAIL_PATTERNS = [
 const TINYTOAST_ALLOWED_PATH_PREFIXES = [
   '/funnel',
   '/cold',
-  '/ideas',
-  '/tasks',
 ] as const;
 
 const TINYTOAST_NAV_HREFS = new Set<string>([
   '/funnel',
   '/cold',
-  '/ideas',
 ]);
 
 export function isTinytoastUserEmail(email: string | null | undefined): boolean {

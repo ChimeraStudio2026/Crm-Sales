@@ -29,3 +29,13 @@ export function isWorkspaceScopedPath(pathname: string): boolean {
 export function resolveWorkspaceLabel(workspaceId: string): string {
   return CRM_WORKSPACES.find((workspace) => workspace.id === workspaceId)?.shortLabel ?? workspaceId;
 }
+
+/** Client pool when creating a creative for a given company. */
+export function resolveClientWorkspaceIdsForCreativeCompany(
+  companyId: WorkspaceId,
+): readonly WorkspaceId[] {
+  if (companyId === TINYTOAST_WORKSPACE_ID) {
+    return [TINYTOAST_WORKSPACE_ID, DEFAULT_WORKSPACE_ID];
+  }
+  return [companyId];
+}

@@ -3,11 +3,8 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { OWNER_ZOD_ENUM } from '@/lib/constants/crm';
 import {
-  createClientTaskAction,
   getClientDetailsAction,
   getCrmSummary,
-  listIdeasAction,
-  listOpenTasksAction,
   searchClientsAction,
   updateClientActionText,
 } from '@/lib/jonny/crm-actions';
@@ -40,22 +37,6 @@ export function createCrmTools(db: SupabaseClient) {
       }),
       execute: async (input) => getClientDetailsAction(cache, input),
     }),
-    listOpenTasks: tool({
-      description: 'Task aperti (non completati). Opzionale filtro per assignee Jeck/Virgi/Martina.',
-      inputSchema: z.object({
-        assignee: z.enum(OWNER_ZOD_ENUM).optional(),
-        limit: z.number().int().min(1).max(10).optional(),
-      }),
-      execute: async (input) => listOpenTasksAction(cache, input),
-    }),
-    listIdeas: tool({
-      description: 'Idee commerciali (non task). Opzionale filtro per status kanban.',
-      inputSchema: z.object({
-        status: z.enum(['Da fare', 'In progress', 'Fatto']).optional(),
-        limit: z.number().int().min(1).max(10).optional(),
-      }),
-      execute: async (input) => listIdeasAction(cache, input),
-    }),
     updateClientAction: tool({
       description: 'Aggiorna il campo azione di un cliente e imposta la data azione a oggi.',
       inputSchema: z.object({
@@ -63,18 +44,6 @@ export function createCrmTools(db: SupabaseClient) {
         action: z.string().describe('Nuovo testo azione per il cliente'),
       }),
       execute: async (input) => updateClientActionText(cache, input),
-    }),
-    createClientTask: tool({
-      description: 'Crea un task collegato a un cliente nel kanban Task & Idee.',
-      inputSchema: z.object({
-        clientName: z.string(),
-        title: z.string(),
-        taskType: z.enum(['call', 'follow-up', 'proposta', 'email', 'meeting', 'altro']).optional(),
-        dueDate: z.string().optional().describe('Data scadenza YYYY-MM-DD'),
-        assignee: z.enum(OWNER_ZOD_ENUM).optional(),
-        notes: z.string().optional(),
-      }),
-      execute: async (input) => createClientTaskAction(cache, input),
     }),
   };
 }

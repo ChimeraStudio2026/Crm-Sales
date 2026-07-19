@@ -426,8 +426,6 @@ export function FunnelClientsTable({
                                         entryId={entry.id}
                                         slotIndex={slotIndex}
                                         action={action}
-                                        clientId={entry.clientId}
-                                        defaultAssignee={isOwner(displayOwner) ? displayOwner : client.owner}
                                         isLocked={isLocked && action.type !== 'Perso'}
                                       />
                                     ) : null

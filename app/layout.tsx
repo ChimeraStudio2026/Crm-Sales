@@ -15,7 +15,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: 'CRM Sales | Dashboard & Gestione Clienti',
-  description: 'Custom CRM Sales — clienti, OKR e task',
+  description: 'Custom CRM Sales — clienti e OKR',
   applicationName: 'CRM Sales',
   appleWebApp: {
     capable: true,
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: 'CRM Sales',
-    description: 'Gestione clienti, OKR e task.',
+    description: 'Gestione clienti e OKR.',
     type: 'website',
     locale: 'it_IT',
     siteName: 'CRM Sales',
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary',
     title: 'CRM Sales',
-    description: 'Gestione clienti, OKR e task.',
+    description: 'Gestione clienti e OKR.',
     images: ['/icons/icon-512.png'],
   },
 };

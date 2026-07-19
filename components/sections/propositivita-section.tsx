@@ -9,7 +9,7 @@ import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
 import { isClientInWorkspace } from '@/lib/crm/workspace-access';
 import { getDefaultOwnerForWorkspace, getOwnersForWorkspace } from '@/lib/crm/workspace-clients';
-import { CRM_WORKSPACES, resolveWorkspaceLabel, type WorkspaceId } from '@/lib/constants/workspaces';
+import { CRM_WORKSPACES, resolveClientWorkspaceIdsForCreativeCompany, resolveWorkspaceLabel, type WorkspaceId } from '@/lib/constants/workspaces';
 import { formatCurrency, getTodayString, isClientInActiveSection, isClientInColdSection } from '@/lib/crm/utils';
 import {
   CREATIVE_PROPOSAL_STAGES,
@@ -281,12 +281,20 @@ export function PropositivitaSection() {
   const clientsForCompany = (companyId: WorkspaceId) => clients
     .filter((client) => isClientInWorkspace(client, companyId))
     .sort((left, right) => left.name.localeCompare(right.name, 'it'));
-  const activeClientsForCompany = (companyId: WorkspaceId) => clients
-    .filter((client) => isClientInActiveSection(client) && isClientInWorkspace(client, companyId))
-    .sort((left, right) => left.name.localeCompare(right.name, 'it'));
-  const coldClientsForCompany = (companyId: WorkspaceId) => clients
-    .filter((client) => isClientInColdSection(client) && isClientInWorkspace(client, companyId))
-    .sort((left, right) => left.name.localeCompare(right.name, 'it'));
+  const activeClientsForCompany = (companyId: WorkspaceId) => {
+    const workspaceIds = resolveClientWorkspaceIdsForCreativeCompany(companyId);
+    return clients
+      .filter((client) => isClientInActiveSection(client)
+        && workspaceIds.some((workspaceId) => isClientInWorkspace(client, workspaceId)))
+      .sort((left, right) => left.name.localeCompare(right.name, 'it'));
+  };
+  const coldClientsForCompany = (companyId: WorkspaceId) => {
+    const workspaceIds = resolveClientWorkspaceIdsForCreativeCompany(companyId);
+    return clients
+      .filter((client) => isClientInColdSection(client)
+        && workspaceIds.some((workspaceId) => isClientInWorkspace(client, workspaceId)))
+      .sort((left, right) => left.name.localeCompare(right.name, 'it'));
+  };
   const workspaceClients = useMemo(
     () => clientsForCompany(workspaceId),
     [clients, workspaceId],

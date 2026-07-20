@@ -998,17 +998,17 @@ export function PropositivitaSection() {
                   />
                 </label>
                 <label className="form-label">
-                  Motivo
-                  <input className="form-input" value={discountReason} onChange={(e) => setDiscountReason(e.target.value)} />
-                </label>
-                <label className="form-label">
-                  PO
+                  Numero PO
                   <input
                     className="form-input"
                     value={discountPo}
                     onChange={(e) => setDiscountPo(e.target.value)}
-                    placeholder="Numero ordine di acquisto"
+                    placeholder="Ordine di acquisto (opzionale)"
                   />
+                </label>
+                <label className="form-label">
+                  Motivo
+                  <input className="form-input" value={discountReason} onChange={(e) => setDiscountReason(e.target.value)} />
                 </label>
                 <label className="form-label">
                   Data
@@ -1095,12 +1095,12 @@ export function PropositivitaSection() {
                   />
                 </label>
                 <label className="form-label">
-                  PO
+                  Numero PO
                   <input
                     className="form-input"
                     value={budgetPo}
                     onChange={(event) => setBudgetPo(event.target.value)}
-                    placeholder="Numero ordine di acquisto"
+                    placeholder="Ordine di acquisto (opzionale)"
                   />
                 </label>
                 <label className="form-label">

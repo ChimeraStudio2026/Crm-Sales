@@ -48,6 +48,7 @@ export interface CreateSpecialDiscountInput {
   type: SpecialDiscountType;
   amount: number;
   reason?: string;
+  po?: string;
   date?: string;
   notes?: string;
 }
@@ -210,6 +211,7 @@ export function createPropositivitaActions(
       type: input.type,
       amount: Math.abs(input.amount),
       reason: input.reason?.trim() || '',
+      po: input.po?.trim() || '',
       date: input.date || getTodayString(),
       notes: input.notes?.trim() || '',
       createdAt: timestamp,
@@ -238,6 +240,7 @@ export function createPropositivitaActions(
       type?: SpecialDiscountType;
       date?: string;
       notes?: string;
+      po?: string;
     },
   ): Promise<string> => {
     const proposal = getState().creativeProposals.find((item) => item.id === proposalId);
@@ -252,6 +255,7 @@ export function createPropositivitaActions(
       type: options?.type || 'spesa_extra',
       amount,
       reason: `Budget creatività: ${proposal.title}`,
+      po: options?.po?.trim() || '',
       date: options?.date || getTodayString(),
       notes: options?.notes,
     });

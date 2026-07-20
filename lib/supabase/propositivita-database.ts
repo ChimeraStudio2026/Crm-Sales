@@ -41,6 +41,7 @@ interface SpecialDiscountRow {
   type: string;
   amount: number | string;
   reason: string | null;
+  po: string | null;
   date: string;
   notes: string | null;
   created_at: string;
@@ -116,6 +117,7 @@ function rowToSpecialDiscount(row: SpecialDiscountRow): SpecialDiscount {
     type: normalizeDiscountType(row.type),
     amount: Number(row.amount) || 0,
     reason: row.reason || '',
+    po: row.po || '',
     date: row.date || '',
     notes: row.notes || '',
     createdAt: row.created_at || '',
@@ -133,6 +135,7 @@ function specialDiscountToRow(discount: SpecialDiscount): Record<string, unknown
     type: discount.type,
     amount: discount.amount,
     reason: discount.reason || '',
+    po: discount.po || '',
     date: discount.date,
     notes: discount.notes || '',
     updated_at: new Date().toISOString(),

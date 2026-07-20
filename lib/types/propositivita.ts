@@ -57,6 +57,7 @@ export interface SpecialDiscount {
   type: SpecialDiscountType;
   amount: number;
   reason: string;
+  po: string;
   date: string;
   notes: string;
   createdAt: string;

@@ -250,6 +250,7 @@ interface CrmContextValue {
     type: SpecialDiscountType;
     amount: number;
     reason?: string;
+    po?: string;
     date?: string;
     notes?: string;
   }) => Promise<string>;
@@ -260,6 +261,7 @@ interface CrmContextValue {
       type?: SpecialDiscountType;
       date?: string;
       notes?: string;
+      po?: string;
     },
   ) => Promise<string>;
   removeSpecialDiscount: (discountId: string) => Promise<void>;
@@ -329,7 +331,6 @@ export function CrmProvider({ children }: CrmProviderProps) {
   const ideasRef = useRef<Idea[]>([]);
   const clientsMutationQueueRef = useRef<Promise<Client[]>>(Promise.resolve([]));
   const ideasMutationQueueRef = useRef<Promise<Idea[]>>(Promise.resolve([]));
-  const jonnyReloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const focusReloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -599,21 +600,15 @@ export function CrmProvider({ children }: CrmProviderProps) {
         })();
       }, delayMs);
     };
-    const handleJonnyUpdated = (): void => {
-      scheduleReload(jonnyReloadTimerRef, 600);
-    };
     const handleFocusReload = (): void => {
       if (document.visibilityState !== 'visible') return;
       scheduleReload(focusReloadTimerRef, 400);
     };
-    window.addEventListener('jonny:crm-updated', handleJonnyUpdated);
     document.addEventListener('visibilitychange', handleFocusReload);
     window.addEventListener('focus', handleFocusReload);
     return () => {
-      window.removeEventListener('jonny:crm-updated', handleJonnyUpdated);
       document.removeEventListener('visibilitychange', handleFocusReload);
       window.removeEventListener('focus', handleFocusReload);
-      if (jonnyReloadTimerRef.current) clearTimeout(jonnyReloadTimerRef.current);
       if (focusReloadTimerRef.current) clearTimeout(focusReloadTimerRef.current);
     };
   }, [reloadRemoteCrmState]);

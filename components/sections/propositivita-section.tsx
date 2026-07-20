@@ -319,6 +319,7 @@ export function PropositivitaSection() {
   const [budgetAmount, setBudgetAmount] = useState('');
   const [budgetDate, setBudgetDate] = useState(getTodayString());
   const [budgetNotes, setBudgetNotes] = useState('');
+  const [budgetPo, setBudgetPo] = useState('');
   const [budgetType, setBudgetType] = useState<SpecialDiscountType>('spesa_extra');
   const [creativeWorkspaceId, setCreativeWorkspaceId] = useState<WorkspaceId>(workspaceId);
   const [creativeClientId, setCreativeClientId] = useState('');
@@ -333,6 +334,7 @@ export function PropositivitaSection() {
   const [discountType, setDiscountType] = useState<SpecialDiscountType>('sconto');
   const [discountAmount, setDiscountAmount] = useState('');
   const [discountReason, setDiscountReason] = useState('');
+  const [discountPo, setDiscountPo] = useState('');
   const [discountDate, setDiscountDate] = useState(getTodayString());
   const [discountOwner, setDiscountOwner] = useState(currentOwner || '');
 
@@ -521,12 +523,14 @@ export function PropositivitaSection() {
       type: discountType,
       amount: Number(discountAmount),
       reason: discountReason,
+      po: discountPo,
       date: discountDate,
     });
     setShowDiscountForm(false);
     setDiscountClientId('');
     setDiscountAmount('');
     setDiscountReason('');
+    setDiscountPo('');
     setDiscountDate(getTodayString());
   };
 
@@ -546,6 +550,7 @@ export function PropositivitaSection() {
     setBudgetAmount('');
     setBudgetDate(getTodayString());
     setBudgetNotes('');
+    setBudgetPo('');
     setBudgetType('spesa_extra');
   };
 
@@ -559,11 +564,13 @@ export function PropositivitaSection() {
         type: budgetType,
         date: budgetDate,
         notes: budgetNotes,
+        po: budgetPo,
       },
     );
     setBudgetProposalId('');
     setBudgetAmount('');
     setBudgetNotes('');
+    setBudgetPo('');
   };
 
   const formatDiscountAmount = (type: SpecialDiscountType, amount: number): string => {
@@ -776,6 +783,7 @@ export function PropositivitaSection() {
                   <span role="columnheader">Cliente</span>
                   <span role="columnheader">Tipo</span>
                   <span role="columnheader">Motivo</span>
+                  <span role="columnheader">PO</span>
                   <span role="columnheader" className="is-num">Valore</span>
                   <span role="columnheader">Data</span>
                   <span role="columnheader" className="is-actions" aria-label="Azioni" />
@@ -795,6 +803,9 @@ export function PropositivitaSection() {
                       </span>
                       <span className="propositivita-discount-reason" role="cell">
                         {discount.reason || '—'}
+                      </span>
+                      <span className="propositivita-discount-po" role="cell">
+                        {discount.po || '—'}
                       </span>
                       <span className="propositivita-discount-value" role="cell">
                         <span className={discount.type === 'sconto' ? 'propositivita-amount is-discount' : 'propositivita-amount is-extra'}>
@@ -991,6 +1002,15 @@ export function PropositivitaSection() {
                   <input className="form-input" value={discountReason} onChange={(e) => setDiscountReason(e.target.value)} />
                 </label>
                 <label className="form-label">
+                  PO
+                  <input
+                    className="form-input"
+                    value={discountPo}
+                    onChange={(e) => setDiscountPo(e.target.value)}
+                    placeholder="Numero ordine di acquisto"
+                  />
+                </label>
+                <label className="form-label">
                   Data
                   <input className="form-input" type="date" value={discountDate} onChange={(e) => setDiscountDate(e.target.value)} required />
                 </label>
@@ -1072,6 +1092,15 @@ export function PropositivitaSection() {
                     value={budgetDate}
                     onChange={(event) => setBudgetDate(event.target.value)}
                     required
+                  />
+                </label>
+                <label className="form-label">
+                  PO
+                  <input
+                    className="form-input"
+                    value={budgetPo}
+                    onChange={(event) => setBudgetPo(event.target.value)}
+                    placeholder="Numero ordine di acquisto"
                   />
                 </label>
                 <label className="form-label">

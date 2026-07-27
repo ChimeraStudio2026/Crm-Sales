@@ -11,8 +11,9 @@ interface CreativeStageModalProps {
   currentStage: CreativeProposalStage;
   nextStage: CreativeProposalStage;
   direction: 'forward' | 'backward';
+  targetStageOptions?: CreativeProposalStage[];
   onClose: () => void;
-  onConfirm: (actionDate: string, note: string) => void;
+  onConfirm: (targetStage: CreativeProposalStage, actionDate: string, note: string) => void;
 }
 
 export function CreativeStageModal({
@@ -21,17 +22,20 @@ export function CreativeStageModal({
   currentStage,
   nextStage,
   direction,
+  targetStageOptions = [],
   onClose,
   onConfirm,
 }: CreativeStageModalProps) {
   const [actionDate, setActionDate] = useState(getTodayString());
   const [note, setNote] = useState('');
+  const [selectedStage, setSelectedStage] = useState<CreativeProposalStage>(nextStage);
   const directionLabel = direction === 'forward' ? 'Avanza stadio' : 'Torna indietro';
+  const canChooseStage = direction === 'forward' && targetStageOptions.length > 0;
 
   const handleSubmit = (event: React.FormEvent): void => {
     event.preventDefault();
-    if (!actionDate) return;
-    onConfirm(actionDate, note.trim());
+    if (!actionDate || !selectedStage) return;
+    onConfirm(selectedStage, actionDate, note.trim());
   };
 
   return (
@@ -44,10 +48,35 @@ export function CreativeStageModal({
         <form onSubmit={handleSubmit}>
           <div className="drawer-body">
             <p className="creative-stage-modal-subtitle">{proposalTitle}</p>
-            <p className="creative-stage-modal-hint">
-              Da <strong>{CREATIVE_PROPOSAL_STAGE_LABELS[currentStage]}</strong>
-              {' '}a <strong>{CREATIVE_PROPOSAL_STAGE_LABELS[nextStage]}</strong>
-            </p>
+            {canChooseStage ? (
+              <label className="form-label" htmlFor="creative-stage-target">
+                Nuovo stadio *
+                <select
+                  id="creative-stage-target"
+                  className="form-select"
+                  value={selectedStage}
+                  onChange={(event) => setSelectedStage(event.target.value as CreativeProposalStage)}
+                  required
+                  autoFocus
+                >
+                  {targetStageOptions.map((stage) => (
+                    <option key={stage} value={stage}>
+                      {CREATIVE_PROPOSAL_STAGE_LABELS[stage]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <p className="creative-stage-modal-hint">
+                Da <strong>{CREATIVE_PROPOSAL_STAGE_LABELS[currentStage]}</strong>
+                {' '}a <strong>{CREATIVE_PROPOSAL_STAGE_LABELS[nextStage]}</strong>
+              </p>
+            )}
+            {canChooseStage ? (
+              <p className="creative-stage-modal-hint">
+                Stadio attuale: <strong>{CREATIVE_PROPOSAL_STAGE_LABELS[currentStage]}</strong>
+              </p>
+            ) : null}
             <label className="form-label" htmlFor="creative-stage-date">
               Data *
               <input
@@ -57,7 +86,7 @@ export function CreativeStageModal({
                 value={actionDate}
                 onChange={(event) => setActionDate(event.target.value)}
                 required
-                autoFocus
+                autoFocus={!canChooseStage}
               />
             </label>
             <label className="form-label" htmlFor="creative-stage-note">

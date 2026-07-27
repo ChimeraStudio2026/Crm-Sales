@@ -57,9 +57,22 @@ export function resolveProgressPctForStage(stage: CreativeProposalStage): number
 }
 
 export function getNextCreativeProposalStage(stage: CreativeProposalStage): CreativeProposalStage | null {
+  if (TERMINAL_CREATIVE_STAGES.includes(stage)) return null;
   const index = CREATIVE_PROPOSAL_STAGES.indexOf(stage);
   if (index < 0 || index >= CREATIVE_PROPOSAL_STAGES.length - 1) return null;
+  if (stage === 'feedback_ricevuto') return 'chiusa_approvata';
   return CREATIVE_PROPOSAL_STAGES[index + 1];
+}
+
+export function getForwardCreativeProposalStageOptions(stage: CreativeProposalStage): CreativeProposalStage[] {
+  if (TERMINAL_CREATIVE_STAGES.includes(stage)) return [];
+  const index = CREATIVE_PROPOSAL_STAGES.indexOf(stage);
+  if (index < 0) return [];
+  if (stage === 'feedback_ricevuto') {
+    return ['chiusa_approvata', 'chiusa_rifiutata'];
+  }
+  const feedbackIndex = CREATIVE_PROPOSAL_STAGES.indexOf('feedback_ricevuto');
+  return CREATIVE_PROPOSAL_STAGES.slice(index + 1, feedbackIndex + 1);
 }
 
 export function getPreviousCreativeProposalStage(stage: CreativeProposalStage): CreativeProposalStage | null {

@@ -24,6 +24,7 @@ import {
   getCreativeStageBadgeClass,
   getDiscountTypeBadgeClass,
   getNextCreativeProposalStage,
+  getForwardCreativeProposalStageOptions,
   getPreviousCreativeProposalStage,
   getStaleCreativeProposals,
   formatCreativeProposalDate,
@@ -86,6 +87,7 @@ function CreativeProposalCard({
   const [isTimelineOpen, setIsTimelineOpen] = useState(false);
   const idleDays = getCreativeProposalIdleDays(proposal);
   const nextStage = getNextCreativeProposalStage(proposal.stage);
+  const forwardStageOptions = getForwardCreativeProposalStageOptions(proposal.stage);
   const previousStage = getPreviousCreativeProposalStage(proposal.stage);
   const isDeadlineOverdue = isCreativeProposalDeadlineOverdue(proposal);
   const chronologicalActions = useMemo(
@@ -183,13 +185,13 @@ function CreativeProposalCard({
               Indietro
             </button>
           ) : null}
-          {nextStage ? (
+          {forwardStageOptions.length > 0 ? (
             <button
               type="button"
               className="btn btn-primary btn-sm"
               onClick={() => onRequestStageChange({
                 proposalId: proposal.id,
-                nextStage,
+                nextStage: nextStage || forwardStageOptions[0],
                 direction: 'forward',
               })}
             >
@@ -534,11 +536,15 @@ export function PropositivitaSection() {
     setDiscountDate(getTodayString());
   };
 
-  const handleConfirmStageChange = async (actionDate: string, note: string): Promise<void> => {
+  const handleConfirmStageChange = async (
+    targetStage: CreativeProposalStage,
+    actionDate: string,
+    note: string,
+  ): Promise<void> => {
     if (!stageChangeRequest) return;
     await updateCreativeProposalStage(
       stageChangeRequest.proposalId,
-      stageChangeRequest.nextStage,
+      targetStage,
       actionDate,
       note,
     );
@@ -1040,8 +1046,13 @@ export function PropositivitaSection() {
           currentStage={stageChangeProposal.stage}
           nextStage={stageChangeRequest.nextStage}
           direction={stageChangeRequest.direction}
+          targetStageOptions={
+            stageChangeRequest.direction === 'forward'
+              ? getForwardCreativeProposalStageOptions(stageChangeProposal.stage)
+              : []
+          }
           onClose={() => setStageChangeRequest(null)}
-          onConfirm={(actionDate, note) => void handleConfirmStageChange(actionDate, note)}
+          onConfirm={(targetStage, actionDate, note) => void handleConfirmStageChange(targetStage, actionDate, note)}
         />
       ) : null}
 

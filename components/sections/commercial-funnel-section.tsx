@@ -3,11 +3,13 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { GitBranch, Plus, Search } from 'lucide-react';
+import { GitBranch, Download, Plus, Search } from 'lucide-react';
 import { buildFunnelCampaignDashboardRow, filterCampaignsByWorkspace, filterFunnelEntriesByWorkspace, searchFunnelEntriesByBrandName } from '@/lib/commercial-funnel/campaigns';
+import { downloadCommercialFunnelExcel } from '@/lib/commercial-funnel/export';
 import { resolveFunnelSemaforo, resolveFunnelStageDisplay } from '@/lib/commercial-funnel/index';
 import { buildFunnelStatsSummary } from '@/lib/commercial-funnel/stats';
 import { formatActionDateDisplay } from '@/lib/crm/utils';
+import { resolveWorkspaceLabel } from '@/lib/constants/workspaces';
 import { CampaignNameCell } from '@/components/mail-campaigns/campaign-name-cell';
 import { CampaignStatusSelect } from '@/components/mail-campaigns/campaign-status-select';
 import { CampaignTableActions } from '@/components/mail-campaigns/campaign-table-actions';
@@ -139,6 +141,15 @@ export function CommercialFunnelSection() {
     await deleteMailCampaignById(campaignId);
   };
 
+  const handleDownloadExcel = (): void => {
+    downloadCommercialFunnelExcel({
+      entries: scopedEntries,
+      clients,
+      mailCampaigns: scopedCampaigns,
+      workspaceLabel: resolveWorkspaceLabel(workspaceId),
+    });
+  };
+
   const isBrandSearchActive = brandSearch.trim().length >= BRAND_SEARCH_MIN_LENGTH;
   const displayRows = isBrandSearchActive ? filteredRows : rows;
 
@@ -180,6 +191,10 @@ export function CommercialFunnelSection() {
                   Clienti
                 </button>
               </div>
+              <button type="button" className="btn btn-secondary" onClick={handleDownloadExcel}>
+                <Download size={16} />
+                <span>Scarica Excel</span>
+              </button>
               <button type="button" className="btn btn-primary" onClick={() => setShowForm(true)}>
                 <Plus size={16} />
                 <span>Nuova campagna</span>

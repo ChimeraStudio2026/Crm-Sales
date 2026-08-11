@@ -18,6 +18,10 @@ const TINYTOAST_EMAIL_PATTERNS = [
   'tinytoast',
 ] as const;
 
+const CHIMERA_ONLY_EMAIL_PATTERNS = [
+  'velcich',
+] as const;
+
 const TINYTOAST_ALLOWED_PATH_PREFIXES = [
   '/funnel',
   '/cold',
@@ -34,6 +38,12 @@ export function isTinytoastUserEmail(email: string | null | undefined): boolean 
   return TINYTOAST_EMAIL_PATTERNS.some((pattern) => normalizedEmail.includes(pattern));
 }
 
+export function isChimeraOnlyUserEmail(email: string | null | undefined): boolean {
+  const normalizedEmail = (email || '').trim().toLowerCase();
+  if (!normalizedEmail) return false;
+  return CHIMERA_ONLY_EMAIL_PATTERNS.some((pattern) => normalizedEmail.includes(pattern));
+}
+
 export function resolveWorkspaceAccess(email: string | null | undefined): WorkspaceAccess {
   if (isTinytoastUserEmail(email)) {
     return {
@@ -41,6 +51,14 @@ export function resolveWorkspaceAccess(email: string | null | undefined): Worksp
       canSwitchWorkspace: false,
       workspaceId: TINYTOAST_WORKSPACE_ID,
       homePath: '/funnel',
+    };
+  }
+  if (isChimeraOnlyUserEmail(email)) {
+    return {
+      navMode: 'full',
+      canSwitchWorkspace: false,
+      workspaceId: DEFAULT_WORKSPACE_ID,
+      homePath: '/analysis',
     };
   }
   return {

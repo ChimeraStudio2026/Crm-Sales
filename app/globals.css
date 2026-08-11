@@ -30,6 +30,7 @@
     --primary-hover: #407ff2;
     --primary-glow: rgba(38, 109, 240, 0.15);
     --primary-soft: #e5eeff;
+    --accent-primary: var(--primary);
     --secondary: #17bde9;
     --secondary-glow: rgba(23, 189, 233, 0.15);
 
@@ -3652,6 +3653,47 @@ body.drawer-open {
 .product-offer-tag.is-active:hover {
     filter: brightness(0.97);
 }
+
+.product-sold-tag--prod {
+    background: #fef3c7;
+    color: #b45309;
+    border-color: #b45309;
+}
+
+.product-sold-tag--mini-prod {
+    background: #fce7f3;
+    color: #be185d;
+    border-color: #be185d;
+}
+
+.product-sold-tag--content {
+    background: #dbeafe;
+    color: #1d4ed8;
+    border-color: #1d4ed8;
+}
+
+.product-sold-tag--evento {
+    background: #d1fae5;
+    color: #047857;
+    border-color: #047857;
+}
+
+.product-sold-tag--prod .product-offer-dot {
+    background: #b45309;
+}
+
+.product-sold-tag--mini-prod .product-offer-dot {
+    background: #be185d;
+}
+
+.product-sold-tag--content .product-offer-dot {
+    background: #1d4ed8;
+}
+
+.product-sold-tag--evento .product-offer-dot {
+    background: #047857;
+}
+
 .product-offers-hint {
     margin: 0 0 8px;
     font-size: 0.75rem;
@@ -7256,6 +7298,7 @@ body:has(.login-page) {
 
     --primary-soft: rgba(38, 109, 240, 0.2);
     --primary-glow: rgba(38, 109, 240, 0.28);
+    --accent-primary: var(--primary);
     --secondary-glow: rgba(23, 189, 233, 0.22);
     --success-glow: rgba(15, 194, 123, 0.22);
     --warning-glow: rgba(245, 185, 0, 0.22);
@@ -7298,6 +7341,272 @@ body:has(.login-page) {
 
 [data-theme="dark"] .login-card {
     box-shadow: var(--shadow-lg);
+}
+
+[data-theme="dark"] .btn-primary,
+[data-theme="dark"] .task-view-toggle-btn.is-active,
+[data-theme="dark"] .client-detail-tab.is-active,
+[data-theme="dark"] .funnel-picker-tab.is-active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+
+[data-theme="dark"] .btn-primary:hover {
+    background: var(--primary-hover);
+}
+
+[data-theme="dark"] ::placeholder {
+    color: var(--text-muted);
+    opacity: 1;
+}
+
+[data-theme="dark"] select option {
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .dropzone-card {
+    background: var(--bg-subtle);
+}
+
+[data-theme="dark"] .form-input,
+[data-theme="dark"] .form-select,
+[data-theme="dark"] .form-textarea,
+[data-theme="dark"] .search-input,
+[data-theme="dark"] .mail-notes-input {
+    background: var(--surface-input);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .sidebar-nav-item {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .sidebar-nav-item:hover,
+[data-theme="dark"] .sidebar-nav-item.is-active {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .cell-type-diretto,
+[data-theme="dark"] .cell-type-agenzia,
+[data-theme="dark"] .cell-type-pr,
+[data-theme="dark"] .cell-type-cdp,
+[data-theme="dark"] .cell-type-eventi,
+[data-theme="dark"] .cell-owner-jeck,
+[data-theme="dark"] .cell-owner-virgi,
+[data-theme="dark"] .cell-owner-martina,
+[data-theme="dark"] .cell-rapporto-top20,
+[data-theme="dark"] .cell-rapporto-ricorrente,
+[data-theme="dark"] .cell-rapporto-nuovo,
+[data-theme="dark"] .cell-rapporto-eliminato,
+[data-theme="dark"] .cell-rapporto-perso,
+[data-theme="dark"] .cell-origin-empty,
+[data-theme="dark"] .cell-origin-jeck,
+[data-theme="dark"] .cell-origin-inbound,
+[data-theme="dark"] .cell-origin-instagram,
+[data-theme="dark"] .cell-origin-community,
+[data-theme="dark"] .cell-origin-outbound,
+[data-theme="dark"] .cell-origin-martino {
+    --chip-fill: color-mix(in srgb, var(--chip-color) 24%, var(--bg-card));
+}
+
+[data-theme="dark"] .retention-positive,
+[data-theme="dark"] .retention-badge-gained,
+[data-theme="dark"] .funnel-converted-count,
+[data-theme="dark"] .funnel-stat-converted strong,
+[data-theme="dark"] .funnel-stat-card-converted .funnel-stat-value,
+[data-theme="dark"] .propositivita-report-card.is-converted .propositivita-report-value {
+    color: #4ade80;
+}
+
+[data-theme="dark"] .retention-negative,
+[data-theme="dark"] .retention-badge-lost,
+[data-theme="dark"] .funnel-stat-card-lost .funnel-stat-value,
+[data-theme="dark"] .propositivita-report-card.is-rejected .propositivita-report-value {
+    color: #f87171;
+}
+
+[data-theme="dark"] .retention-badge-retained,
+[data-theme="dark"] .propositivita-company-badge.is-chimera,
+[data-theme="dark"] .propositivita-badge.is-sent,
+[data-theme="dark"] .propositivita-stage-select.is-sent,
+[data-theme="dark"] .funnel-main-list-badge {
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .propositivita-badge.is-neutral,
+[data-theme="dark"] .propositivita-badge.is-extra,
+[data-theme="dark"] .propositivita-stage-select.is-neutral {
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .propositivita-badge.is-approved,
+[data-theme="dark"] .propositivita-stage-select.is-approved {
+    color: #4ade80;
+}
+
+[data-theme="dark"] .propositivita-badge.is-rejected,
+[data-theme="dark"] .propositivita-badge.is-discount,
+[data-theme="dark"] .propositivita-stage-select.is-rejected {
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .propositivita-badge.is-gift,
+[data-theme="dark"] .propositivita-summary-stats .is-warning {
+    color: #fbbf24;
+}
+
+[data-theme="dark"] .propositivita-company-badge.is-tinytoast {
+    color: #fb923c;
+}
+
+[data-theme="dark"] .mail-campaign-status-bozza {
+    background: rgba(148, 163, 184, 0.2);
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .mail-campaign-status-attiva {
+    background: rgba(34, 197, 94, 0.18);
+    color: #86efac;
+}
+
+[data-theme="dark"] .mail-campaign-status-chiusa {
+    background: rgba(59, 130, 246, 0.18);
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .cold-category-count {
+    color: #38bdf8;
+}
+
+[data-theme="dark"] .funnel-stat-card-quotation .funnel-stat-value {
+    color: #fbbf24;
+}
+
+[data-theme="dark"] .funnel-stat-card-meeting .funnel-stat-value {
+    color: #c4b5fd;
+}
+
+[data-theme="dark"] .funnel-action-select.is-positive {
+    background: rgba(34, 197, 94, 0.18);
+    color: #86efac;
+    border-color: rgba(34, 197, 94, 0.35);
+}
+
+[data-theme="dark"] .funnel-lost-badge {
+    background: rgba(239, 68, 68, 0.18);
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .funnel-converted-badge {
+    background: rgba(34, 197, 94, 0.18);
+    color: #86efac;
+}
+
+[data-theme="dark"] .funnel-main-list-badge {
+    background: rgba(59, 130, 246, 0.18);
+}
+
+[data-theme="dark"] .mail-send-cell.is-overdue .mail-send-btn {
+    background: rgba(245, 158, 11, 0.18);
+    border-color: rgba(245, 158, 11, 0.45);
+    color: #fcd34d;
+}
+
+[data-theme="dark"] .task-status-da-fare {
+    background: rgba(239, 68, 68, 0.16);
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .task-status-in-progress {
+    background: rgba(245, 158, 11, 0.16);
+    color: #fcd34d;
+}
+
+[data-theme="dark"] .task-status-fatto {
+    background: rgba(34, 197, 94, 0.16);
+    color: #86efac;
+}
+
+[data-theme="dark"] .recall-slot-top20 .recall-slot-badge {
+    background: rgba(245, 158, 11, 0.16);
+    color: #fcd34d;
+}
+
+[data-theme="dark"] .recall-slot-ricorrente .recall-slot-badge {
+    background: rgba(34, 197, 94, 0.16);
+    color: #86efac;
+}
+
+[data-theme="dark"] .recall-slot-nuovo .recall-slot-badge {
+    background: rgba(14, 165, 233, 0.16);
+    color: #7dd3fc;
+}
+
+[data-theme="dark"] .idea-item-type-tag.is-idea,
+[data-theme="dark"] .idea-type-switch-btn.is-active.is-idea {
+    background: rgba(59, 130, 246, 0.18);
+    border-color: rgba(59, 130, 246, 0.4);
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .idea-item-type-tag.is-task,
+[data-theme="dark"] .idea-type-switch-btn.is-active.is-task {
+    background: rgba(234, 88, 12, 0.18);
+    border-color: rgba(234, 88, 12, 0.4);
+    color: #fdba74;
+}
+
+[data-theme="dark"] .product-sold-tag--prod {
+    background: rgba(245, 158, 11, 0.18);
+    color: #fcd34d;
+    border-color: rgba(245, 158, 11, 0.45);
+}
+
+[data-theme="dark"] .product-sold-tag--mini-prod {
+    background: rgba(236, 72, 153, 0.18);
+    color: #f9a8d4;
+    border-color: rgba(236, 72, 153, 0.45);
+}
+
+[data-theme="dark"] .product-sold-tag--content {
+    background: rgba(59, 130, 246, 0.18);
+    color: #93c5fd;
+    border-color: rgba(59, 130, 246, 0.45);
+}
+
+[data-theme="dark"] .product-sold-tag--evento {
+    background: rgba(16, 185, 129, 0.18);
+    color: #6ee7b7;
+    border-color: rgba(16, 185, 129, 0.45);
+}
+
+[data-theme="dark"] .product-sold-tag--prod .product-offer-dot {
+    background: #fcd34d;
+}
+
+[data-theme="dark"] .product-sold-tag--mini-prod .product-offer-dot {
+    background: #f9a8d4;
+}
+
+[data-theme="dark"] .product-sold-tag--content .product-offer-dot {
+    background: #93c5fd;
+}
+
+[data-theme="dark"] .product-sold-tag--evento .product-offer-dot {
+    background: #6ee7b7;
+}
+
+[data-theme="dark"] .product-offer-tag.is-active:hover {
+    filter: brightness(1.08);
+}
+
+[data-theme="dark"] .crm-table th,
+[data-theme="dark"] .crm-table td {
+    color: var(--text-primary);
+    border-color: var(--border-color);
 }
 
 .theme-toggle-btn {

@@ -3776,7 +3776,7 @@ body.drawer-open {
 }
 .analysis-block,
 .analysis-accordion {
-    background: var(--card-bg, #fff);
+    background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
     overflow: hidden;
@@ -3790,6 +3790,10 @@ body.drawer-open {
     padding: 16px 20px;
     background: var(--bg-hover);
     border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+.analysis-block-header h3 {
+    color: var(--text-primary);
 }
 .analysis-block-header-actions {
     display: flex;
@@ -3997,6 +4001,8 @@ body.drawer-open {
     border-radius: var(--radius-sm);
     font-size: 1.1rem;
     font-weight: 700;
+    background: var(--surface-input);
+    color: var(--text-primary);
 }
 .analysis-pct-input {
     max-width: 72px;
@@ -4010,6 +4016,7 @@ body.drawer-open {
 .analysis-table-title {
     margin: 0 0 6px;
     font-size: 0.95rem;
+    color: var(--text-primary);
 }
 .analysis-table-sub {
     margin: 0 0 10px;
@@ -4029,6 +4036,10 @@ body.drawer-open {
     padding: 10px 12px;
     border-bottom: 1px solid var(--border-color);
     text-align: left;
+    color: var(--text-primary);
+}
+.analysis-table td {
+    background: var(--bg-card);
 }
 .analysis-table th {
     background: var(--bg-hover);
@@ -4037,12 +4048,17 @@ body.drawer-open {
     letter-spacing: 0.35px;
     color: var(--text-secondary);
 }
+.analysis-table tbody tr:hover td {
+    background: var(--bg-hover);
+}
 .analysis-table .analysis-num {
     text-align: right;
     white-space: nowrap;
 }
 .analysis-row-total td {
-    background: var(--primary-glow);
+    background: var(--primary-soft);
+    color: var(--text-primary);
+    font-weight: 600;
 }
 .analysis-quarters {
     display: flex;
@@ -7607,6 +7623,49 @@ body:has(.login-page) {
 [data-theme="dark"] .crm-table td {
     color: var(--text-primary);
     border-color: var(--border-color);
+}
+
+[data-theme="dark"] .analysis-block,
+[data-theme="dark"] .analysis-accordion,
+[data-theme="dark"] .analysis-table td {
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .analysis-table th {
+    background: var(--bg-subtle);
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .analysis-table tbody tr:hover td {
+    background: var(--bg-hover);
+}
+
+[data-theme="dark"] .analysis-row-total td {
+    background: rgba(38, 109, 240, 0.22);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .analysis-row-total td strong {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .analysis-table-title,
+[data-theme="dark"] .analysis-block-header h3,
+[data-theme="dark"] .analysis-accordion-toggle span:first-of-type {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .analysis-forecast-input,
+[data-theme="dark"] .analysis-pct-input {
+    background: var(--surface-input);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .analysis-year-switcher-btn.is-active {
+    background: var(--bg-hover);
+    color: var(--text-primary);
 }
 
 .theme-toggle-btn {

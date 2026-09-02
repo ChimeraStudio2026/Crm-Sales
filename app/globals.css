@@ -8525,6 +8525,7 @@ body:has(.login-page) {
     justify-content: flex-start;
     gap: 4px;
     width: 100%;
+    min-height: 36px;
     border: none;
     background: transparent;
     color: var(--text-secondary);
@@ -8544,6 +8545,30 @@ body:has(.login-page) {
 .proposals-sort-btn:hover,
 .proposals-sort-btn.is-active {
     color: var(--text-primary);
+}
+
+.proposals-sort-idle {
+    opacity: 0.35;
+}
+
+.analysis-table th.is-sorted {
+    background: var(--primary-soft);
+}
+
+.proposals-client-filter {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-width: 280px;
+    margin-bottom: 12px;
+}
+
+.proposals-client-filter span {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.35px;
 }
 
 @media (max-width: 1100px) {

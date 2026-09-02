@@ -7,6 +7,7 @@ import { CategoryTicketChart } from '@/components/sales-proposals/category-ticke
 import { ClientCategoryTable } from '@/components/sales-proposals/client-category-table';
 import { ProposalsImportCard } from '@/components/sales-proposals/proposals-import-card';
 import { createBrowserSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
+import { fetchAllOkrRecords } from '@/lib/supabase/database';
 import { fetchSalesProposals } from '@/lib/supabase/sales-proposals-database';
 import {
   buildCategoryTicketStats,
@@ -21,6 +22,7 @@ import {
 import { ANALYSIS_YEAR } from '@/lib/constants/crm';
 import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
+import type { OkrRecord } from '@/lib/types/crm';
 import type { SalesProposal } from '@/lib/types/sales-proposals';
 
 function resolveDefaultYear(years: number[], currentYear: number): number {
@@ -29,10 +31,11 @@ function resolveDefaultYear(years: number[], currentYear: number): number {
 }
 
 export function SalesProposalsSection() {
-  const { clients, okrRecords, showToast } = useCrm();
+  const { clients, showToast } = useCrm();
   const { workspaceId } = useWorkspace();
   const currentYear = new Date().getFullYear();
   const [proposals, setProposals] = useState<SalesProposal[]>([]);
+  const [okrRecords, setOkrRecords] = useState<OkrRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(currentYear);
 
@@ -40,14 +43,19 @@ export function SalesProposalsSection() {
     const db = createBrowserSupabaseClient();
     if (!isSupabaseConfigured() || !db) {
       setProposals([]);
+      setOkrRecords([]);
       setIsLoading(false);
       showToast('Supabase non configurato.', 'warning');
       return;
     }
     setIsLoading(true);
     try {
-      const rows = await fetchSalesProposals(db, workspaceId);
+      const [rows, okr] = await Promise.all([
+        fetchSalesProposals(db, workspaceId),
+        fetchAllOkrRecords(db),
+      ]);
       setProposals(rows);
+      setOkrRecords(okr);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Errore lettura proposte.';
       showToast(message, 'danger');
@@ -166,12 +174,11 @@ export function SalesProposalsSection() {
                 <div className="proposals-panel-head">
                   <h3>Cliente × categoria</h3>
                   <p>
-                    Conteggio proposte accettate per cliente e categoria.
-                    Il totale è il fatturato OKR dell'anno, associato al cliente.
-                    Clicca le intestazioni per ordinare.
+                    Ogni riga è un cliente con proposte accettate. Il totale è il fatturato OKR {selectedYear},
+                    non il valore delle proposte. Clicca una colonna per ordinare.
                   </p>
                 </div>
-                <ClientCategoryTable stats={clientStats} />
+                <ClientCategoryTable stats={clientStats} year={selectedYear} />
               </div>
             </>
           )}

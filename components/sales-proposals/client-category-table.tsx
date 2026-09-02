@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { formatCurrency } from '@/lib/crm/utils';
 import { collectClientTableCategories } from '@/lib/sales-proposals/stats';
 import type { ClientProposalStat } from '@/lib/types/sales-proposals';
@@ -13,6 +13,7 @@ type SortDirection = 'asc' | 'desc';
 
 interface ClientCategoryTableProps {
   stats: ClientProposalStat[];
+  year: number;
 }
 
 interface SortState {
@@ -49,7 +50,94 @@ function compareStats(
   return left.cliente.localeCompare(right.cliente, 'it', { sensitivity: 'base' });
 }
 
-function SortHeaderButton({
+export function ClientCategoryTable({ stats, year }: ClientCategoryTableProps) {
+  const categories = useMemo(() => collectClientTableCategories(stats), [stats]);
+  const [sort, setSort] = useState<SortState>({ columnId: OKR_COLUMN, direction: 'desc' });
+  const [clientQuery, setClientQuery] = useState('');
+  useEffect(() => {
+    if (sort.columnId === CLIENT_COLUMN || sort.columnId === OKR_COLUMN) return;
+    if (categories.includes(sort.columnId)) return;
+    setSort({ columnId: OKR_COLUMN, direction: 'desc' });
+  }, [categories, sort.columnId]);
+  const visibleStats = useMemo(() => {
+    const query = clientQuery.trim().toLowerCase();
+    const filtered = query
+      ? stats.filter((stat) => stat.cliente.toLowerCase().includes(query))
+      : stats;
+    return [...filtered].sort((left, right) => compareStats(left, right, sort));
+  }, [clientQuery, sort, stats]);
+  const handleSort = (columnId: string): void => {
+    setSort((current) => {
+      if (current.columnId === columnId) {
+        return { columnId, direction: current.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { columnId, direction: isNumericColumn(columnId) ? 'desc' : 'asc' };
+    });
+  };
+  if (stats.length === 0) {
+    return <p className="proposals-empty">Nessun dato cliente × categoria per l'anno selezionato.</p>;
+  }
+  return (
+    <div className="proposals-client-table">
+      <label className="proposals-client-filter">
+        <span>Filtra cliente</span>
+        <input
+          type="search"
+          className="form-input"
+          value={clientQuery}
+          placeholder="Cerca per nome..."
+          onChange={(event) => setClientQuery(event.target.value)}
+        />
+      </label>
+      <div className="analysis-table-wrap">
+        <table className="analysis-table">
+          <thead>
+            <tr>
+              <SortableHeader
+                label="Cliente"
+                columnId={CLIENT_COLUMN}
+                sort={sort}
+                onSort={handleSort}
+              />
+              <SortableHeader
+                label={`Fatturato OKR ${year}`}
+                columnId={OKR_COLUMN}
+                sort={sort}
+                align="right"
+                onSort={handleSort}
+              />
+              {categories.map((categoria) => (
+                <SortableHeader
+                  key={categoria}
+                  label={categoria}
+                  columnId={categoria}
+                  sort={sort}
+                  align="right"
+                  onSort={handleSort}
+                />
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {visibleStats.map((stat) => (
+              <tr key={stat.cliente}>
+                <td><strong>{stat.cliente}</strong></td>
+                <td className="analysis-num">{formatCurrency(stat.okrTotal)}</td>
+                {categories.map((categoria) => (
+                  <td key={categoria} className="analysis-num">
+                    {stat.countsByCategory[categoria] || 0}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function SortableHeader({
   label,
   columnId,
   sort,
@@ -64,83 +152,22 @@ function SortHeaderButton({
 }) {
   const isActive = sort.columnId === columnId;
   return (
-    <button
-      type="button"
-      className={`proposals-sort-btn${isActive ? ' is-active' : ''}${align === 'right' ? ' is-numeric' : ''}`}
-      aria-pressed={isActive}
-      onClick={() => onSort(columnId)}
+    <th
+      className={`${align === 'right' ? 'analysis-num' : ''}${isActive ? ' is-sorted' : ''}`}
+      aria-sort={isActive ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
     >
-      <span>{label}</span>
-      {isActive ? (
-        sort.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-      ) : (
-        <ChevronsUpDown size={14} />
-      )}
-    </button>
-  );
-}
-
-export function ClientCategoryTable({ stats }: ClientCategoryTableProps) {
-  const categories = useMemo(() => collectClientTableCategories(stats), [stats]);
-  const [sort, setSort] = useState<SortState>({ columnId: OKR_COLUMN, direction: 'desc' });
-  useEffect(() => {
-    if (sort.columnId === CLIENT_COLUMN || sort.columnId === OKR_COLUMN) return;
-    if (categories.includes(sort.columnId)) return;
-    setSort({ columnId: OKR_COLUMN, direction: 'desc' });
-  }, [categories, sort.columnId]);
-  const sortedStats = useMemo(
-    () => [...stats].sort((left, right) => compareStats(left, right, sort)),
-    [sort, stats],
-  );
-  const handleSort = (columnId: string): void => {
-    setSort((current) => {
-      if (current.columnId === columnId) {
-        return { columnId, direction: current.direction === 'asc' ? 'desc' : 'asc' };
-      }
-      return { columnId, direction: isNumericColumn(columnId) ? 'desc' : 'asc' };
-    });
-  };
-  if (stats.length === 0) {
-    return <p className="proposals-empty">Nessun dato cliente × categoria per l'anno selezionato.</p>;
-  }
-  return (
-    <div className="analysis-table-wrap">
-      <table className="analysis-table">
-        <thead>
-          <tr>
-            <th>
-              <SortHeaderButton label="Cliente" columnId={CLIENT_COLUMN} sort={sort} onSort={handleSort} />
-            </th>
-            <th className="analysis-num">
-              <SortHeaderButton label="Totale OKR" columnId={OKR_COLUMN} sort={sort} align="right" onSort={handleSort} />
-            </th>
-            {categories.map((categoria) => (
-              <th key={categoria} className="analysis-num">
-                <SortHeaderButton
-                  label={categoria}
-                  columnId={categoria}
-                  sort={sort}
-                  align="right"
-                  onSort={handleSort}
-                />
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {sortedStats.map((stat) => (
-            <tr key={stat.cliente}>
-              <td><strong>{stat.cliente}</strong></td>
-              <td className="analysis-num">{formatCurrency(stat.okrTotal)}</td>
-              {categories.map((categoria) => (
-                <td key={categoria} className="analysis-num">
-                  {stat.countsByCategory[categoria] || 0}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+      <button
+        type="button"
+        className={`proposals-sort-btn${isActive ? ' is-active' : ''}${align === 'right' ? ' is-numeric' : ''}`}
+        onClick={() => onSort(columnId)}
+      >
+        <span>{label}</span>
+        {isActive ? (
+          sort.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+        ) : (
+          <ChevronDown size={14} className="proposals-sort-idle" />
+        )}
+      </button>
+    </th>
   );
 }

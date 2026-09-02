@@ -8519,54 +8519,31 @@ body:has(.login-page) {
     font-size: 0.72rem;
 }
 
-.proposals-client-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    max-height: 480px;
-    overflow: auto;
-}
-
-.proposals-client-row {
-    display: grid;
-    grid-template-columns: 32px minmax(0, 1fr) auto;
-    gap: 12px;
+.proposals-sort-btn {
+    display: inline-flex;
     align-items: center;
-    padding: 10px 4px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.proposals-client-row:last-child {
-    border-bottom: none;
-}
-
-.proposals-client-rank {
-    font-size: 0.78rem;
+    justify-content: flex-start;
+    gap: 4px;
+    width: 100%;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: 0.72rem;
     font-weight: 700;
-    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.35px;
+    cursor: pointer;
+    padding: 0;
 }
 
-.proposals-client-copy {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
+.proposals-sort-btn.is-numeric {
+    justify-content: flex-end;
 }
 
-.proposals-client-copy strong {
+.proposals-sort-btn:hover,
+.proposals-sort-btn.is-active {
     color: var(--text-primary);
-    font-size: 0.9rem;
-}
-
-.proposals-client-copy small {
-    color: var(--text-muted);
-    font-size: 0.75rem;
-}
-
-.proposals-client-value {
-    font-weight: 700;
-    color: var(--text-primary);
-    white-space: nowrap;
 }
 
 @media (max-width: 1100px) {

@@ -1,11 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { BarChart3, Users } from 'lucide-react';
+import { BarChart3 } from 'lucide-react';
 import { TopHeader } from '@/components/layout/top-header';
 import { CategoryTicketChart } from '@/components/sales-proposals/category-ticket-chart';
 import { ClientCategoryTable } from '@/components/sales-proposals/client-category-table';
-import { ClientRankingList } from '@/components/sales-proposals/client-ranking-list';
 import { ProposalsImportCard } from '@/components/sales-proposals/proposals-import-card';
 import { createBrowserSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { fetchSalesProposals } from '@/lib/supabase/sales-proposals-database';
@@ -30,7 +29,7 @@ function resolveDefaultYear(years: number[], currentYear: number): number {
 }
 
 export function SalesProposalsSection() {
-  const { showToast } = useCrm();
+  const { clients, okrRecords, showToast } = useCrm();
   const { workspaceId } = useWorkspace();
   const currentYear = new Date().getFullYear();
   const [proposals, setProposals] = useState<SalesProposal[]>([]);
@@ -78,7 +77,10 @@ export function SalesProposalsSection() {
   );
   const kpis = useMemo(() => buildProposalKpis(yearProposals), [yearProposals]);
   const categoryStats = useMemo(() => buildCategoryTicketStats(yearProposals), [yearProposals]);
-  const clientStats = useMemo(() => buildClientProposalStats(yearProposals), [yearProposals]);
+  const clientStats = useMemo(
+    () => buildClientProposalStats(yearProposals, okrRecords, selectedYear, clients),
+    [clients, okrRecords, selectedYear, yearProposals],
+  );
   const latestBatch = useMemo(() => resolveLatestImportBatch(yearProposals), [yearProposals]);
   const isCurrentYear = selectedYear === currentYear;
 
@@ -162,15 +164,12 @@ export function SalesProposalsSection() {
               </div>
               <div className="glass-card proposals-panel">
                 <div className="proposals-panel-head">
-                  <h3><Users size={18} /> Clienti per valore accettato</h3>
-                  <p>Elenco ordinato per valore totale decrescente.</p>
-                </div>
-                <ClientRankingList stats={clientStats} />
-              </div>
-              <div className="glass-card proposals-panel">
-                <div className="proposals-panel-head">
                   <h3>Cliente × categoria</h3>
-                  <p>Conteggio proposte accettate per cliente e categoria, con totale accettato.</p>
+                  <p>
+                    Conteggio proposte accettate per cliente e categoria.
+                    Il totale è il fatturato OKR dell'anno, associato al cliente.
+                    Clicca le intestazioni per ordinare.
+                  </p>
                 </div>
                 <ClientCategoryTable stats={clientStats} />
               </div>

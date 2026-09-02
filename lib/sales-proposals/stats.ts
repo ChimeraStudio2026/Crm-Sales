@@ -1,3 +1,6 @@
+import { normalizeOkrClientName } from '@/lib/analysis/okr-timeline';
+import { resolveCanonicalClientBrandName, normalizeClientBrandLookupKey } from '@/lib/crm/client-brand-aliases';
+import type { Client, OkrRecord } from '@/lib/types/crm';
 import {
   KNOWN_PROPOSAL_CATEGORIES,
   PROPOSAL_STATUS_ACCEPTED,
@@ -162,8 +165,72 @@ export function buildCategoryTicketStats(proposals: SalesProposal[]): CategoryTi
     });
 }
 
-export function buildClientProposalStats(proposals: SalesProposal[]): ClientProposalStat[] {
+function collectClientMatchKeys(name: string): string[] {
+  const trimmed = name.trim();
+  if (!trimmed) return [];
+  const canonical = resolveCanonicalClientBrandName(trimmed);
+  const keys = new Set<string>();
+  keys.add(normalizeOkrClientName(trimmed));
+  keys.add(normalizeOkrClientName(canonical));
+  const brandKey = normalizeClientBrandLookupKey(trimmed);
+  if (brandKey) keys.add(`brand:${brandKey}`);
+  const canonicalBrandKey = normalizeClientBrandLookupKey(canonical);
+  if (canonicalBrandKey) keys.add(`brand:${canonicalBrandKey}`);
+  return Array.from(keys);
+}
+
+function compactBrandKey(name: string): string {
+  return normalizeClientBrandLookupKey(resolveCanonicalClientBrandName(name)).replace(/\s+/g, '');
+}
+
+function namesLooselyMatch(left: string, right: string): boolean {
+  const leftKeys = new Set(collectClientMatchKeys(left));
+  if (collectClientMatchKeys(right).some((key) => leftKeys.has(key))) return true;
+  const leftCompact = compactBrandKey(left);
+  const rightCompact = compactBrandKey(right);
+  if (!leftCompact || !rightCompact) return false;
+  if (leftCompact === rightCompact) return true;
+  const minPrefixLength = 5;
+  if (leftCompact.length >= minPrefixLength && rightCompact.startsWith(leftCompact)) return true;
+  if (rightCompact.length >= minPrefixLength && leftCompact.startsWith(rightCompact)) return true;
+  return false;
+}
+
+function findMatchingCrmClient(cliente: string, clients: Client[]): Client | undefined {
+  return clients.find((client) => namesLooselyMatch(client.name, cliente));
+}
+
+function isOkrRecordForClient(
+  record: OkrRecord,
+  cliente: string,
+  matchedClient: Client | undefined,
+): boolean {
+  if (matchedClient && record.clientId && record.clientId === matchedClient.id) return true;
+  if (namesLooselyMatch(record.clientName, cliente)) return true;
+  if (matchedClient && namesLooselyMatch(record.clientName, matchedClient.name)) return true;
+  return false;
+}
+
+function resolveOkrTotalForClient(
+  cliente: string,
+  yearRecords: OkrRecord[],
+  clients: Client[],
+): number {
+  const matchedClient = findMatchingCrmClient(cliente, clients);
+  return yearRecords.reduce((total, record) => {
+    if (!isOkrRecordForClient(record, cliente, matchedClient)) return total;
+    return total + (Number(record.amount) || 0);
+  }, 0);
+}
+
+export function buildClientProposalStats(
+  proposals: SalesProposal[],
+  okrRecords: OkrRecord[],
+  year: number,
+  clients: Client[] = [],
+): ClientProposalStat[] {
   const accepted = proposals.filter(isAcceptedProposal);
+  const yearRecords = okrRecords.filter((record) => record.year === year);
   const grouped = new Map<string, ClientProposalStat>();
   accepted.forEach((proposal) => {
     const cliente = resolveClientLabel(proposal.cliente);
@@ -171,18 +238,14 @@ export function buildClientProposalStats(proposals: SalesProposal[]): ClientProp
     const current = grouped.get(cliente) || {
       cliente,
       acceptedCount: 0,
-      totalValue: 0,
+      okrTotal: resolveOkrTotalForClient(cliente, yearRecords, clients),
       countsByCategory: {},
     };
     current.acceptedCount += 1;
-    current.totalValue += resolveProposalValue(proposal) || 0;
     current.countsByCategory[categoria] = (current.countsByCategory[categoria] || 0) + 1;
     grouped.set(cliente, current);
   });
-  return Array.from(grouped.values()).sort((left, right) => {
-    if (right.totalValue !== left.totalValue) return right.totalValue - left.totalValue;
-    return left.cliente.localeCompare(right.cliente, 'it');
-  });
+  return Array.from(grouped.values());
 }
 
 export function collectClientTableCategories(stats: ClientProposalStat[]): string[] {

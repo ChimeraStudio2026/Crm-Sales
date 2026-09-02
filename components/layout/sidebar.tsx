@@ -6,6 +6,7 @@ import {
   BarChart3,
   CheckSquare,
   FileSpreadsheet,
+  FileText,
   GitBranch,
   Lightbulb,
   LogOut,
@@ -27,6 +28,7 @@ import { useWorkspace } from '@/providers/workspace-provider';
 
 const ICON_MAP: Record<string, LucideIcon> = {
   BarChart3,
+  FileText,
   Users,
   Mail,
   GitBranch,

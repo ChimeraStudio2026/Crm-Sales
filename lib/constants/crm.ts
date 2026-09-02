@@ -112,6 +112,7 @@ export const EXCEL_IMPORT_DESC_PREFIX = 'Cliente creato da import Excel';
 
 export const NAV_ITEMS = [
   { href: '/analysis', label: 'Analisi', icon: 'BarChart3' },
+  { href: '/proposte', label: 'Proposte', icon: 'FileText' },
   { href: '/clients', label: 'Lista Clienti', icon: 'Users' },
   { href: '/funnel', label: 'Funnel Commerciale', icon: 'GitBranch' },
   { href: '/propositivita', label: 'Propositività', icon: 'Sparkles' },
@@ -122,6 +123,7 @@ export const NAV_ITEMS = [
 
 export const PAGE_META: Record<string, { title: string; subtitle: string }> = {
   '/analysis': { title: 'Analisi', subtitle: 'OKR, previsioni e breakdown per quarter.' },
+  '/proposte': { title: 'Proposte', subtitle: 'Preventivi commerciali: KPI, ticket medio e clienti per categoria.' },
   '/clients': { title: 'Gestione Clienti', subtitle: 'Lista generica e schede clienti.' },
   '/funnel': { title: 'Funnel Commerciale', subtitle: 'Campagne commerciali con pipeline clienti, azioni, status e semaforo tempi.' },
   '/propositivita': { title: 'Propositività', subtitle: 'Creatività proposte ai clienti e sconti/extra concessi.' },

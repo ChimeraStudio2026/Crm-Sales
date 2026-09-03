@@ -85,6 +85,6 @@ export interface CategoryTicketStat {
 export interface ClientProposalStat {
   cliente: string;
   acceptedCount: number;
-  okrTotal: number;
+  acceptedTotal: number;
   countsByCategory: Record<string, number>;
 }

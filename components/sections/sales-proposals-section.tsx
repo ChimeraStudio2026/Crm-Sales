@@ -5,9 +5,9 @@ import { BarChart3 } from 'lucide-react';
 import { TopHeader } from '@/components/layout/top-header';
 import { CategoryTicketChart } from '@/components/sales-proposals/category-ticket-chart';
 import { ClientCategoryTable } from '@/components/sales-proposals/client-category-table';
+import { ClientRankingList } from '@/components/sales-proposals/client-ranking-list';
 import { ProposalsImportCard } from '@/components/sales-proposals/proposals-import-card';
 import { createBrowserSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
-import { fetchAllOkrRecords } from '@/lib/supabase/database';
 import { fetchSalesProposals } from '@/lib/supabase/sales-proposals-database';
 import {
   buildCategoryTicketStats,
@@ -22,7 +22,6 @@ import {
 import { ANALYSIS_YEAR } from '@/lib/constants/crm';
 import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
-import type { OkrRecord } from '@/lib/types/crm';
 import type { SalesProposal } from '@/lib/types/sales-proposals';
 
 function resolveDefaultYear(years: number[], currentYear: number): number {
@@ -31,11 +30,10 @@ function resolveDefaultYear(years: number[], currentYear: number): number {
 }
 
 export function SalesProposalsSection() {
-  const { clients, showToast } = useCrm();
+  const { showToast } = useCrm();
   const { workspaceId } = useWorkspace();
   const currentYear = new Date().getFullYear();
   const [proposals, setProposals] = useState<SalesProposal[]>([]);
-  const [okrRecords, setOkrRecords] = useState<OkrRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(currentYear);
 
@@ -43,19 +41,14 @@ export function SalesProposalsSection() {
     const db = createBrowserSupabaseClient();
     if (!isSupabaseConfigured() || !db) {
       setProposals([]);
-      setOkrRecords([]);
       setIsLoading(false);
       showToast('Supabase non configurato.', 'warning');
       return;
     }
     setIsLoading(true);
     try {
-      const [rows, okr] = await Promise.all([
-        fetchSalesProposals(db, workspaceId),
-        fetchAllOkrRecords(db),
-      ]);
+      const rows = await fetchSalesProposals(db, workspaceId);
       setProposals(rows);
-      setOkrRecords(okr);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Errore lettura proposte.';
       showToast(message, 'danger');
@@ -86,8 +79,8 @@ export function SalesProposalsSection() {
   const kpis = useMemo(() => buildProposalKpis(yearProposals), [yearProposals]);
   const categoryStats = useMemo(() => buildCategoryTicketStats(yearProposals), [yearProposals]);
   const clientStats = useMemo(
-    () => buildClientProposalStats(yearProposals, okrRecords, selectedYear, clients),
-    [clients, okrRecords, selectedYear, yearProposals],
+    () => buildClientProposalStats(yearProposals),
+    [yearProposals],
   );
   const latestBatch = useMemo(() => resolveLatestImportBatch(yearProposals), [yearProposals]);
   const isCurrentYear = selectedYear === currentYear;
@@ -172,13 +165,20 @@ export function SalesProposalsSection() {
               </div>
               <div className="glass-card proposals-panel">
                 <div className="proposals-panel-head">
+                  <h3>Top clienti per valore accettato</h3>
+                  <p>Ordinati per valore totale delle proposte accettate nell'anno selezionato.</p>
+                </div>
+                <ClientRankingList stats={clientStats} />
+              </div>
+              <div className="glass-card proposals-panel">
+                <div className="proposals-panel-head">
                   <h3>Cliente × categoria</h3>
                   <p>
-                    Ogni riga è un cliente con proposte accettate. Il totale è il fatturato OKR {selectedYear},
-                    non il valore delle proposte. Clicca una colonna per ordinare.
+                    Ogni riga è un cliente con proposte accettate. Il totale è la somma dei valori accettati.
+                    Le colonne categoria mostrano il conteggio per tipologia.
                   </p>
                 </div>
-                <ClientCategoryTable stats={clientStats} year={selectedYear} />
+                <ClientCategoryTable stats={clientStats} />
               </div>
             </>
           )}

@@ -7,13 +7,12 @@ import { collectClientTableCategories } from '@/lib/sales-proposals/stats';
 import type { ClientProposalStat } from '@/lib/types/sales-proposals';
 
 const CLIENT_COLUMN = 'cliente' as const;
-const OKR_COLUMN = 'okrTotal' as const;
+const TOTAL_COLUMN = 'acceptedTotal' as const;
 
 type SortDirection = 'asc' | 'desc';
 
 interface ClientCategoryTableProps {
   stats: ClientProposalStat[];
-  year: number;
 }
 
 interface SortState {
@@ -27,7 +26,7 @@ function isNumericColumn(columnId: string): boolean {
 
 function readSortValue(stat: ClientProposalStat, columnId: string): string | number {
   if (columnId === CLIENT_COLUMN) return stat.cliente;
-  if (columnId === OKR_COLUMN) return stat.okrTotal;
+  if (columnId === TOTAL_COLUMN) return stat.acceptedTotal;
   return stat.countsByCategory[columnId] || 0;
 }
 
@@ -50,14 +49,14 @@ function compareStats(
   return left.cliente.localeCompare(right.cliente, 'it', { sensitivity: 'base' });
 }
 
-export function ClientCategoryTable({ stats, year }: ClientCategoryTableProps) {
+export function ClientCategoryTable({ stats }: ClientCategoryTableProps) {
   const categories = useMemo(() => collectClientTableCategories(stats), [stats]);
-  const [sort, setSort] = useState<SortState>({ columnId: OKR_COLUMN, direction: 'desc' });
+  const [sort, setSort] = useState<SortState>({ columnId: TOTAL_COLUMN, direction: 'desc' });
   const [clientQuery, setClientQuery] = useState('');
   useEffect(() => {
-    if (sort.columnId === CLIENT_COLUMN || sort.columnId === OKR_COLUMN) return;
+    if (sort.columnId === CLIENT_COLUMN || sort.columnId === TOTAL_COLUMN) return;
     if (categories.includes(sort.columnId)) return;
-    setSort({ columnId: OKR_COLUMN, direction: 'desc' });
+    setSort({ columnId: TOTAL_COLUMN, direction: 'desc' });
   }, [categories, sort.columnId]);
   const visibleStats = useMemo(() => {
     const query = clientQuery.trim().toLowerCase();
@@ -100,8 +99,8 @@ export function ClientCategoryTable({ stats, year }: ClientCategoryTableProps) {
                 onSort={handleSort}
               />
               <SortableHeader
-                label={`Fatturato OKR ${year}`}
-                columnId={OKR_COLUMN}
+                label="Totale accettato"
+                columnId={TOTAL_COLUMN}
                 sort={sort}
                 align="right"
                 onSort={handleSort}
@@ -122,7 +121,7 @@ export function ClientCategoryTable({ stats, year }: ClientCategoryTableProps) {
             {visibleStats.map((stat) => (
               <tr key={stat.cliente}>
                 <td><strong>{stat.cliente}</strong></td>
-                <td className="analysis-num">{formatCurrency(stat.okrTotal)}</td>
+                <td className="analysis-num">{formatCurrency(stat.acceptedTotal)}</td>
                 {categories.map((categoria) => (
                   <td key={categoria} className="analysis-num">
                     {stat.countsByCategory[categoria] || 0}

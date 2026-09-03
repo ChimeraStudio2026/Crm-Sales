@@ -181,7 +181,6 @@ export function buildClientProposalStats(proposals: SalesProposal[]): ClientProp
     grouped.set(cliente, current);
   });
   return Array.from(grouped.values()).sort((left, right) => {
-    if (right.acceptedTotal !== left.acceptedTotal) return right.acceptedTotal - left.acceptedTotal;
     if (right.acceptedCount !== left.acceptedCount) return right.acceptedCount - left.acceptedCount;
     return left.cliente.localeCompare(right.cliente, 'it');
   });

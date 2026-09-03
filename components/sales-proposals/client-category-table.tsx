@@ -2,12 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { formatCurrency } from '@/lib/crm/utils';
 import { collectClientTableCategories } from '@/lib/sales-proposals/stats';
 import type { ClientProposalStat } from '@/lib/types/sales-proposals';
 
 const CLIENT_COLUMN = 'cliente' as const;
-const TOTAL_COLUMN = 'acceptedTotal' as const;
 
 type SortDirection = 'asc' | 'desc';
 
@@ -26,7 +24,6 @@ function isNumericColumn(columnId: string): boolean {
 
 function readSortValue(stat: ClientProposalStat, columnId: string): string | number {
   if (columnId === CLIENT_COLUMN) return stat.cliente;
-  if (columnId === TOTAL_COLUMN) return stat.acceptedTotal;
   return stat.countsByCategory[columnId] || 0;
 }
 
@@ -51,12 +48,12 @@ function compareStats(
 
 export function ClientCategoryTable({ stats }: ClientCategoryTableProps) {
   const categories = useMemo(() => collectClientTableCategories(stats), [stats]);
-  const [sort, setSort] = useState<SortState>({ columnId: TOTAL_COLUMN, direction: 'desc' });
+  const [sort, setSort] = useState<SortState>({ columnId: CLIENT_COLUMN, direction: 'asc' });
   const [clientQuery, setClientQuery] = useState('');
   useEffect(() => {
-    if (sort.columnId === CLIENT_COLUMN || sort.columnId === TOTAL_COLUMN) return;
+    if (sort.columnId === CLIENT_COLUMN) return;
     if (categories.includes(sort.columnId)) return;
-    setSort({ columnId: TOTAL_COLUMN, direction: 'desc' });
+    setSort({ columnId: CLIENT_COLUMN, direction: 'asc' });
   }, [categories, sort.columnId]);
   const visibleStats = useMemo(() => {
     const query = clientQuery.trim().toLowerCase();
@@ -98,13 +95,6 @@ export function ClientCategoryTable({ stats }: ClientCategoryTableProps) {
                 sort={sort}
                 onSort={handleSort}
               />
-              <SortableHeader
-                label="Totale accettato"
-                columnId={TOTAL_COLUMN}
-                sort={sort}
-                align="right"
-                onSort={handleSort}
-              />
               {categories.map((categoria) => (
                 <SortableHeader
                   key={categoria}
@@ -121,7 +111,6 @@ export function ClientCategoryTable({ stats }: ClientCategoryTableProps) {
             {visibleStats.map((stat) => (
               <tr key={stat.cliente}>
                 <td><strong>{stat.cliente}</strong></td>
-                <td className="analysis-num">{formatCurrency(stat.acceptedTotal)}</td>
                 {categories.map((categoria) => (
                   <td key={categoria} className="analysis-num">
                     {stat.countsByCategory[categoria] || 0}

@@ -5,7 +5,6 @@ import { BarChart3 } from 'lucide-react';
 import { TopHeader } from '@/components/layout/top-header';
 import { CategoryTicketChart } from '@/components/sales-proposals/category-ticket-chart';
 import { ClientCategoryTable } from '@/components/sales-proposals/client-category-table';
-import { ClientRankingList } from '@/components/sales-proposals/client-ranking-list';
 import { ProposalsImportCard } from '@/components/sales-proposals/proposals-import-card';
 import { createBrowserSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { fetchSalesProposals } from '@/lib/supabase/sales-proposals-database';
@@ -165,16 +164,9 @@ export function SalesProposalsSection() {
               </div>
               <div className="glass-card proposals-panel">
                 <div className="proposals-panel-head">
-                  <h3>Top clienti per valore accettato</h3>
-                  <p>Ordinati per valore totale delle proposte accettate nell'anno selezionato.</p>
-                </div>
-                <ClientRankingList stats={clientStats} />
-              </div>
-              <div className="glass-card proposals-panel">
-                <div className="proposals-panel-head">
                   <h3>Cliente × categoria</h3>
                   <p>
-                    Ogni riga è un cliente con proposte accettate. Il totale è la somma dei valori accettati.
+                    Ogni riga è un cliente con proposte accettate.
                     Le colonne categoria mostrano il conteggio per tipologia.
                   </p>
                 </div>

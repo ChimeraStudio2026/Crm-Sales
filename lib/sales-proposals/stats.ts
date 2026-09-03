@@ -106,17 +106,27 @@ export function buildProposalKpis(proposals: SalesProposal[]): ProposalKpiSummar
   const rejectedCount = rejected.length;
   const totalCount = proposals.length;
   const decidedCount = acceptedCount + rejectedCount;
+  const acceptedTotal = sumProposalValues(accepted);
+  const acceptedValuedCount = countProposalsWithValue(accepted);
   return {
     totalCount,
     acceptedCount,
     rejectedCount,
     openCount: pending.length,
-    acceptedTotal: sumProposalValues(accepted),
+    acceptedTotal,
     rejectedTotal: sumProposalValues(rejected),
     pendingTotal: sumProposalValues(pending),
+    acceptedAverageTicket: acceptedValuedCount > 0 ? acceptedTotal / acceptedValuedCount : 0,
+    acceptedValuedCount,
     conversionOnTotal: totalCount > 0 ? acceptedCount / totalCount : 0,
     conversionOnDecided: decidedCount > 0 ? acceptedCount / decidedCount : 0,
   };
+}
+
+function countProposalsWithValue(proposals: SalesProposal[]): number {
+  return proposals.reduce((count, proposal) => {
+    return resolveProposalValue(proposal) !== null ? count + 1 : count;
+  }, 0);
 }
 
 export function sumProposalValues(proposals: SalesProposal[]): number {

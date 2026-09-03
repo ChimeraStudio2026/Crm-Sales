@@ -192,6 +192,15 @@ export function SalesProposalsSection() {
                     kpis.openCount > 0 ? ` · ${kpis.openCount} pending escluse` : ''
                   }`}
                 />
+                <ProposalsKpiCard
+                  label="Ticket medio totale"
+                  value={formatProposalCurrency(kpis.acceptedAverageTicket)}
+                  hint={
+                    kpis.acceptedValuedCount > 0
+                      ? `${kpis.acceptedValuedCount} accettate con valore · tutte le categorie`
+                      : 'Nessuna proposta accettata con valore'
+                  }
+                />
               </div>
               {detailFilter ? (
                 <ProposalsDetailView

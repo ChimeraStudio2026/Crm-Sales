@@ -73,6 +73,8 @@ export interface ProposalKpiSummary {
   acceptedTotal: number;
   rejectedTotal: number;
   pendingTotal: number;
+  acceptedAverageTicket: number;
+  acceptedValuedCount: number;
   conversionOnTotal: number;
   conversionOnDecided: number;
 }

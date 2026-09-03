@@ -94,6 +94,12 @@ export interface ProposalRejectionReasonStat {
   totalValue: number;
 }
 
+export interface RejectedClientStat {
+  cliente: string;
+  rejectedCount: number;
+  rejectedTotal: number;
+}
+
 export interface CategoryTicketStat {
   categoria: string;
   count: number;

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
+import { RejectedClientRankingList } from '@/components/sales-proposals/rejected-client-ranking-list';
 import { RejectionReasonChart } from '@/components/sales-proposals/rejection-reason-chart';
 import {
   formatProposalCurrency,
@@ -13,6 +14,7 @@ import type {
   ProposalDetailFilter,
   ProposalDetailGroup,
   ProposalRejectionReasonStat,
+  RejectedClientStat,
 } from '@/lib/types/sales-proposals';
 
 interface ProposalsDetailViewProps {
@@ -20,6 +22,7 @@ interface ProposalsDetailViewProps {
   filter: ProposalDetailFilter;
   groups: ProposalDetailGroup[];
   rejectionReasonStats?: ProposalRejectionReasonStat[];
+  rejectedClientStats?: RejectedClientStat[];
   totalCount: number;
   totalValue: number;
   onBack: () => void;
@@ -99,6 +102,7 @@ export function ProposalsDetailView({
   filter,
   groups,
   rejectionReasonStats = [],
+  rejectedClientStats = [],
   totalCount,
   totalValue,
   onBack,
@@ -130,6 +134,15 @@ export function ProposalsDetailView({
             <p>Panoramica del numero di proposte rifiutate per ogni motivo.</p>
           </div>
           <RejectionReasonChart stats={rejectionReasonStats} />
+        </div>
+      ) : null}
+      {filter === 'rejected' && rejectedClientStats.length > 0 ? (
+        <div className="glass-card proposals-panel">
+          <div className="proposals-panel-head">
+            <h3>Clienti per proposte rifiutate</h3>
+            <p>Ranking dei clienti con più rifiuti nell'anno selezionato, ordinati per numero di proposte.</p>
+          </div>
+          <RejectedClientRankingList stats={rejectedClientStats} />
         </div>
       ) : null}
       {groups.length === 0 ? (

@@ -16,6 +16,7 @@ import {
   buildProposalCategoryGroups,
   buildProposalKpis,
   buildProposalRejectionReasonGroups,
+  buildRejectedClientStats,
   buildRejectionReasonStats,
   collectProposalYears,
   filterProposalsByYear,
@@ -105,6 +106,10 @@ export function SalesProposalsSection() {
   const rejectionReasonStats = useMemo(() => {
     if (detailFilter !== 'rejected') return [];
     return buildRejectionReasonStats(detailProposals);
+  }, [detailFilter, detailProposals]);
+  const rejectedClientStats = useMemo(() => {
+    if (detailFilter !== 'rejected') return [];
+    return buildRejectedClientStats(detailProposals);
   }, [detailFilter, detailProposals]);
   const detailTotalValue = useMemo(
     () => sumProposalValues(detailProposals),
@@ -208,6 +213,7 @@ export function SalesProposalsSection() {
                   filter={detailFilter}
                   groups={detailGroups}
                   rejectionReasonStats={rejectionReasonStats}
+                  rejectedClientStats={rejectedClientStats}
                   totalCount={detailProposals.length}
                   totalValue={detailTotalValue}
                   onBack={() => setDetailFilter(null)}

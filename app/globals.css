@@ -8533,6 +8533,71 @@ body:has(.login-page) {
     border-radius: 0;
 }
 
+.proposals-rejected-client-ranking {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.proposals-rejected-client-ranking-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+}
+
+.proposals-rejected-client-ranking-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.proposals-rejected-client-ranking-position {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    background: rgba(220, 38, 38, 0.12);
+    color: var(--danger);
+    font-size: 0.78rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.proposals-rejected-client-ranking-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.proposals-rejected-client-ranking-copy strong {
+    color: var(--text-primary);
+    font-size: 0.92rem;
+    line-height: 1.35;
+}
+
+.proposals-rejected-client-ranking-copy span {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+}
+
+.proposals-rejected-client-ranking-value {
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    white-space: nowrap;
+}
+
 .proposals-panel {
     padding: 16px 18px;
     margin-bottom: 18px;

@@ -9,6 +9,7 @@ import {
   type ProposalDetailFilter,
   type ProposalKpiSummary,
   type ProposalRejectionReasonStat,
+  type RejectedClientStat,
   type SalesProposal,
 } from '@/lib/types/sales-proposals';
 
@@ -311,6 +312,28 @@ export function buildClientProposalStats(proposals: SalesProposal[]): ClientProp
   return Array.from(grouped.values()).sort((left, right) => {
     if (right.acceptedCount !== left.acceptedCount) return right.acceptedCount - left.acceptedCount;
     return left.cliente.localeCompare(right.cliente, 'it');
+  });
+}
+
+export function buildRejectedClientStats(proposals: SalesProposal[]): RejectedClientStat[] {
+  const rejected = proposals.filter(isRejectedProposal);
+  const grouped = new Map<string, RejectedClientStat>();
+  rejected.forEach((proposal) => {
+    const cliente = resolveClientLabel(proposal.cliente);
+    const current = grouped.get(cliente) || {
+      cliente,
+      rejectedCount: 0,
+      rejectedTotal: 0,
+    };
+    current.rejectedCount += 1;
+    const value = resolveProposalValue(proposal);
+    if (value !== null) current.rejectedTotal += value;
+    grouped.set(cliente, current);
+  });
+  return Array.from(grouped.values()).sort((left, right) => {
+    if (right.rejectedCount !== left.rejectedCount) return right.rejectedCount - left.rejectedCount;
+    if (right.rejectedTotal !== left.rejectedTotal) return right.rejectedTotal - left.rejectedTotal;
+    return left.cliente.localeCompare(right.cliente, 'it', { sensitivity: 'base' });
   });
 }
 

@@ -70,8 +70,19 @@ export interface ProposalKpiSummary {
   acceptedCount: number;
   rejectedCount: number;
   openCount: number;
+  acceptedTotal: number;
+  rejectedTotal: number;
   conversionOnTotal: number;
   conversionOnDecided: number;
+}
+
+export type ProposalDetailFilter = 'all' | 'accepted' | 'rejected';
+
+export interface ProposalCategoryGroup {
+  categoria: string;
+  proposals: SalesProposal[];
+  count: number;
+  totalValue: number;
 }
 
 export interface CategoryTicketStat {

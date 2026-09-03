@@ -5,23 +5,30 @@ import { BarChart3 } from 'lucide-react';
 import { TopHeader } from '@/components/layout/top-header';
 import { CategoryTicketChart } from '@/components/sales-proposals/category-ticket-chart';
 import { ClientCategoryTable } from '@/components/sales-proposals/client-category-table';
+import { ProposalsDetailView } from '@/components/sales-proposals/proposals-detail-view';
+import { ProposalsKpiCard } from '@/components/sales-proposals/proposals-kpi-card';
 import { ProposalsImportCard } from '@/components/sales-proposals/proposals-import-card';
 import { createBrowserSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { fetchSalesProposals } from '@/lib/supabase/sales-proposals-database';
 import {
   buildCategoryTicketStats,
   buildClientProposalStats,
+  buildProposalCategoryGroups,
   buildProposalKpis,
   collectProposalYears,
   filterProposalsByYear,
+  filterProposalsForDetail,
+  formatProposalCurrency,
   formatProposalDateLabel,
   formatProposalPercent,
   resolveLatestImportBatch,
+  resolveProposalDetailTitle,
+  sumProposalValues,
 } from '@/lib/sales-proposals/stats';
 import { ANALYSIS_YEAR } from '@/lib/constants/crm';
 import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
-import type { SalesProposal } from '@/lib/types/sales-proposals';
+import type { ProposalDetailFilter, SalesProposal } from '@/lib/types/sales-proposals';
 
 function resolveDefaultYear(years: number[], currentYear: number): number {
   if (years.includes(currentYear)) return currentYear;
@@ -35,6 +42,7 @@ export function SalesProposalsSection() {
   const [proposals, setProposals] = useState<SalesProposal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [detailFilter, setDetailFilter] = useState<ProposalDetailFilter | null>(null);
 
   const loadProposals = useCallback(async (): Promise<void> => {
     const db = createBrowserSupabaseClient();
@@ -83,6 +91,18 @@ export function SalesProposalsSection() {
   );
   const latestBatch = useMemo(() => resolveLatestImportBatch(yearProposals), [yearProposals]);
   const isCurrentYear = selectedYear === currentYear;
+  const detailProposals = useMemo(() => {
+    if (!detailFilter) return [];
+    return filterProposalsForDetail(yearProposals, detailFilter);
+  }, [detailFilter, yearProposals]);
+  const detailGroups = useMemo(
+    () => buildProposalCategoryGroups(detailProposals),
+    [detailProposals],
+  );
+  const detailTotalValue = useMemo(
+    () => sumProposalValues(detailProposals),
+    [detailProposals],
+  );
 
   return (
     <>
@@ -126,52 +146,74 @@ export function SalesProposalsSection() {
           ) : (
             <>
               <div className="proposals-kpi-grid">
-                <div className="analysis-kpi-card">
-                  <span className="analysis-kpi-label">Proposte totali</span>
-                  <strong className="analysis-kpi-value">{kpis.totalCount}</strong>
-                  <span className="analysis-kpi-hint">{selectedYear}</span>
-                </div>
-                <div className="analysis-kpi-card">
-                  <span className="analysis-kpi-label">Accettate</span>
-                  <strong className="analysis-kpi-value analysis-kpi-positive">{kpis.acceptedCount}</strong>
-                  <span className="analysis-kpi-hint">Stato Si</span>
-                </div>
-                <div className="analysis-kpi-card">
-                  <span className="analysis-kpi-label">Rifiutate</span>
-                  <strong className="analysis-kpi-value analysis-kpi-negative">{kpis.rejectedCount}</strong>
-                  <span className="analysis-kpi-hint">Stato No</span>
-                </div>
-                <div className="analysis-kpi-card">
-                  <span className="analysis-kpi-label">Conversione sul totale</span>
-                  <strong className="analysis-kpi-value">{formatProposalPercent(kpis.conversionOnTotal)}</strong>
-                  <span className="analysis-kpi-hint">{kpis.acceptedCount} su {kpis.totalCount}</span>
-                </div>
-                <div className="analysis-kpi-card">
-                  <span className="analysis-kpi-label">Conversione su decise</span>
-                  <strong className="analysis-kpi-value">{formatProposalPercent(kpis.conversionOnDecided)}</strong>
-                  <span className="analysis-kpi-hint">
-                    {kpis.acceptedCount} su {kpis.acceptedCount + kpis.rejectedCount}
-                    {kpis.openCount > 0 ? ` · ${kpis.openCount} aperte escluse` : ''}
-                  </span>
-                </div>
+                <ProposalsKpiCard
+                  label="Proposte totali"
+                  value={kpis.totalCount}
+                  hint={String(selectedYear)}
+                  isClickable
+                  onClick={() => setDetailFilter('all')}
+                />
+                <ProposalsKpiCard
+                  label="Accettate"
+                  value={kpis.acceptedCount}
+                  amountLabel={formatProposalCurrency(kpis.acceptedTotal)}
+                  hint="Stato Si"
+                  valueClassName="analysis-kpi-positive"
+                  isClickable
+                  onClick={() => setDetailFilter('accepted')}
+                />
+                <ProposalsKpiCard
+                  label="Rifiutate"
+                  value={kpis.rejectedCount}
+                  amountLabel={formatProposalCurrency(kpis.rejectedTotal)}
+                  hint="Stato No"
+                  valueClassName="analysis-kpi-negative"
+                  isClickable
+                  onClick={() => setDetailFilter('rejected')}
+                />
+                <ProposalsKpiCard
+                  label="Conversione sul totale"
+                  value={formatProposalPercent(kpis.conversionOnTotal)}
+                  hint={`${kpis.acceptedCount} su ${kpis.totalCount}`}
+                />
+                <ProposalsKpiCard
+                  label="Conversione su decise"
+                  value={formatProposalPercent(kpis.conversionOnDecided)}
+                  hint={`${kpis.acceptedCount} su ${kpis.acceptedCount + kpis.rejectedCount}${
+                    kpis.openCount > 0 ? ` · ${kpis.openCount} aperte escluse` : ''
+                  }`}
+                />
               </div>
-              <div className="glass-card proposals-panel">
-                <div className="proposals-panel-head">
-                  <h3><BarChart3 size={18} /> Ticket medio per categoria</h3>
-                  <p>Solo proposte accettate. Valore = Budget Finale, con fallback su Ultimo prezzo.</p>
-                </div>
-                <CategoryTicketChart stats={categoryStats} />
-              </div>
-              <div className="glass-card proposals-panel">
-                <div className="proposals-panel-head">
-                  <h3>Cliente × categoria</h3>
-                  <p>
-                    Ogni riga è un cliente con proposte accettate.
-                    Le colonne categoria mostrano il conteggio per tipologia.
-                  </p>
-                </div>
-                <ClientCategoryTable stats={clientStats} />
-              </div>
+              {detailFilter ? (
+                <ProposalsDetailView
+                  title={resolveProposalDetailTitle(detailFilter)}
+                  filter={detailFilter}
+                  groups={detailGroups}
+                  totalCount={detailProposals.length}
+                  totalValue={detailTotalValue}
+                  onBack={() => setDetailFilter(null)}
+                />
+              ) : (
+                <>
+                  <div className="glass-card proposals-panel">
+                    <div className="proposals-panel-head">
+                      <h3><BarChart3 size={18} /> Ticket medio per categoria</h3>
+                      <p>Solo proposte accettate. Valore = Budget Finale, con fallback su Ultimo prezzo.</p>
+                    </div>
+                    <CategoryTicketChart stats={categoryStats} />
+                  </div>
+                  <div className="glass-card proposals-panel">
+                    <div className="proposals-panel-head">
+                      <h3>Cliente × categoria</h3>
+                      <p>
+                        Ogni riga è un cliente con proposte accettate.
+                        Le colonne categoria mostrano il conteggio per tipologia.
+                      </p>
+                    </div>
+                    <ClientCategoryTable stats={clientStats} />
+                  </div>
+                </>
+              )}
             </>
           )}
         </section>

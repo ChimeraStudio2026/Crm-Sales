@@ -8455,6 +8455,57 @@ body:has(.login-page) {
     margin-bottom: 18px;
 }
 
+.proposals-kpi-card {
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.proposals-kpi-card--clickable:hover,
+.proposals-kpi-card--clickable:focus-visible {
+    border-color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.proposals-kpi-amount {
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.proposals-detail-toolbar {
+    margin-bottom: 14px;
+}
+
+.proposals-detail-head {
+    margin-bottom: 14px;
+}
+
+.proposals-detail-group {
+    margin-bottom: 14px;
+}
+
+.proposals-detail-group-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.proposals-detail-group-head h4 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.proposals-detail-group-head span {
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    white-space: nowrap;
+}
+
 .proposals-panel {
     padding: 16px 18px;
     margin-bottom: 18px;

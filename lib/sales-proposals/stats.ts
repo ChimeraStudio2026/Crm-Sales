@@ -5,6 +5,8 @@ import {
   PROPOSAL_YEAR_OPTIONS_BASE,
   type CategoryTicketStat,
   type ClientProposalStat,
+  type ProposalCategoryGroup,
+  type ProposalDetailFilter,
   type ProposalKpiSummary,
   type SalesProposal,
 } from '@/lib/types/sales-proposals';
@@ -91,8 +93,10 @@ export function resolveLatestImportBatch(proposals: SalesProposal[]): string | n
 }
 
 export function buildProposalKpis(proposals: SalesProposal[]): ProposalKpiSummary {
-  const acceptedCount = proposals.filter(isAcceptedProposal).length;
-  const rejectedCount = proposals.filter(isRejectedProposal).length;
+  const accepted = proposals.filter(isAcceptedProposal);
+  const rejected = proposals.filter(isRejectedProposal);
+  const acceptedCount = accepted.length;
+  const rejectedCount = rejected.length;
   const totalCount = proposals.length;
   const decidedCount = acceptedCount + rejectedCount;
   return {
@@ -100,9 +104,57 @@ export function buildProposalKpis(proposals: SalesProposal[]): ProposalKpiSummar
     acceptedCount,
     rejectedCount,
     openCount: totalCount - decidedCount,
+    acceptedTotal: sumProposalValues(accepted),
+    rejectedTotal: sumProposalValues(rejected),
     conversionOnTotal: totalCount > 0 ? acceptedCount / totalCount : 0,
     conversionOnDecided: decidedCount > 0 ? acceptedCount / decidedCount : 0,
   };
+}
+
+export function sumProposalValues(proposals: SalesProposal[]): number {
+  return proposals.reduce((total, proposal) => {
+    const value = resolveProposalValue(proposal);
+    return value !== null ? total + value : total;
+  }, 0);
+}
+
+export function filterProposalsForDetail(
+  proposals: SalesProposal[],
+  filter: ProposalDetailFilter,
+): SalesProposal[] {
+  if (filter === 'accepted') return proposals.filter(isAcceptedProposal);
+  if (filter === 'rejected') return proposals.filter(isRejectedProposal);
+  return proposals;
+}
+
+export function buildProposalCategoryGroups(proposals: SalesProposal[]): ProposalCategoryGroup[] {
+  const grouped = new Map<string, SalesProposal[]>();
+  proposals.forEach((proposal) => {
+    const categoria = resolveCategoryLabel(proposal.categoria);
+    const current = grouped.get(categoria) || [];
+    current.push(proposal);
+    grouped.set(categoria, current);
+  });
+  return sortProposalCategories(Array.from(grouped.keys())).map((categoria) => {
+    const items = grouped.get(categoria) || [];
+    const sortedItems = [...items].sort((left, right) => {
+      const byDate = right.creatoIl.localeCompare(left.creatoIl);
+      if (byDate !== 0) return byDate;
+      return left.nome.localeCompare(right.nome, 'it', { sensitivity: 'base' });
+    });
+    return {
+      categoria,
+      proposals: sortedItems,
+      count: sortedItems.length,
+      totalValue: sumProposalValues(sortedItems),
+    };
+  });
+}
+
+export function resolveProposalDetailTitle(filter: ProposalDetailFilter): string {
+  if (filter === 'accepted') return 'Proposte accettate';
+  if (filter === 'rejected') return 'Proposte rifiutate';
+  return 'Tutte le proposte';
 }
 
 function resolveCategoryLabel(categoria: string): string {

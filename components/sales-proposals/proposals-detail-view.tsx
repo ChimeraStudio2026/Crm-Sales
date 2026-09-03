@@ -1,6 +1,7 @@
 'use client';
 
-import { ArrowLeft } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { RejectionReasonChart } from '@/components/sales-proposals/rejection-reason-chart';
 import {
   formatProposalCurrency,
@@ -27,6 +28,70 @@ interface ProposalsDetailViewProps {
 function formatProposalValue(proposalValue: number | null): string {
   if (proposalValue === null) return '—';
   return formatProposalCurrency(proposalValue);
+}
+
+interface ProposalDetailGroupAccordionProps {
+  group: ProposalDetailGroup;
+  showCategoryColumn: boolean;
+  defaultOpen: boolean;
+}
+
+function ProposalDetailGroupAccordion({
+  group,
+  showCategoryColumn,
+  defaultOpen,
+}: ProposalDetailGroupAccordionProps) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  return (
+    <div className={`analysis-accordion proposals-detail-accordion${isOpen ? ' is-open' : ''}`}>
+      <button
+        type="button"
+        className="analysis-accordion-toggle"
+        onClick={() => setIsOpen((current) => !current)}
+        aria-expanded={isOpen}
+      >
+        <ChevronRight size={18} className="analysis-accordion-icon" />
+        <span>{group.label}</span>
+        <span className="analysis-accordion-meta">
+          {group.count} proposte
+          {group.totalValue > 0 ? ` · ${formatProposalCurrency(group.totalValue)}` : ''}
+        </span>
+      </button>
+      {isOpen ? (
+        <div className="analysis-accordion-body proposals-detail-accordion-body">
+          <div className="analysis-table-wrap">
+            <table className="analysis-table">
+              <thead>
+                <tr>
+                  <th>Proposta</th>
+                  <th>Cliente</th>
+                  {showCategoryColumn ? <th>Categoria</th> : null}
+                  <th className="analysis-num">Valore</th>
+                  <th>Creato il</th>
+                </tr>
+              </thead>
+              <tbody>
+                {group.proposals.map((proposal) => {
+                  const value = resolveProposalValue(proposal);
+                  return (
+                    <tr key={proposal.id}>
+                      <td><strong>{proposal.nome}</strong></td>
+                      <td>{proposal.cliente.trim() || '—'}</td>
+                      {showCategoryColumn ? (
+                        <td>{proposal.categoria.trim() || '—'}</td>
+                      ) : null}
+                      <td className="analysis-num">{formatProposalValue(value)}</td>
+                      <td>{formatProposalDateLabel(proposal.creatoIl)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export function ProposalsDetailView({
@@ -70,46 +135,16 @@ export function ProposalsDetailView({
       {groups.length === 0 ? (
         <p className="proposals-empty">Nessuna proposta per la selezione corrente.</p>
       ) : (
-        groups.map((group) => (
-          <div key={group.label} className="glass-card proposals-panel proposals-detail-group">
-            <div className="proposals-detail-group-head">
-              <h4>{group.label}</h4>
-              <span>
-                {group.count} proposte
-                {group.totalValue > 0 ? ` · ${formatProposalCurrency(group.totalValue)}` : ''}
-              </span>
-            </div>
-            <div className="analysis-table-wrap">
-              <table className="analysis-table">
-                <thead>
-                  <tr>
-                    <th>Proposta</th>
-                    <th>Cliente</th>
-                    {showCategoryColumn ? <th>Categoria</th> : null}
-                    <th className="analysis-num">Valore</th>
-                    <th>Creato il</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {group.proposals.map((proposal) => {
-                    const value = resolveProposalValue(proposal);
-                    return (
-                      <tr key={proposal.id}>
-                        <td><strong>{proposal.nome}</strong></td>
-                        <td>{proposal.cliente.trim() || '—'}</td>
-                        {showCategoryColumn ? (
-                          <td>{proposal.categoria.trim() || '—'}</td>
-                        ) : null}
-                        <td className="analysis-num">{formatProposalValue(value)}</td>
-                        <td>{formatProposalDateLabel(proposal.creatoIl)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        ))
+        <div className="proposals-detail-groups">
+          {groups.map((group, index) => (
+            <ProposalDetailGroupAccordion
+              key={group.label}
+              group={group}
+              showCategoryColumn={showCategoryColumn}
+              defaultOpen={index === 0}
+            />
+          ))}
+        </div>
       )}
     </div>
   );

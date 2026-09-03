@@ -8514,6 +8514,25 @@ body:has(.login-page) {
     white-space: nowrap;
 }
 
+.proposals-detail-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.proposals-detail-accordion {
+    margin-bottom: 0;
+}
+
+.proposals-detail-accordion-body {
+    padding: 0;
+}
+
+.proposals-detail-accordion-body .analysis-table-wrap {
+    border: none;
+    border-radius: 0;
+}
+
 .proposals-panel {
     padding: 16px 18px;
     margin-bottom: 18px;

@@ -5,14 +5,16 @@ import {
   PROPOSAL_YEAR_OPTIONS_BASE,
   type CategoryTicketStat,
   type ClientProposalStat,
-  type ProposalCategoryGroup,
+  type ProposalDetailGroup,
   type ProposalDetailFilter,
   type ProposalKpiSummary,
+  type ProposalRejectionReasonStat,
   type SalesProposal,
 } from '@/lib/types/sales-proposals';
 
 const EMPTY_CATEGORY_LABEL = 'Senza categoria';
 const EMPTY_CLIENT_LABEL = 'Senza cliente';
+const EMPTY_REJECTION_REASON_LABEL = 'Senza motivazione';
 
 export function formatProposalCurrency(value: number): string {
   return new Intl.NumberFormat('it-IT', {
@@ -57,6 +59,10 @@ export function isRejectedProposal(proposal: SalesProposal): boolean {
   return normalizeProposalStatus(proposal.stato) === PROPOSAL_STATUS_REJECTED;
 }
 
+export function isPendingProposal(proposal: SalesProposal): boolean {
+  return !isAcceptedProposal(proposal) && !isRejectedProposal(proposal);
+}
+
 export function resolveProposalValue(proposal: SalesProposal): number | null {
   if (proposal.budgetFinale !== null) return proposal.budgetFinale;
   if (proposal.ultimoPrezzo !== null) return proposal.ultimoPrezzo;
@@ -95,6 +101,7 @@ export function resolveLatestImportBatch(proposals: SalesProposal[]): string | n
 export function buildProposalKpis(proposals: SalesProposal[]): ProposalKpiSummary {
   const accepted = proposals.filter(isAcceptedProposal);
   const rejected = proposals.filter(isRejectedProposal);
+  const pending = proposals.filter(isPendingProposal);
   const acceptedCount = accepted.length;
   const rejectedCount = rejected.length;
   const totalCount = proposals.length;
@@ -103,9 +110,10 @@ export function buildProposalKpis(proposals: SalesProposal[]): ProposalKpiSummar
     totalCount,
     acceptedCount,
     rejectedCount,
-    openCount: totalCount - decidedCount,
+    openCount: pending.length,
     acceptedTotal: sumProposalValues(accepted),
     rejectedTotal: sumProposalValues(rejected),
+    pendingTotal: sumProposalValues(pending),
     conversionOnTotal: totalCount > 0 ? acceptedCount / totalCount : 0,
     conversionOnDecided: decidedCount > 0 ? acceptedCount / decidedCount : 0,
   };
@@ -124,26 +132,34 @@ export function filterProposalsForDetail(
 ): SalesProposal[] {
   if (filter === 'accepted') return proposals.filter(isAcceptedProposal);
   if (filter === 'rejected') return proposals.filter(isRejectedProposal);
-  return proposals;
+  return proposals.filter(isPendingProposal);
 }
 
-export function buildProposalCategoryGroups(proposals: SalesProposal[]): ProposalCategoryGroup[] {
+function sortProposalItems(items: SalesProposal[]): SalesProposal[] {
+  return [...items].sort((left, right) => {
+    const byDate = right.creatoIl.localeCompare(left.creatoIl);
+    if (byDate !== 0) return byDate;
+    return left.nome.localeCompare(right.nome, 'it', { sensitivity: 'base' });
+  });
+}
+
+function buildProposalDetailGroups(
+  proposals: SalesProposal[],
+  resolveLabel: (proposal: SalesProposal) => string,
+  sortLabels: (labels: string[]) => string[],
+): ProposalDetailGroup[] {
   const grouped = new Map<string, SalesProposal[]>();
   proposals.forEach((proposal) => {
-    const categoria = resolveCategoryLabel(proposal.categoria);
-    const current = grouped.get(categoria) || [];
+    const label = resolveLabel(proposal);
+    const current = grouped.get(label) || [];
     current.push(proposal);
-    grouped.set(categoria, current);
+    grouped.set(label, current);
   });
-  return sortProposalCategories(Array.from(grouped.keys())).map((categoria) => {
-    const items = grouped.get(categoria) || [];
-    const sortedItems = [...items].sort((left, right) => {
-      const byDate = right.creatoIl.localeCompare(left.creatoIl);
-      if (byDate !== 0) return byDate;
-      return left.nome.localeCompare(right.nome, 'it', { sensitivity: 'base' });
-    });
+  return sortLabels(Array.from(grouped.keys())).map((label) => {
+    const items = grouped.get(label) || [];
+    const sortedItems = sortProposalItems(items);
     return {
-      categoria,
+      label,
       proposals: sortedItems,
       count: sortedItems.length,
       totalValue: sumProposalValues(sortedItems),
@@ -151,14 +167,64 @@ export function buildProposalCategoryGroups(proposals: SalesProposal[]): Proposa
   });
 }
 
+export function buildProposalCategoryGroups(proposals: SalesProposal[]): ProposalDetailGroup[] {
+  return buildProposalDetailGroups(
+    proposals,
+    (proposal) => resolveCategoryLabel(proposal.categoria),
+    sortProposalCategories,
+  );
+}
+
+export function buildProposalRejectionReasonGroups(proposals: SalesProposal[]): ProposalDetailGroup[] {
+  return buildProposalDetailGroups(
+    proposals,
+    (proposal) => resolveRejectionReasonLabel(proposal.motivoRifiuto),
+    sortRejectionReasonLabels,
+  ).sort((left, right) => {
+    if (right.count !== left.count) return right.count - left.count;
+    return left.label.localeCompare(right.label, 'it', { sensitivity: 'base' });
+  });
+}
+
+export function buildRejectionReasonStats(proposals: SalesProposal[]): ProposalRejectionReasonStat[] {
+  const groups = buildProposalRejectionReasonGroups(proposals);
+  return groups
+    .map((group) => ({
+      motivo: group.label,
+      count: group.count,
+      totalValue: group.totalValue,
+    }))
+    .sort((left, right) => {
+      if (right.count !== left.count) return right.count - left.count;
+      return left.motivo.localeCompare(right.motivo, 'it', { sensitivity: 'base' });
+    });
+}
+
 export function resolveProposalDetailTitle(filter: ProposalDetailFilter): string {
   if (filter === 'accepted') return 'Proposte accettate';
   if (filter === 'rejected') return 'Proposte rifiutate';
-  return 'Tutte le proposte';
+  return 'Proposte pending';
+}
+
+export function resolveProposalDetailGroupLabel(filter: ProposalDetailFilter): string {
+  if (filter === 'rejected') return 'motivazione';
+  return 'categoria';
 }
 
 function resolveCategoryLabel(categoria: string): string {
   return categoria.trim() || EMPTY_CATEGORY_LABEL;
+}
+
+function resolveRejectionReasonLabel(motivoRifiuto: string): string {
+  return motivoRifiuto.trim() || EMPTY_REJECTION_REASON_LABEL;
+}
+
+function sortRejectionReasonLabels(labels: string[]): string[] {
+  return [...labels].sort((left, right) => {
+    if (left === EMPTY_REJECTION_REASON_LABEL) return 1;
+    if (right === EMPTY_REJECTION_REASON_LABEL) return -1;
+    return left.localeCompare(right, 'it', { sensitivity: 'base' });
+  });
 }
 
 function resolveClientLabel(cliente: string): string {

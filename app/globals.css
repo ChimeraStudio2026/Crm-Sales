@@ -8450,7 +8450,7 @@ body:has(.login-page) {
 
 .proposals-kpi-grid {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 14px;
     margin-bottom: 18px;
 }
@@ -8472,6 +8472,14 @@ body:has(.login-page) {
 .proposals-kpi-amount {
     font-weight: 700;
     color: var(--text-primary);
+}
+
+.proposals-kpi-pending {
+    color: var(--warning, #d97706);
+}
+
+.proposals-bar-fill--danger {
+    background: var(--danger);
 }
 
 .proposals-detail-toolbar {
@@ -8620,6 +8628,12 @@ body:has(.login-page) {
     color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.35px;
+}
+
+@media (max-width: 1400px) {
+    .proposals-kpi-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
 }
 
 @media (max-width: 1100px) {

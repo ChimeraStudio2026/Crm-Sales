@@ -72,15 +72,22 @@ export interface ProposalKpiSummary {
   openCount: number;
   acceptedTotal: number;
   rejectedTotal: number;
+  pendingTotal: number;
   conversionOnTotal: number;
   conversionOnDecided: number;
 }
 
-export type ProposalDetailFilter = 'all' | 'accepted' | 'rejected';
+export type ProposalDetailFilter = 'accepted' | 'rejected' | 'pending';
 
-export interface ProposalCategoryGroup {
-  categoria: string;
+export interface ProposalDetailGroup {
+  label: string;
   proposals: SalesProposal[];
+  count: number;
+  totalValue: number;
+}
+
+export interface ProposalRejectionReasonStat {
+  motivo: string;
   count: number;
   totalValue: number;
 }

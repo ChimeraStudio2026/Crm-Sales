@@ -15,6 +15,8 @@ import {
   buildClientProposalStats,
   buildProposalCategoryGroups,
   buildProposalKpis,
+  buildProposalRejectionReasonGroups,
+  buildRejectionReasonStats,
   collectProposalYears,
   filterProposalsByYear,
   filterProposalsForDetail,
@@ -95,10 +97,15 @@ export function SalesProposalsSection() {
     if (!detailFilter) return [];
     return filterProposalsForDetail(yearProposals, detailFilter);
   }, [detailFilter, yearProposals]);
-  const detailGroups = useMemo(
-    () => buildProposalCategoryGroups(detailProposals),
-    [detailProposals],
-  );
+  const detailGroups = useMemo(() => {
+    if (!detailFilter) return [];
+    if (detailFilter === 'rejected') return buildProposalRejectionReasonGroups(detailProposals);
+    return buildProposalCategoryGroups(detailProposals);
+  }, [detailFilter, detailProposals]);
+  const rejectionReasonStats = useMemo(() => {
+    if (detailFilter !== 'rejected') return [];
+    return buildRejectionReasonStats(detailProposals);
+  }, [detailFilter, detailProposals]);
   const detailTotalValue = useMemo(
     () => sumProposalValues(detailProposals),
     [detailProposals],
@@ -150,8 +157,6 @@ export function SalesProposalsSection() {
                   label="Proposte totali"
                   value={kpis.totalCount}
                   hint={String(selectedYear)}
-                  isClickable
-                  onClick={() => setDetailFilter('all')}
                 />
                 <ProposalsKpiCard
                   label="Accettate"
@@ -172,6 +177,15 @@ export function SalesProposalsSection() {
                   onClick={() => setDetailFilter('rejected')}
                 />
                 <ProposalsKpiCard
+                  label="Pending"
+                  value={kpis.openCount}
+                  amountLabel={formatProposalCurrency(kpis.pendingTotal)}
+                  hint="Senza esito"
+                  valueClassName="proposals-kpi-pending"
+                  isClickable
+                  onClick={() => setDetailFilter('pending')}
+                />
+                <ProposalsKpiCard
                   label="Conversione sul totale"
                   value={formatProposalPercent(kpis.conversionOnTotal)}
                   hint={`${kpis.acceptedCount} su ${kpis.totalCount}`}
@@ -180,7 +194,7 @@ export function SalesProposalsSection() {
                   label="Conversione su decise"
                   value={formatProposalPercent(kpis.conversionOnDecided)}
                   hint={`${kpis.acceptedCount} su ${kpis.acceptedCount + kpis.rejectedCount}${
-                    kpis.openCount > 0 ? ` · ${kpis.openCount} aperte escluse` : ''
+                    kpis.openCount > 0 ? ` · ${kpis.openCount} pending escluse` : ''
                   }`}
                 />
               </div>
@@ -189,6 +203,7 @@ export function SalesProposalsSection() {
                   title={resolveProposalDetailTitle(detailFilter)}
                   filter={detailFilter}
                   groups={detailGroups}
+                  rejectionReasonStats={rejectionReasonStats}
                   totalCount={detailProposals.length}
                   totalValue={detailTotalValue}
                   onBack={() => setDetailFilter(null)}

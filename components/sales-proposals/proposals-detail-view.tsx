@@ -1,18 +1,24 @@
 'use client';
 
 import { ArrowLeft } from 'lucide-react';
+import { RejectionReasonChart } from '@/components/sales-proposals/rejection-reason-chart';
 import {
   formatProposalCurrency,
   formatProposalDateLabel,
-  normalizeProposalStatus,
+  resolveProposalDetailGroupLabel,
   resolveProposalValue,
 } from '@/lib/sales-proposals/stats';
-import type { ProposalCategoryGroup, ProposalDetailFilter } from '@/lib/types/sales-proposals';
+import type {
+  ProposalDetailFilter,
+  ProposalDetailGroup,
+  ProposalRejectionReasonStat,
+} from '@/lib/types/sales-proposals';
 
 interface ProposalsDetailViewProps {
   title: string;
   filter: ProposalDetailFilter;
-  groups: ProposalCategoryGroup[];
+  groups: ProposalDetailGroup[];
+  rejectionReasonStats?: ProposalRejectionReasonStat[];
   totalCount: number;
   totalValue: number;
   onBack: () => void;
@@ -27,11 +33,13 @@ export function ProposalsDetailView({
   title,
   filter,
   groups,
+  rejectionReasonStats = [],
   totalCount,
   totalValue,
   onBack,
 }: ProposalsDetailViewProps) {
-  const showStatus = filter === 'all';
+  const showCategoryColumn = filter === 'rejected';
+  const groupLabel = resolveProposalDetailGroupLabel(filter);
   return (
     <div className="proposals-detail">
       <div className="proposals-detail-toolbar">
@@ -46,17 +54,26 @@ export function ProposalsDetailView({
           <p>
             {totalCount} proposte
             {totalValue > 0 ? ` · ${formatProposalCurrency(totalValue)}` : ''}
-            {' · '}raggruppate per categoria.
+            {' · '}raggruppate per {groupLabel}.
           </p>
         </div>
       </div>
+      {filter === 'rejected' && rejectionReasonStats.length > 0 ? (
+        <div className="glass-card proposals-panel">
+          <div className="proposals-panel-head">
+            <h3>Rifiuti per motivazione</h3>
+            <p>Panoramica del numero di proposte rifiutate per ogni motivo.</p>
+          </div>
+          <RejectionReasonChart stats={rejectionReasonStats} />
+        </div>
+      ) : null}
       {groups.length === 0 ? (
         <p className="proposals-empty">Nessuna proposta per la selezione corrente.</p>
       ) : (
         groups.map((group) => (
-          <div key={group.categoria} className="glass-card proposals-panel proposals-detail-group">
+          <div key={group.label} className="glass-card proposals-panel proposals-detail-group">
             <div className="proposals-detail-group-head">
-              <h4>{group.categoria}</h4>
+              <h4>{group.label}</h4>
               <span>
                 {group.count} proposte
                 {group.totalValue > 0 ? ` · ${formatProposalCurrency(group.totalValue)}` : ''}
@@ -68,7 +85,7 @@ export function ProposalsDetailView({
                   <tr>
                     <th>Proposta</th>
                     <th>Cliente</th>
-                    {showStatus ? <th>Stato</th> : null}
+                    {showCategoryColumn ? <th>Categoria</th> : null}
                     <th className="analysis-num">Valore</th>
                     <th>Creato il</th>
                   </tr>
@@ -80,7 +97,9 @@ export function ProposalsDetailView({
                       <tr key={proposal.id}>
                         <td><strong>{proposal.nome}</strong></td>
                         <td>{proposal.cliente.trim() || '—'}</td>
-                        {showStatus ? <td>{normalizeProposalStatus(proposal.stato)}</td> : null}
+                        {showCategoryColumn ? (
+                          <td>{proposal.categoria.trim() || '—'}</td>
+                        ) : null}
                         <td className="analysis-num">{formatProposalValue(value)}</td>
                         <td>{formatProposalDateLabel(proposal.creatoIl)}</td>
                       </tr>

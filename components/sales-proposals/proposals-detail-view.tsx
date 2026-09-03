@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { RejectedClientRankingList } from '@/components/sales-proposals/rejected-client-ranking-list';
 import { RejectionReasonChart } from '@/components/sales-proposals/rejection-reason-chart';
@@ -97,6 +97,41 @@ function ProposalDetailGroupAccordion({
   );
 }
 
+interface ProposalsCollapsiblePanelProps {
+  title: string;
+  meta: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}
+
+function ProposalsCollapsiblePanel({
+  title,
+  meta,
+  defaultOpen = false,
+  children,
+}: ProposalsCollapsiblePanelProps) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  return (
+    <div className={`analysis-accordion proposals-detail-accordion proposals-detail-collapsible${isOpen ? ' is-open' : ''}`}>
+      <button
+        type="button"
+        className="analysis-accordion-toggle"
+        onClick={() => setIsOpen((current) => !current)}
+        aria-expanded={isOpen}
+      >
+        <ChevronRight size={18} className="analysis-accordion-icon" />
+        <span>{title}</span>
+        <span className="analysis-accordion-meta">{meta}</span>
+      </button>
+      {isOpen ? (
+        <div className="analysis-accordion-body proposals-detail-collapsible-body">
+          {children}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function ProposalsDetailView({
   title,
   filter,
@@ -137,13 +172,13 @@ export function ProposalsDetailView({
         </div>
       ) : null}
       {filter === 'rejected' && rejectedClientStats.length > 0 ? (
-        <div className="glass-card proposals-panel">
-          <div className="proposals-panel-head">
-            <h3>Clienti per proposte rifiutate</h3>
-            <p>Ranking dei clienti con più rifiuti nell'anno selezionato, ordinati per numero di proposte.</p>
-          </div>
+        <ProposalsCollapsiblePanel
+          title="Clienti per proposte rifiutate"
+          meta={`${rejectedClientStats.length} clienti · ranking per numero di rifiuti`}
+          defaultOpen
+        >
           <RejectedClientRankingList stats={rejectedClientStats} />
-        </div>
+        </ProposalsCollapsiblePanel>
       ) : null}
       {groups.length === 0 ? (
         <p className="proposals-empty">Nessuna proposta per la selezione corrente.</p>

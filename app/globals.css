@@ -8533,7 +8533,13 @@ body:has(.login-page) {
     border-radius: 0;
 }
 
-.proposals-rejected-client-ranking {
+.proposals-detail-collapsible {
+    margin-bottom: 14px;
+}
+
+.proposals-detail-collapsible-body {
+    padding: 16px 18px;
+}
     list-style: none;
     margin: 0;
     padding: 0;

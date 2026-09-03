@@ -186,11 +186,6 @@ export function SalesProposalsSection() {
                   onClick={() => setDetailFilter('pending')}
                 />
                 <ProposalsKpiCard
-                  label="Conversione sul totale"
-                  value={formatProposalPercent(kpis.conversionOnTotal)}
-                  hint={`${kpis.acceptedCount} su ${kpis.totalCount}`}
-                />
-                <ProposalsKpiCard
                   label="Conversione su decise"
                   value={formatProposalPercent(kpis.conversionOnDecided)}
                   hint={`${kpis.acceptedCount} su ${kpis.acceptedCount + kpis.rejectedCount}${

@@ -122,6 +122,7 @@ export type Owner = 'Jeck' | 'Virgi' | 'Martina' | 'Martino';
 export type ClientOrigin = 'Jeck' | 'Inbound' | 'Instagram' | 'Community' | 'Outbound' | 'Martino';
 
 export type Relationship =
+  | 'Freddo'
   | 'Nuovo Cliente'
   | 'Ricorrente'
   | 'Top 20%'

@@ -41,7 +41,6 @@ export function CampaignContactPicker({
       .filter((row) => {
         if (relationshipFilter && row.relationshipLabel !== relationshipFilter) {
           const client = clients.find((item) => item.id === row.clientId);
-          if (relationshipFilter === 'Contatto Freddo') return client?.isColdClient;
           return client?.relationship === relationshipFilter;
         }
         return true;
@@ -97,7 +96,6 @@ export function CampaignContactPicker({
               onChange={(e) => setRelationshipFilter(e.target.value)}
             >
               <option value="">Tutti i rapporti</option>
-              <option value="Contatto Freddo">Contatto Freddo</option>
               {RELATIONSHIPS.filter((item) => item !== 'Eliminato').map((item) => (
                 <option key={item} value={item}>{item}</option>
               ))}

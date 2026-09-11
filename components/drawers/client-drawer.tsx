@@ -134,28 +134,24 @@ export function ClientDrawer({ client, isCold, workspaceId, onClose }: ClientDra
                 {availableOrigins.map((origin) => <option key={origin} value={origin}>{origin}</option>)}
               </select>
             </div>
-            {!isCold && (
-              <>
-                <div className="form-group">
-                  <label htmlFor="form-relationship">Stato Rapporto</label>
-                  <select id="form-relationship" className="form-select" value={relationship} onChange={(e) => setRelationship(e.target.value as Client['relationship'])}>
-                    {RELATIONSHIPS.map((r) => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="form-rev-2023">Fatturato 2023 (€)</label>
-                  <input id="form-rev-2023" type="number" className="form-input" value={rev2023} step={0.01} onChange={(e) => setRev2023(parseFloat(e.target.value) || 0)} />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="form-rev-2024">Fatturato 2024 (€)</label>
-                  <input id="form-rev-2024" type="number" className="form-input" value={rev2024} step={0.01} onChange={(e) => setRev2024(parseFloat(e.target.value) || 0)} />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="form-rev-2025">Fatturato 2025 (€)</label>
-                  <input id="form-rev-2025" type="number" className="form-input" value={rev2025} min={0} step={0.01} onChange={(e) => setRev2025(parseFloat(e.target.value) || 0)} />
-                </div>
-              </>
-            )}
+            <div className="form-group">
+              <label htmlFor="form-relationship">Stato Rapporto</label>
+              <select id="form-relationship" className="form-select" value={relationship} onChange={(e) => setRelationship(e.target.value as Client['relationship'])}>
+                {RELATIONSHIPS.map((r) => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="form-rev-2023">Fatturato 2023 (€)</label>
+              <input id="form-rev-2023" type="number" className="form-input" value={rev2023} step={0.01} onChange={(e) => setRev2023(parseFloat(e.target.value) || 0)} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="form-rev-2024">Fatturato 2024 (€)</label>
+              <input id="form-rev-2024" type="number" className="form-input" value={rev2024} step={0.01} onChange={(e) => setRev2024(parseFloat(e.target.value) || 0)} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="form-rev-2025">Fatturato 2025 (€)</label>
+              <input id="form-rev-2025" type="number" className="form-input" value={rev2025} min={0} step={0.01} onChange={(e) => setRev2025(parseFloat(e.target.value) || 0)} />
+            </div>
             <div className="form-group">
               <label htmlFor="form-rev-2026">Fatturato 2026 (€)</label>
               <input id="form-rev-2026" type="number" className="form-input" value={rev2026} min={0} step={0.01} onChange={(e) => setRev2026(parseFloat(e.target.value) || 0)} />

@@ -44,7 +44,7 @@ export function getTrackingForCampaign(
 
 export function resolveRelationshipLabel(client: Client | undefined): string {
   if (!client) return '—';
-  if (client.isColdClient) return 'Contatto Freddo';
+  if (client.relationship === 'Freddo' || client.isColdClient) return 'Freddo';
   return client.relationship || '—';
 }
 

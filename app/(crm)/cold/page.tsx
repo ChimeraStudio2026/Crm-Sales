@@ -1,5 +1,12 @@
-import { ColdClientsSection } from '@/components/sections/cold-section';
+'use client';
 
-export default function ColdPage() {
-  return <ColdClientsSection />;
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+
+export default function ColdClientsRedirectPage() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace('/clients?rapporto=Freddo');
+  }, [router]);
+  return null;
 }

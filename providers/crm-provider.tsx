@@ -71,7 +71,6 @@ import {
   createUniqueId,
   getTodayString,
   isClientInActiveSection,
-  isClientInColdSection,
   normalizeClients,
   recalculateRelationships,
   reconcileImportedClientsToMainList,
@@ -725,8 +724,9 @@ export function CrmProvider({ children }: CrmProviderProps) {
             updated.action = trimmedAction;
             updated.actionDate = resolveActionDateOnTextChange(c.action || '', trimmedAction, c.actionDate);
           }
-          if (isCold || isClientInColdSection(updated)) {
-            updated.isColdClient = (updated.rev2026 || 0) <= COLD_CLIENT_REV_THRESHOLD;
+          if (isCold && updated.relationship !== 'Freddo') {
+            updated.relationship = 'Freddo';
+            updated.manualRelationship = true;
           }
           return applyColdClientPromotion(updated).client;
         });
@@ -739,10 +739,10 @@ export function CrmProvider({ children }: CrmProviderProps) {
         type: input.type || 'Cliente Diretto',
         owner: input.owner || 'Jeck',
         clientOrigin: input.clientOrigin || '',
-        relationship: input.relationship || 'Nuovo Cliente',
-        manualRelationship: false,
-        rev2023: 0,
-        rev2024: 0,
+        relationship: input.relationship || (isCold ? 'Freddo' : 'Nuovo Cliente'),
+        manualRelationship: isCold || input.relationship === 'Freddo',
+        rev2023: input.rev2023 || 0,
+        rev2024: input.rev2024 || 0,
         rev2025: input.rev2025 || 0,
         rev2026: input.rev2026 || 0,
         action: trimmedAction,
@@ -757,7 +757,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
           input.productOffers,
         ),
         needsProfileCompletion: true,
-        isColdClient: isCold || (input.rev2026 || 0) <= COLD_CLIENT_REV_THRESHOLD,
+        isColdClient: isCold || input.relationship === 'Freddo',
       };
       return [...prev, applyColdClientPromotion(newClient).client];
     });
@@ -781,8 +781,8 @@ export function CrmProvider({ children }: CrmProviderProps) {
           type: input.type || 'Cliente Diretto',
           owner: input.owner || 'Jeck',
           clientOrigin: input.clientOrigin || '',
-          relationship: input.relationship || 'Nuovo Cliente',
-          manualRelationship: false,
+          relationship: input.relationship || (isCold ? 'Freddo' : 'Nuovo Cliente'),
+          manualRelationship: isCold || input.relationship === 'Freddo',
           rev2023: 0,
           rev2024: 0,
           rev2025: input.rev2025 || 0,
@@ -799,7 +799,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
             input.productOffers,
           ),
           needsProfileCompletion: true,
-          isColdClient: isCold || (input.rev2026 || 0) <= COLD_CLIENT_REV_THRESHOLD,
+          isColdClient: isCold || input.relationship === 'Freddo',
         };
         return applyColdClientPromotion(newClient).client;
       });
@@ -825,7 +825,14 @@ export function CrmProvider({ children }: CrmProviderProps) {
     await mutateClients((prev) => prev.map((c) => {
       if (c.id !== clientId) return c;
       const updated = { ...c, [field]: value } as Client;
-      if (field === 'relationship') updated.manualRelationship = true;
+      if (field === 'relationship') {
+        updated.manualRelationship = true;
+        if (value === 'Freddo') {
+          updated.isColdClient = true;
+        } else if (c.relationship === 'Freddo') {
+          updated.isColdClient = false;
+        }
+      }
       if (field === 'type') {
         updated.productOffers = reconcileProductOffersForTypeChange(
           updated.type,

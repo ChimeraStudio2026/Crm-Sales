@@ -24,12 +24,12 @@ const CHIMERA_ONLY_EMAIL_PATTERNS = [
 
 const TINYTOAST_ALLOWED_PATH_PREFIXES = [
   '/funnel',
-  '/cold',
+  '/clients',
 ] as const;
 
 const TINYTOAST_NAV_HREFS = new Set<string>([
   '/funnel',
-  '/cold',
+  '/clients',
 ]);
 
 export function isTinytoastUserEmail(email: string | null | undefined): boolean {

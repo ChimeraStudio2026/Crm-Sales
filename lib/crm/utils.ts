@@ -1,6 +1,10 @@
-import type { Client, ClientContact } from '@/lib/types/crm';
+import type { Client, ClientContact, Relationship } from '@/lib/types/crm';
 import { ACTION_DATE_STALE_DAYS, COLD_CLIENT_REV_THRESHOLD, DEFAULT_ACTION_DATE, EXCEL_IMPORT_ACTION_PREFIX } from '@/lib/constants/crm';
-import { applyAutoRelationships, normalizeStoredRelationship } from '@/lib/crm/relationship-rules';
+import {
+  applyAutoRelationships,
+  normalizeStoredRelationship,
+  resolveAutoRelationship,
+} from '@/lib/crm/relationship-rules';
 import { normalizeClientProductOffers } from '@/lib/crm/product-offers';
 
 export function createUniqueId(prefix: string): string {
@@ -79,18 +83,37 @@ export function extractDomainFromEmail(email: string): string {
   return domain;
 }
 
+export function isFreddoRelationship(relationship: Relationship): boolean {
+  return relationship === 'Freddo';
+}
+
+export function syncClientColdRelationship(client: Client): Client {
+  const next = { ...client };
+  if (next.relationship === 'Eliminato') {
+    return next;
+  }
+  if (next.relationship === 'Freddo' || next.isColdClient) {
+    next.relationship = 'Freddo';
+    next.isColdClient = true;
+    next.manualRelationship = true;
+    return next;
+  }
+  next.isColdClient = false;
+  return next;
+}
+
 export function isClientInColdSection(client: Client): boolean {
-  return client.isColdClient === true && client.relationship !== 'Eliminato';
+  return client.relationship === 'Freddo';
 }
 
-/** Clienti nella lista principale (inclusi Eliminato), esclusi i freddi. */
-export function isClientInMainList(client: Client): boolean {
-  return !client.isColdClient;
+/** Lista clienti unificata: tutti i clienti del workspace (inclusi Freddo ed Eliminato). */
+export function isClientInMainList(_client: Client): boolean {
+  return true;
 }
 
-/** Clienti attivi per analisi e totali fatturato (esclusi Eliminato). */
+/** Clienti attivi per analisi e totali fatturato (esclusi Freddo ed Eliminato). */
 export function isClientInActiveSection(client: Client): boolean {
-  return !client.isColdClient && client.relationship !== 'Eliminato';
+  return client.relationship !== 'Freddo' && client.relationship !== 'Eliminato';
 }
 
 export function hasExcelRevenueDifference(
@@ -209,14 +232,22 @@ export function recalculateRelationships(clients: Client[]): Client[] {
 export function applyColdClientPromotion(
   client: Client,
 ): { promoted: boolean; client: Client } {
-  if (!client.isColdClient) return { promoted: false, client };
-  if (client.rev2026 > COLD_CLIENT_REV_THRESHOLD) {
+  const synced = syncClientColdRelationship(client);
+  if (synced.relationship !== 'Freddo') {
+    return { promoted: false, client: synced };
+  }
+  if (synced.rev2026 > COLD_CLIENT_REV_THRESHOLD) {
     return {
       promoted: true,
-      client: { ...client, isColdClient: false },
+      client: {
+        ...synced,
+        isColdClient: false,
+        relationship: resolveAutoRelationship(synced.rev2026),
+        manualRelationship: false,
+      },
     };
   }
-  return { promoted: false, client };
+  return { promoted: false, client: synced };
 }
 
 export function applyColdClientPromotionToAll(clients: Client[]): Client[] {
@@ -226,14 +257,23 @@ export function applyColdClientPromotionToAll(clients: Client[]): Client[] {
 /** Clients from OKR/Excel imports belong in the main list, not cold prospects. */
 export function reconcileImportedClientsToMainList(clients: Client[]): Client[] {
   return clients.map((client) => {
-    if (!client.isColdClient) return client;
+    const isColdLike = client.isColdClient || client.relationship === 'Freddo';
+    if (!isColdLike) return client;
     if ((client.rev2025 || 0) > 0) {
-      return { ...client, isColdClient: false };
+      return {
+        ...client,
+        isColdClient: false,
+        relationship: client.relationship === 'Freddo' ? 'Nuovo Cliente' : client.relationship,
+      };
     }
     if ((client.action || '').startsWith(EXCEL_IMPORT_ACTION_PREFIX)) {
-      return { ...client, isColdClient: false };
+      return {
+        ...client,
+        isColdClient: false,
+        relationship: client.relationship === 'Freddo' ? 'Nuovo Cliente' : client.relationship,
+      };
     }
-    return client;
+    return syncClientColdRelationship(client);
   });
 }
 
@@ -248,7 +288,15 @@ export function normalizeClients(clients: Client[]): Client[] {
       normalized.clientOrigin = '';
     }
     normalized.relationship = normalizeStoredRelationship(normalized.relationship || 'Nuovo Cliente');
-    if (normalized.relationship === 'Da recuperare' || normalized.relationship === 'Eliminato') {
+    if (
+      normalized.relationship === 'Freddo'
+      || normalized.relationship === 'Da recuperare'
+      || normalized.relationship === 'Eliminato'
+    ) {
+      normalized.manualRelationship = true;
+    }
+    if (normalized.isColdClient && normalized.relationship !== 'Eliminato' && normalized.relationship !== 'Freddo') {
+      normalized.relationship = 'Freddo';
       normalized.manualRelationship = true;
     }
     normalizeClientContacts(normalized);
@@ -267,6 +315,6 @@ export function normalizeClients(clients: Client[]): Client[] {
         date: normalized.actionDate || DEFAULT_ACTION_DATE,
       });
     }
-    return normalized;
+    return syncClientColdRelationship(normalized);
   });
 }

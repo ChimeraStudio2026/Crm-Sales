@@ -57,6 +57,7 @@ export const CLIENT_ORIGIN_CHIP_CLASSES: Record<ClientOrigin, string> = {
 };
 
 export const RELATIONSHIPS: Relationship[] = [
+  'Freddo',
   'Nuovo Cliente',
   'Ricorrente',
   'Top 20%',
@@ -116,7 +117,6 @@ export const NAV_ITEMS = [
   { href: '/clients', label: 'Lista Clienti', icon: 'Users' },
   { href: '/funnel', label: 'Funnel Commerciale', icon: 'GitBranch' },
   { href: '/propositivita', label: 'Propositività', icon: 'Sparkles' },
-  { href: '/cold', label: 'Clienti Freddi', icon: 'Snowflake' },
   { href: '/import', label: 'Importa Excel', icon: 'FileSpreadsheet' },
   { href: '/settings', label: 'Impostazioni', icon: 'Settings' },
 ] as const;
@@ -124,10 +124,12 @@ export const NAV_ITEMS = [
 export const PAGE_META: Record<string, { title: string; subtitle: string }> = {
   '/analysis': { title: 'Analisi', subtitle: 'OKR, previsioni e breakdown per quarter.' },
   '/proposte': { title: 'Proposte', subtitle: 'Preventivi commerciali: KPI, ticket medio e clienti per categoria.' },
-  '/clients': { title: 'Gestione Clienti', subtitle: 'Lista generica e schede clienti.' },
+  '/clients': {
+    title: 'Gestione Clienti',
+    subtitle: 'Clienti attivi e prospect freddi nella stessa lista. Usa Rapporto «Freddo» per i contatti cold.',
+  },
   '/funnel': { title: 'Funnel Commerciale', subtitle: 'Campagne commerciali con pipeline clienti, azioni, status e semaforo tempi.' },
   '/propositivita': { title: 'Propositività', subtitle: 'Creatività proposte ai clienti e sconti/extra concessi.' },
-  '/cold': { title: 'Clienti Freddi', subtitle: 'Prospect con cui non hai mai lavorato. I clienti importati da OKR restano in Lista Clienti.' },
   '/import': { title: 'Importazione Dati', subtitle: 'Carica fatturati 2023–2026 da foglio di calcolo.' },
   '/settings': { title: 'Impostazioni', subtitle: 'Manutenzione database e regole.' },
 };

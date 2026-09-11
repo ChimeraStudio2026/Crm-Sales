@@ -1233,6 +1233,10 @@ body.crm-col-resizing {
     color: var(--text-secondary);
     border: 1px solid rgba(107, 114, 128, 0.3);
 }
+.client-row-freddo {
+    background: rgba(56, 189, 248, 0.06);
+}
+
 .client-row-eliminato {
     opacity: 0.72;
 }
@@ -8540,6 +8544,8 @@ body:has(.login-page) {
 .proposals-detail-collapsible-body {
     padding: 16px 18px;
 }
+
+.proposals-rejected-client-ranking {
     list-style: none;
     margin: 0;
     padding: 0;

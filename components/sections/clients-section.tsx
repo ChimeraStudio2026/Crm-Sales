@@ -1,6 +1,7 @@
 'use client';
 
-import { Fragment, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { ChevronRight, Download, Edit, FilterX, Search, Sparkles, Trash2 } from 'lucide-react';
 import {
   CLIENT_TYPES,
@@ -13,13 +14,11 @@ import {
 } from '@/lib/constants/crm';
 import {
   formatCurrency,
-  isClientInActiveSection,
-  isClientInMainList,
   shouldHighlightIncompleteClient,
 } from '@/lib/crm/utils';
-import { DEFAULT_WORKSPACE_ID } from '@/lib/constants/workspaces';
 import { isClientInWorkspace } from '@/lib/crm/workspace-access';
 import { useCrm } from '@/providers/crm-provider';
+import { useWorkspace } from '@/providers/workspace-provider';
 import { ClientDrawer } from '@/components/drawers/client-drawer';
 import { BulkClientsDrawer } from '@/components/drawers/bulk-clients-drawer';
 import { ClientDetailPanel } from '@/components/clients/client-detail-panel';
@@ -48,6 +47,7 @@ function buildClientsTableColumnOrder(showRev2023: boolean, showRev2024: boolean
 }
 
 const RELATIONSHIP_LABELS: Record<Relationship, string> = {
+  Freddo: '❄️ Freddo',
   'Nuovo Cliente': '⭐ Nuovo Cliente',
   Ricorrente: '⭐⭐ Ricorrente',
   'Top 20%': '⭐⭐⭐ Top 20%',
@@ -71,6 +71,8 @@ export function ClientsSection() {
     updateClientProductOffers,
     enrichClientApollo,
   } = useCrm();
+  const { workspaceId } = useWorkspace();
+  const searchParams = useSearchParams();
   const [filterIncomplete, setFilterIncomplete] = useState(false);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('');
@@ -87,6 +89,13 @@ export function ClientsSection() {
   const tableRef = useRef<HTMLTableElement>(null);
   const tableScrollBarRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const rapporto = searchParams.get('rapporto');
+    if (rapporto && (RELATIONSHIPS as readonly string[]).includes(rapporto)) {
+      setFilterRelationship(rapporto);
+    }
+  }, [searchParams]);
+
   useCrmTableHorizontalScroll({
     viewportRef: tableViewportRef,
     tableRef,
@@ -100,15 +109,18 @@ export function ClientsSection() {
   );
 
   const incompleteCount = useMemo(
-    () => clients.filter((c) => isClientInActiveSection(c) && shouldHighlightIncompleteClient(c)).length,
-    [clients],
+    () => clients.filter(
+      (c) => isClientInWorkspace(c, workspaceId)
+        && c.relationship !== 'Eliminato'
+        && shouldHighlightIncompleteClient(c),
+    ).length,
+    [clients, workspaceId],
   );
 
   const filtered = useMemo(() => {
     const query = search.toLowerCase().trim();
     let list = clients.filter((c) => {
-      if (!isClientInMainList(c)) return false;
-      if (!isClientInWorkspace(c, DEFAULT_WORKSPACE_ID)) return false;
+      if (!isClientInWorkspace(c, workspaceId)) return false;
       if (filterIncomplete && !shouldHighlightIncompleteClient(c)) return false;
       const matchesQuery =
         !query ||
@@ -139,9 +151,9 @@ export function ClientsSection() {
       return 0;
     });
     return list;
-  }, [clients, filterIncomplete, filterOwner, filterRelationship, filterType, search, sort]);
+  }, [clients, filterIncomplete, filterOwner, filterRelationship, filterType, search, sort, workspaceId]);
 
-  const totalInList = clients.filter((c) => isClientInMainList(c) && isClientInWorkspace(c, DEFAULT_WORKSPACE_ID)).length;
+  const totalInList = clients.filter((c) => isClientInWorkspace(c, workspaceId)).length;
   const columnCount = tableColumnOrder.length;
 
   const handleSort = (column: string) => {
@@ -284,6 +296,9 @@ export function ClientsSection() {
               <strong>⭐⭐⭐</strong> Top 20% · oltre {formatCurrency(TOP_20_REV_THRESHOLD)}
             </span>
             <span className="recall-legend-item">
+              ❄️ Freddo · prospect cold
+            </span>
+            <span className="recall-legend-item">
               🟡 Da recuperare · 🔴 Eliminato · solo manuali
             </span>
           </div>
@@ -397,6 +412,7 @@ export function ClientsSection() {
                             className={[
                               'client-row-expandable',
                               client.relationship === 'Eliminato' ? 'client-row-eliminato' : '',
+                              client.relationship === 'Freddo' ? 'client-row-freddo' : '',
                               isExpanded ? 'is-row-expanded' : '',
                             ].filter(Boolean).join(' ')}
                             onClick={(event) => {

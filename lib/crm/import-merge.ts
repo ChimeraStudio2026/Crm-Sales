@@ -107,6 +107,9 @@ export function mergeClientsWithExcelImport(
     }
     existing[revField] = imported.revenue;
     existing.isColdClient = false;
+    if (existing.relationship === 'Freddo') {
+      existing.relationship = 'Nuovo Cliente';
+    }
     if (
       existing.relationship !== 'Da recuperare'
       && existing.relationship !== 'Eliminato'

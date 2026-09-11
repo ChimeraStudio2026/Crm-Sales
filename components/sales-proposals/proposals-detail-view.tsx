@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
+import { ProposalsDetailTimelineTable } from '@/components/sales-proposals/proposals-detail-timeline-table';
 import { RejectedClientRankingList } from '@/components/sales-proposals/rejected-client-ranking-list';
 import { RejectionReasonChart } from '@/components/sales-proposals/rejection-reason-chart';
 import {
@@ -9,17 +10,22 @@ import {
   formatProposalDateLabel,
   resolveProposalDetailGroupLabel,
   resolveProposalValue,
+  sortProposalsByCreatedDate,
 } from '@/lib/sales-proposals/stats';
 import type {
   ProposalDetailFilter,
   ProposalDetailGroup,
   ProposalRejectionReasonStat,
   RejectedClientStat,
+  SalesProposal,
 } from '@/lib/types/sales-proposals';
+
+type ProposalsDetailLayout = 'grouped' | 'timeline';
 
 interface ProposalsDetailViewProps {
   title: string;
   filter: ProposalDetailFilter;
+  proposals: SalesProposal[];
   groups: ProposalDetailGroup[];
   rejectionReasonStats?: ProposalRejectionReasonStat[];
   rejectedClientStats?: RejectedClientStat[];
@@ -135,6 +141,7 @@ function ProposalsCollapsiblePanel({
 export function ProposalsDetailView({
   title,
   filter,
+  proposals,
   groups,
   rejectionReasonStats = [],
   rejectedClientStats = [],
@@ -142,8 +149,19 @@ export function ProposalsDetailView({
   totalValue,
   onBack,
 }: ProposalsDetailViewProps) {
+  const [layout, setLayout] = useState<ProposalsDetailLayout>('grouped');
+  useEffect(() => {
+    setLayout('grouped');
+  }, [filter, title]);
   const showCategoryColumn = filter === 'rejected';
   const groupLabel = resolveProposalDetailGroupLabel(filter);
+  const timelineProposals = useMemo(
+    () => sortProposalsByCreatedDate(proposals),
+    [proposals],
+  );
+  const layoutHint = layout === 'grouped'
+    ? `raggruppate per ${groupLabel}.`
+    : 'lista temporale · più recenti in alto.';
   return (
     <div className="proposals-detail">
       <div className="proposals-detail-toolbar">
@@ -158,10 +176,30 @@ export function ProposalsDetailView({
           <p>
             {totalCount} proposte
             {totalValue > 0 ? ` · ${formatProposalCurrency(totalValue)}` : ''}
-            {' · '}raggruppate per {groupLabel}.
+            {' · '}{layoutHint}
           </p>
         </div>
       </div>
+      {proposals.length > 0 ? (
+        <div className="proposals-detail-view-toolbar">
+          <div className="task-view-toggle" role="group" aria-label="Layout elenco proposte">
+            <button
+              type="button"
+              className={`task-view-toggle-btn${layout === 'grouped' ? ' is-active' : ''}`}
+              onClick={() => setLayout('grouped')}
+            >
+              {filter === 'rejected' ? 'Per motivazione' : 'Per categoria'}
+            </button>
+            <button
+              type="button"
+              className={`task-view-toggle-btn${layout === 'timeline' ? ' is-active' : ''}`}
+              onClick={() => setLayout('timeline')}
+            >
+              Lista temporale
+            </button>
+          </div>
+        </div>
+      ) : null}
       {filter === 'rejected' && rejectionReasonStats.length > 0 ? (
         <div className="glass-card proposals-panel">
           <div className="proposals-panel-head">
@@ -180,8 +218,10 @@ export function ProposalsDetailView({
           <RejectedClientRankingList stats={rejectedClientStats} />
         </ProposalsCollapsiblePanel>
       ) : null}
-      {groups.length === 0 ? (
+      {proposals.length === 0 ? (
         <p className="proposals-empty">Nessuna proposta per la selezione corrente.</p>
+      ) : layout === 'timeline' ? (
+        <ProposalsDetailTimelineTable filter={filter} proposals={timelineProposals} />
       ) : (
         <div className="proposals-detail-groups">
           {groups.map((group, index) => (

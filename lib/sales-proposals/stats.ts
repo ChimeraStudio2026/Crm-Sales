@@ -146,12 +146,16 @@ export function filterProposalsForDetail(
   return proposals.filter(isPendingProposal);
 }
 
-function sortProposalItems(items: SalesProposal[]): SalesProposal[] {
-  return [...items].sort((left, right) => {
+export function sortProposalsByCreatedDate(proposals: SalesProposal[]): SalesProposal[] {
+  return [...proposals].sort((left, right) => {
     const byDate = right.creatoIl.localeCompare(left.creatoIl);
     if (byDate !== 0) return byDate;
     return left.nome.localeCompare(right.nome, 'it', { sensitivity: 'base' });
   });
+}
+
+function sortProposalItems(items: SalesProposal[]): SalesProposal[] {
+  return sortProposalsByCreatedDate(items);
 }
 
 function buildProposalDetailGroups(

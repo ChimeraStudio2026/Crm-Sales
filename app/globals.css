@@ -8490,6 +8490,16 @@ body:has(.login-page) {
     margin-bottom: 14px;
 }
 
+.proposals-detail-view-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 14px;
+}
+
+.proposals-detail-timeline {
+    margin-bottom: 14px;
+}
+
 .proposals-detail-head {
     margin-bottom: 14px;
 }

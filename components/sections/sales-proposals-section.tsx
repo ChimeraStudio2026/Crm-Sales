@@ -211,6 +211,7 @@ export function SalesProposalsSection() {
                 <ProposalsDetailView
                   title={resolveProposalDetailTitle(detailFilter)}
                   filter={detailFilter}
+                  proposals={detailProposals}
                   groups={detailGroups}
                   rejectionReasonStats={rejectionReasonStats}
                   rejectedClientStats={rejectedClientStats}

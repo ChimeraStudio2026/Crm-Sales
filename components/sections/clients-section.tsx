@@ -78,6 +78,7 @@ export function ClientsSection() {
   const [filterType, setFilterType] = useState('');
   const [filterOwner, setFilterOwner] = useState('');
   const [filterRelationship, setFilterRelationship] = useState('');
+  const [hideEliminati, setHideEliminati] = useState(true);
   const [sort, setSort] = useState<SortState>({ column: 'name', direction: 'asc' });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [bulkDrawerOpen, setBulkDrawerOpen] = useState(false);
@@ -117,10 +118,24 @@ export function ClientsSection() {
     [clients, workspaceId],
   );
 
+  const eliminatedCount = useMemo(
+    () => clients.filter(
+      (c) => isClientInWorkspace(c, workspaceId) && c.relationship === 'Eliminato',
+    ).length,
+    [clients, workspaceId],
+  );
+
   const filtered = useMemo(() => {
     const query = search.toLowerCase().trim();
     let list = clients.filter((c) => {
       if (!isClientInWorkspace(c, workspaceId)) return false;
+      if (
+        hideEliminati
+        && c.relationship === 'Eliminato'
+        && filterRelationship !== 'Eliminato'
+      ) {
+        return false;
+      }
       if (filterIncomplete && !shouldHighlightIncompleteClient(c)) return false;
       const matchesQuery =
         !query ||
@@ -151,9 +166,16 @@ export function ClientsSection() {
       return 0;
     });
     return list;
-  }, [clients, filterIncomplete, filterOwner, filterRelationship, filterType, search, sort, workspaceId]);
+  }, [clients, filterIncomplete, filterOwner, filterRelationship, filterType, hideEliminati, search, sort, workspaceId]);
 
-  const totalInList = clients.filter((c) => isClientInWorkspace(c, workspaceId)).length;
+  const totalInList = useMemo(
+    () => clients.filter((c) => {
+      if (!isClientInWorkspace(c, workspaceId)) return false;
+      if (hideEliminati && c.relationship === 'Eliminato') return false;
+      return true;
+    }).length,
+    [clients, hideEliminati, workspaceId],
+  );
   const columnCount = tableColumnOrder.length;
 
   const handleSort = (column: string) => {
@@ -327,6 +349,17 @@ export function ClientsSection() {
                   <option value="">Tutti i Rapporti</option>
                   {RELATIONSHIPS.map((r) => <option key={r} value={r}>{RELATIONSHIP_LABELS[r]}</option>)}
                 </select>
+                {eliminatedCount > 0 ? (
+                  <button
+                    type="button"
+                    className={`clients-filter-chip ${hideEliminati ? 'is-active' : ''}`}
+                    onClick={() => setHideEliminati((prev) => !prev)}
+                    title={hideEliminati ? 'Mostra clienti con rapporto Eliminato' : 'Nascondi clienti eliminati'}
+                  >
+                    {hideEliminati ? 'Eliminati nascosti' : 'Eliminati visibili'}
+                    <span className="clients-filter-chip-count">{eliminatedCount}</span>
+                  </button>
+                ) : null}
                 {incompleteCount > 0 && (
                   <button
                     type="button"
@@ -366,6 +399,7 @@ export function ClientsSection() {
                   setFilterOwner('');
                   setFilterRelationship('');
                   setFilterIncomplete(false);
+                  setHideEliminati(true);
                 }}
               >
                 <FilterX size={16} />

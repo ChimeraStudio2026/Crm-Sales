@@ -8,6 +8,7 @@ import { ClientCategoryTable } from '@/components/sales-proposals/client-categor
 import { ProposalsDetailView } from '@/components/sales-proposals/proposals-detail-view';
 import { ProposalsKpiCard } from '@/components/sales-proposals/proposals-kpi-card';
 import { ProposalsImportCard } from '@/components/sales-proposals/proposals-import-card';
+import { ProposalsWeeklyReview } from '@/components/sales-proposals/proposals-weekly-review';
 import { createBrowserSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { fetchSalesProposals } from '@/lib/supabase/sales-proposals-database';
 import {
@@ -16,11 +17,13 @@ import {
   buildProposalCategoryGroups,
   buildProposalKpis,
   buildProposalRejectionReasonGroups,
+  buildProposalWeeklyReview,
   buildRejectedClientStats,
   buildRejectionReasonStats,
   collectProposalYears,
   filterProposalsByYear,
   filterProposalsForDetail,
+  formatProposalConversionDuration,
   formatProposalCurrency,
   formatProposalDateLabel,
   formatProposalPercent,
@@ -32,6 +35,8 @@ import { ANALYSIS_YEAR } from '@/lib/constants/crm';
 import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
 import type { ProposalDetailFilter, SalesProposal } from '@/lib/types/sales-proposals';
+
+type ProposalsViewMode = 'overview' | 'weekly';
 
 function resolveDefaultYear(years: number[], currentYear: number): number {
   if (years.includes(currentYear)) return currentYear;
@@ -46,6 +51,7 @@ export function SalesProposalsSection() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [detailFilter, setDetailFilter] = useState<ProposalDetailFilter | null>(null);
+  const [viewMode, setViewMode] = useState<ProposalsViewMode>('overview');
 
   const loadProposals = useCallback(async (): Promise<void> => {
     const db = createBrowserSupabaseClient();
@@ -115,6 +121,10 @@ export function SalesProposalsSection() {
     () => sumProposalValues(detailProposals),
     [detailProposals],
   );
+  const weeklyReview = useMemo(
+    () => buildProposalWeeklyReview(proposals),
+    [proposals],
+  );
 
   return (
     <>
@@ -126,18 +136,44 @@ export function SalesProposalsSection() {
               <h3>Preventivi commerciali</h3>
               <p>Analisi delle richieste cliente importate dallo scarico CSV mensile.</p>
             </div>
-            <div className="analysis-year-switcher" role="group" aria-label="Seleziona anno proposte">
-              {yearOptions.map((year) => (
+            <div className="proposals-toolbar-actions">
+              <div className="task-view-toggle" role="group" aria-label="Vista proposte">
                 <button
-                  key={year}
                   type="button"
-                  className={`analysis-year-switcher-btn${selectedYear === year ? ' is-active' : ''}`}
-                  aria-pressed={selectedYear === year}
-                  onClick={() => setSelectedYear(year)}
+                  className={`task-view-toggle-btn${viewMode === 'overview' ? ' is-active' : ''}`}
+                  onClick={() => {
+                    setViewMode('overview');
+                    setDetailFilter(null);
+                  }}
                 >
-                  {year}
+                  Panoramica
                 </button>
-              ))}
+                <button
+                  type="button"
+                  className={`task-view-toggle-btn${viewMode === 'weekly' ? ' is-active' : ''}`}
+                  onClick={() => {
+                    setViewMode('weekly');
+                    setDetailFilter(null);
+                  }}
+                >
+                  Weekly review
+                </button>
+              </div>
+              {viewMode === 'overview' ? (
+                <div className="analysis-year-switcher" role="group" aria-label="Seleziona anno proposte">
+                  {yearOptions.map((year) => (
+                    <button
+                      key={year}
+                      type="button"
+                      className={`analysis-year-switcher-btn${selectedYear === year ? ' is-active' : ''}`}
+                      aria-pressed={selectedYear === year}
+                      onClick={() => setSelectedYear(year)}
+                    >
+                      {year}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
           </div>
           {isCurrentYear ? (
@@ -155,6 +191,8 @@ export function SalesProposalsSection() {
           />
           {isLoading ? (
             <p className="proposals-empty">Caricamento proposte...</p>
+          ) : viewMode === 'weekly' ? (
+            <ProposalsWeeklyReview summary={weeklyReview} />
           ) : (
             <>
               <div className="proposals-kpi-grid">
@@ -204,6 +242,15 @@ export function SalesProposalsSection() {
                     kpis.acceptedValuedCount > 0
                       ? `${kpis.acceptedValuedCount} accettate con valore · tutte le categorie`
                       : 'Nessuna proposta accettata con valore'
+                  }
+                />
+                <ProposalsKpiCard
+                  label="Tempo di conversione"
+                  value={formatProposalConversionDuration(kpis.averageConversionDays)}
+                  hint={
+                    kpis.conversionSampleCount > 0
+                      ? `Media su ${kpis.conversionSampleCount} proposte chiuse (Si/No) · da creazione a chiusura`
+                      : 'Nessuna proposta chiusa con date complete'
                   }
                 />
               </div>

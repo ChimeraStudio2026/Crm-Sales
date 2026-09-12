@@ -9,6 +9,7 @@ import {
   type ProposalDetailFilter,
   type ProposalKpiSummary,
   type ProposalRejectionReasonStat,
+  type ProposalWeeklyReviewSummary,
   type RejectedClientStat,
   type SalesProposal,
 } from '@/lib/types/sales-proposals';
@@ -109,6 +110,7 @@ export function buildProposalKpis(proposals: SalesProposal[]): ProposalKpiSummar
   const decidedCount = acceptedCount + rejectedCount;
   const acceptedTotal = sumProposalValues(accepted);
   const acceptedValuedCount = countProposalsWithValue(accepted);
+  const conversionStats = buildAverageConversionStats(proposals);
   return {
     totalCount,
     acceptedCount,
@@ -119,8 +121,138 @@ export function buildProposalKpis(proposals: SalesProposal[]): ProposalKpiSummar
     pendingTotal: sumProposalValues(pending),
     acceptedAverageTicket: acceptedValuedCount > 0 ? acceptedTotal / acceptedValuedCount : 0,
     acceptedValuedCount,
+    averageConversionDays: conversionStats.averageDays,
+    conversionSampleCount: conversionStats.sampleCount,
     conversionOnTotal: totalCount > 0 ? acceptedCount / totalCount : 0,
     conversionOnDecided: decidedCount > 0 ? acceptedCount / decidedCount : 0,
+  };
+}
+
+function normalizeProposalDateKey(value: string | null | undefined): string | null {
+  if (!value || !value.trim()) return null;
+  const trimmed = value.trim();
+  const isoDate = trimmed.length >= 10 ? trimmed.slice(0, 10) : trimmed;
+  const date = new Date(`${isoDate}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return null;
+  return isoDate;
+}
+
+function parseProposalDateKey(value: string | null | undefined): number | null {
+  const key = normalizeProposalDateKey(value);
+  if (!key) return null;
+  const date = new Date(`${key}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.getTime();
+}
+
+export function resolveProposalClosedDate(proposal: SalesProposal): string | null {
+  if (isAcceptedProposal(proposal)) {
+    return normalizeProposalDateKey(proposal.dataAccettazione);
+  }
+  if (isRejectedProposal(proposal)) {
+    return normalizeProposalDateKey(proposal.dataRifiuto);
+  }
+  return null;
+}
+
+export function buildAverageConversionStats(proposals: SalesProposal[]): {
+  averageDays: number | null;
+  sampleCount: number;
+} {
+  const durations: number[] = [];
+  proposals.forEach((proposal) => {
+    const createdKey = normalizeProposalDateKey(proposal.creatoIl);
+    const closedKey = resolveProposalClosedDate(proposal);
+    if (!createdKey || !closedKey) return;
+    const createdMs = parseProposalDateKey(createdKey);
+    const closedMs = parseProposalDateKey(closedKey);
+    if (createdMs === null || closedMs === null || closedMs < createdMs) return;
+    const days = (closedMs - createdMs) / (1000 * 60 * 60 * 24);
+    durations.push(days);
+  });
+  if (durations.length === 0) {
+    return { averageDays: null, sampleCount: 0 };
+  }
+  const totalDays = durations.reduce((sum, days) => sum + days, 0);
+  return { averageDays: totalDays / durations.length, sampleCount: durations.length };
+}
+
+export function formatProposalConversionDuration(averageDays: number | null): string {
+  if (averageDays === null || !Number.isFinite(averageDays)) return '—';
+  if (averageDays < 7) {
+    return `${Math.round(averageDays)} gg`;
+  }
+  const weeks = averageDays / 7;
+  return `${weeks.toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} sett.`;
+}
+
+export interface ProposalWeekRange {
+  weekStart: string;
+  weekEnd: string;
+  weekLabel: string;
+}
+
+export function getPreviousWeekRange(referenceDate: Date = new Date()): ProposalWeekRange {
+  const referenceKey = normalizeProposalDateKey(referenceDate.toISOString().slice(0, 10));
+  const referenceMs = parseProposalDateKey(referenceKey || referenceDate.toISOString().slice(0, 10));
+  const todayMs = referenceMs ?? Date.now();
+  const today = new Date(todayMs);
+  const dayOfWeek = today.getUTCDay();
+  const daysFromMonday = (dayOfWeek + 6) % 7;
+  const thisWeekMondayMs = todayMs - daysFromMonday * 24 * 60 * 60 * 1000;
+  const prevWeekMondayMs = thisWeekMondayMs - 7 * 24 * 60 * 60 * 1000;
+  const prevWeekSundayMs = prevWeekMondayMs + 6 * 24 * 60 * 60 * 1000;
+  const weekStart = new Date(prevWeekMondayMs).toISOString().slice(0, 10);
+  const weekEnd = new Date(prevWeekSundayMs).toISOString().slice(0, 10);
+  const weekLabel = `${formatProposalDateLabel(weekStart)} – ${formatProposalDateLabel(weekEnd)}`;
+  return { weekStart, weekEnd, weekLabel };
+}
+
+function isDateKeyInRange(dateKey: string, startKey: string, endKey: string): boolean {
+  return dateKey >= startKey && dateKey <= endKey;
+}
+
+export function buildProposalWeeklyReview(
+  proposals: SalesProposal[],
+  referenceDate: Date = new Date(),
+): ProposalWeeklyReviewSummary {
+  const { weekStart, weekEnd, weekLabel } = getPreviousWeekRange(referenceDate);
+  let newCount = 0;
+  let newTotalValue = 0;
+  let acceptedCount = 0;
+  let acceptedTotalValue = 0;
+  let rejectedCount = 0;
+  let rejectedTotalValue = 0;
+  proposals.forEach((proposal) => {
+    const createdKey = normalizeProposalDateKey(proposal.creatoIl);
+    if (createdKey && isDateKeyInRange(createdKey, weekStart, weekEnd)) {
+      newCount += 1;
+      const value = resolveProposalValue(proposal);
+      if (value !== null) newTotalValue += value;
+    }
+    const acceptedKey = normalizeProposalDateKey(proposal.dataAccettazione);
+    if (isAcceptedProposal(proposal) && acceptedKey && isDateKeyInRange(acceptedKey, weekStart, weekEnd)) {
+      acceptedCount += 1;
+      const value = resolveProposalValue(proposal);
+      if (value !== null) acceptedTotalValue += value;
+    }
+    const rejectedKey = normalizeProposalDateKey(proposal.dataRifiuto);
+    if (isRejectedProposal(proposal) && rejectedKey && isDateKeyInRange(rejectedKey, weekStart, weekEnd)) {
+      rejectedCount += 1;
+      const value = resolveProposalValue(proposal);
+      if (value !== null) rejectedTotalValue += value;
+    }
+  });
+  return {
+    weekLabel,
+    weekStart,
+    weekEnd,
+    newCount,
+    newTotalValue,
+    acceptedCount,
+    acceptedTotalValue,
+    rejectedCount,
+    rejectedTotalValue,
   };
 }
 

@@ -75,8 +75,22 @@ export interface ProposalKpiSummary {
   pendingTotal: number;
   acceptedAverageTicket: number;
   acceptedValuedCount: number;
+  averageConversionDays: number | null;
+  conversionSampleCount: number;
   conversionOnTotal: number;
   conversionOnDecided: number;
+}
+
+export interface ProposalWeeklyReviewSummary {
+  weekLabel: string;
+  weekStart: string;
+  weekEnd: string;
+  newCount: number;
+  newTotalValue: number;
+  acceptedCount: number;
+  acceptedTotalValue: number;
+  rejectedCount: number;
+  rejectedTotalValue: number;
 }
 
 export type ProposalDetailFilter = 'accepted' | 'rejected' | 'pending';

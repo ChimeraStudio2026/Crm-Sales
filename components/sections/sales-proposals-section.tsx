@@ -17,7 +17,6 @@ import {
   buildProposalCategoryGroups,
   buildProposalKpis,
   buildProposalRejectionReasonGroups,
-  buildProposalWeeklyReview,
   buildRejectedClientStats,
   buildRejectionReasonStats,
   collectProposalYears,
@@ -121,11 +120,6 @@ export function SalesProposalsSection() {
     () => sumProposalValues(detailProposals),
     [detailProposals],
   );
-  const weeklyReview = useMemo(
-    () => buildProposalWeeklyReview(proposals),
-    [proposals],
-  );
-
   return (
     <>
       <TopHeader />
@@ -192,7 +186,7 @@ export function SalesProposalsSection() {
           {isLoading ? (
             <p className="proposals-empty">Caricamento proposte...</p>
           ) : viewMode === 'weekly' ? (
-            <ProposalsWeeklyReview summary={weeklyReview} />
+            <ProposalsWeeklyReview proposals={proposals} />
           ) : (
             <>
               <div className="proposals-kpi-grid">

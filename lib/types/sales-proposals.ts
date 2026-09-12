@@ -81,7 +81,14 @@ export interface ProposalKpiSummary {
   conversionOnDecided: number;
 }
 
+export interface ProposalIsoWeekRef {
+  isoYear: number;
+  isoWeek: number;
+}
+
 export interface ProposalWeeklyReviewSummary {
+  isoYear: number;
+  isoWeek: number;
   weekLabel: string;
   weekStart: string;
   weekEnd: string;
@@ -91,6 +98,9 @@ export interface ProposalWeeklyReviewSummary {
   acceptedTotalValue: number;
   rejectedCount: number;
   rejectedTotalValue: number;
+  newProposals: SalesProposal[];
+  acceptedProposals: SalesProposal[];
+  rejectedProposals: SalesProposal[];
 }
 
 export type ProposalDetailFilter = 'accepted' | 'rejected' | 'pending';

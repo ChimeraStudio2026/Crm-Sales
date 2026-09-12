@@ -9,6 +9,7 @@ import {
   type ProposalDetailFilter,
   type ProposalKpiSummary,
   type ProposalRejectionReasonStat,
+  type ProposalIsoWeekRef,
   type ProposalWeeklyReviewSummary,
   type RejectedClientStat,
   type SalesProposal,
@@ -192,20 +193,69 @@ export interface ProposalWeekRange {
   weekLabel: string;
 }
 
-export function getPreviousWeekRange(referenceDate: Date = new Date()): ProposalWeekRange {
-  const referenceKey = normalizeProposalDateKey(referenceDate.toISOString().slice(0, 10));
-  const referenceMs = parseProposalDateKey(referenceKey || referenceDate.toISOString().slice(0, 10));
-  const todayMs = referenceMs ?? Date.now();
-  const today = new Date(todayMs);
-  const dayOfWeek = today.getUTCDay();
-  const daysFromMonday = (dayOfWeek + 6) % 7;
-  const thisWeekMondayMs = todayMs - daysFromMonday * 24 * 60 * 60 * 1000;
-  const prevWeekMondayMs = thisWeekMondayMs - 7 * 24 * 60 * 60 * 1000;
-  const prevWeekSundayMs = prevWeekMondayMs + 6 * 24 * 60 * 60 * 1000;
-  const weekStart = new Date(prevWeekMondayMs).toISOString().slice(0, 10);
-  const weekEnd = new Date(prevWeekSundayMs).toISOString().slice(0, 10);
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+function dateKeyFromUtcMs(ms: number): string {
+  return new Date(ms).toISOString().slice(0, 10);
+}
+
+export function getIsoWeekRefFromDate(date: Date): ProposalIsoWeekRef {
+  const utcDate = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const dayNum = utcDate.getUTCDay() || 7;
+  utcDate.setUTCDate(utcDate.getUTCDate() + 4 - dayNum);
+  const isoYear = utcDate.getUTCFullYear();
+  const yearStart = new Date(Date.UTC(isoYear, 0, 1));
+  const isoWeek = Math.ceil((((utcDate.getTime() - yearStart.getTime()) / MS_PER_DAY) + 1) / 7);
+  return { isoYear, isoWeek };
+}
+
+export function getIsoWeeksInYear(isoYear: number): number {
+  return getIsoWeekRefFromDate(new Date(Date.UTC(isoYear, 11, 28))).isoWeek;
+}
+
+export function getWeekRangeFromIsoWeek(isoYear: number, isoWeek: number): ProposalWeekRange {
+  const simple = new Date(Date.UTC(isoYear, 0, 1 + (isoWeek - 1) * 7));
+  const dayOfWeek = simple.getUTCDay();
+  const weekStartDate = new Date(simple);
+  if (dayOfWeek <= 4) {
+    weekStartDate.setUTCDate(simple.getUTCDate() - dayOfWeek + 1);
+  } else {
+    weekStartDate.setUTCDate(simple.getUTCDate() + 8 - dayOfWeek);
+  }
+  const weekEndDate = new Date(weekStartDate);
+  weekEndDate.setUTCDate(weekStartDate.getUTCDate() + 6);
+  const weekStart = dateKeyFromUtcMs(weekStartDate.getTime());
+  const weekEnd = dateKeyFromUtcMs(weekEndDate.getTime());
   const weekLabel = `${formatProposalDateLabel(weekStart)} – ${formatProposalDateLabel(weekEnd)}`;
   return { weekStart, weekEnd, weekLabel };
+}
+
+export function getPreviousIsoWeekRef(referenceDate: Date = new Date()): ProposalIsoWeekRef {
+  const currentRange = getWeekRangeFromIsoWeek(
+    getIsoWeekRefFromDate(referenceDate).isoYear,
+    getIsoWeekRefFromDate(referenceDate).isoWeek,
+  );
+  const currentMondayMs = parseProposalDateKey(currentRange.weekStart) ?? referenceDate.getTime();
+  const previousMondayMs = currentMondayMs - 7 * MS_PER_DAY;
+  return getIsoWeekRefFromDate(new Date(previousMondayMs));
+}
+
+export function collectProposalIsoYears(proposals: SalesProposal[], currentYear: number): number[] {
+  const years = new Set<number>([currentYear]);
+  proposals.forEach((proposal) => {
+    const createdKey = normalizeProposalDateKey(proposal.creatoIl);
+    if (createdKey) years.add(getIsoWeekRefFromDate(new Date(`${createdKey}T00:00:00Z`)).isoYear);
+    const acceptedKey = normalizeProposalDateKey(proposal.dataAccettazione);
+    if (acceptedKey) years.add(getIsoWeekRefFromDate(new Date(`${acceptedKey}T00:00:00Z`)).isoYear);
+    const rejectedKey = normalizeProposalDateKey(proposal.dataRifiuto);
+    if (rejectedKey) years.add(getIsoWeekRefFromDate(new Date(`${rejectedKey}T00:00:00Z`)).isoYear);
+  });
+  return Array.from(years).sort((left, right) => right - left);
+}
+
+export function getPreviousWeekRange(referenceDate: Date = new Date()): ProposalWeekRange {
+  const previous = getPreviousIsoWeekRef(referenceDate);
+  return getWeekRangeFromIsoWeek(previous.isoYear, previous.isoWeek);
 }
 
 function isDateKeyInRange(dateKey: string, startKey: string, endKey: string): boolean {
@@ -214,45 +264,56 @@ function isDateKeyInRange(dateKey: string, startKey: string, endKey: string): bo
 
 export function buildProposalWeeklyReview(
   proposals: SalesProposal[],
-  referenceDate: Date = new Date(),
+  isoWeekRef: ProposalIsoWeekRef,
 ): ProposalWeeklyReviewSummary {
-  const { weekStart, weekEnd, weekLabel } = getPreviousWeekRange(referenceDate);
-  let newCount = 0;
-  let newTotalValue = 0;
-  let acceptedCount = 0;
-  let acceptedTotalValue = 0;
-  let rejectedCount = 0;
-  let rejectedTotalValue = 0;
+  const { isoYear, isoWeek } = isoWeekRef;
+  const { weekStart, weekEnd, weekLabel } = getWeekRangeFromIsoWeek(isoYear, isoWeek);
+  const newProposals: SalesProposal[] = [];
+  const acceptedProposals: SalesProposal[] = [];
+  const rejectedProposals: SalesProposal[] = [];
   proposals.forEach((proposal) => {
     const createdKey = normalizeProposalDateKey(proposal.creatoIl);
     if (createdKey && isDateKeyInRange(createdKey, weekStart, weekEnd)) {
-      newCount += 1;
-      const value = resolveProposalValue(proposal);
-      if (value !== null) newTotalValue += value;
+      newProposals.push(proposal);
     }
     const acceptedKey = normalizeProposalDateKey(proposal.dataAccettazione);
     if (isAcceptedProposal(proposal) && acceptedKey && isDateKeyInRange(acceptedKey, weekStart, weekEnd)) {
-      acceptedCount += 1;
-      const value = resolveProposalValue(proposal);
-      if (value !== null) acceptedTotalValue += value;
+      acceptedProposals.push(proposal);
     }
     const rejectedKey = normalizeProposalDateKey(proposal.dataRifiuto);
     if (isRejectedProposal(proposal) && rejectedKey && isDateKeyInRange(rejectedKey, weekStart, weekEnd)) {
-      rejectedCount += 1;
-      const value = resolveProposalValue(proposal);
-      if (value !== null) rejectedTotalValue += value;
+      rejectedProposals.push(proposal);
     }
   });
+  const sortByCloseOrCreate = (left: SalesProposal, right: SalesProposal): number => {
+    return right.creatoIl.localeCompare(left.creatoIl);
+  };
+  newProposals.sort(sortByCloseOrCreate);
+  acceptedProposals.sort((left, right) => {
+    const leftKey = normalizeProposalDateKey(left.dataAccettazione) || left.creatoIl;
+    const rightKey = normalizeProposalDateKey(right.dataAccettazione) || right.creatoIl;
+    return rightKey.localeCompare(leftKey);
+  });
+  rejectedProposals.sort((left, right) => {
+    const leftKey = normalizeProposalDateKey(left.dataRifiuto) || left.creatoIl;
+    const rightKey = normalizeProposalDateKey(right.dataRifiuto) || right.creatoIl;
+    return rightKey.localeCompare(leftKey);
+  });
   return {
+    isoYear,
+    isoWeek,
     weekLabel,
     weekStart,
     weekEnd,
-    newCount,
-    newTotalValue,
-    acceptedCount,
-    acceptedTotalValue,
-    rejectedCount,
-    rejectedTotalValue,
+    newCount: newProposals.length,
+    newTotalValue: sumProposalValues(newProposals),
+    acceptedCount: acceptedProposals.length,
+    acceptedTotalValue: sumProposalValues(acceptedProposals),
+    rejectedCount: rejectedProposals.length,
+    rejectedTotalValue: sumProposalValues(rejectedProposals),
+    newProposals,
+    acceptedProposals,
+    rejectedProposals,
   };
 }
 

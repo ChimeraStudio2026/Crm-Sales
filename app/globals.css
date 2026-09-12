@@ -8479,16 +8479,6 @@ body:has(.login-page) {
     }
 }
 
-.proposals-weekly-pending-panel {
-    margin-top: 14px;
-}
-
-.proposals-weekly-pending-groups {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
 .proposals-weekly-review-head {
     margin-bottom: 14px;
 }
@@ -8517,12 +8507,12 @@ body:has(.login-page) {
 
 .proposals-weekly-lists {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 14px;
     margin-top: 14px;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1400px) {
     .proposals-weekly-lists {
         grid-template-columns: 1fr;
     }

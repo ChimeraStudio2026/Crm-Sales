@@ -3,7 +3,6 @@
 import { useMemo, useState } from 'react';
 import { ProposalsKpiCard } from '@/components/sales-proposals/proposals-kpi-card';
 import { ProposalsWeeklyList } from '@/components/sales-proposals/proposals-weekly-list';
-import { ProposalsWeeklyPendingGroups } from '@/components/sales-proposals/proposals-weekly-pending-groups';
 import {
   buildProposalWeeklyReview,
   collectProposalIsoYears,
@@ -134,8 +133,14 @@ export function ProposalsWeeklyReview({ proposals }: ProposalsWeeklyReviewProps)
           closedDateLabel="Data No"
           resolveClosedDate={(proposal) => proposal.dataRifiuto}
         />
+        <ProposalsWeeklyList
+          title="Proposte ancora pending"
+          emptyLabel="Nessuna proposta rimasta aperta a fine settimana."
+          proposals={summary.pendingProposals}
+          closedDateLabel="Creata il"
+          resolveClosedDate={(proposal) => proposal.creatoIl}
+        />
       </div>
-      <ProposalsWeeklyPendingGroups proposals={summary.pendingProposals} />
     </div>
   );
 }

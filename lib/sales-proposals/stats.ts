@@ -262,6 +262,26 @@ function isDateKeyInRange(dateKey: string, startKey: string, endKey: string): bo
   return dateKey >= startKey && dateKey <= endKey;
 }
 
+function wasProposalPendingAtWeekEnd(
+  proposal: SalesProposal,
+  weekStart: string,
+  weekEnd: string,
+): boolean {
+  const createdKey = normalizeProposalDateKey(proposal.creatoIl);
+  if (!createdKey || !isDateKeyInRange(createdKey, weekStart, weekEnd)) {
+    return false;
+  }
+  const acceptedKey = normalizeProposalDateKey(proposal.dataAccettazione);
+  if (isAcceptedProposal(proposal) && acceptedKey && acceptedKey <= weekEnd) {
+    return false;
+  }
+  const rejectedKey = normalizeProposalDateKey(proposal.dataRifiuto);
+  if (isRejectedProposal(proposal) && rejectedKey && rejectedKey <= weekEnd) {
+    return false;
+  }
+  return true;
+}
+
 export function buildProposalWeeklyReview(
   proposals: SalesProposal[],
   isoWeekRef: ProposalIsoWeekRef,
@@ -271,10 +291,14 @@ export function buildProposalWeeklyReview(
   const newProposals: SalesProposal[] = [];
   const acceptedProposals: SalesProposal[] = [];
   const rejectedProposals: SalesProposal[] = [];
+  const pendingProposals: SalesProposal[] = [];
   proposals.forEach((proposal) => {
     const createdKey = normalizeProposalDateKey(proposal.creatoIl);
     if (createdKey && isDateKeyInRange(createdKey, weekStart, weekEnd)) {
       newProposals.push(proposal);
+    }
+    if (wasProposalPendingAtWeekEnd(proposal, weekStart, weekEnd)) {
+      pendingProposals.push(proposal);
     }
     const acceptedKey = normalizeProposalDateKey(proposal.dataAccettazione);
     if (isAcceptedProposal(proposal) && acceptedKey && isDateKeyInRange(acceptedKey, weekStart, weekEnd)) {
@@ -299,6 +323,7 @@ export function buildProposalWeeklyReview(
     const rightKey = normalizeProposalDateKey(right.dataRifiuto) || right.creatoIl;
     return rightKey.localeCompare(leftKey);
   });
+  pendingProposals.sort(sortByCloseOrCreate);
   return {
     isoYear,
     isoWeek,
@@ -311,9 +336,12 @@ export function buildProposalWeeklyReview(
     acceptedTotalValue: sumProposalValues(acceptedProposals),
     rejectedCount: rejectedProposals.length,
     rejectedTotalValue: sumProposalValues(rejectedProposals),
+    pendingCount: pendingProposals.length,
+    pendingTotalValue: sumProposalValues(pendingProposals),
     newProposals,
     acceptedProposals,
     rejectedProposals,
+    pendingProposals,
   };
 }
 

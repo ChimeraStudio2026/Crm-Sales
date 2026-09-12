@@ -98,9 +98,12 @@ export interface ProposalWeeklyReviewSummary {
   acceptedTotalValue: number;
   rejectedCount: number;
   rejectedTotalValue: number;
+  pendingCount: number;
+  pendingTotalValue: number;
   newProposals: SalesProposal[];
   acceptedProposals: SalesProposal[];
   rejectedProposals: SalesProposal[];
+  pendingProposals: SalesProposal[];
 }
 
 export type ProposalDetailFilter = 'accepted' | 'rejected' | 'pending';

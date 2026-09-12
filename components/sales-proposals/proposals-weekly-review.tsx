@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { ProposalsKpiCard } from '@/components/sales-proposals/proposals-kpi-card';
 import { ProposalsWeeklyList } from '@/components/sales-proposals/proposals-weekly-list';
+import { ProposalsWeeklyPendingGroups } from '@/components/sales-proposals/proposals-weekly-pending-groups';
 import {
   buildProposalWeeklyReview,
   collectProposalIsoYears,
@@ -58,7 +59,8 @@ export function ProposalsWeeklyReview({ proposals }: ProposalsWeeklyReviewProps)
           <h3>Weekly review</h3>
           <p>
             Settimana {summary.isoWeek} del {summary.isoYear} ({summary.weekLabel}).
-            Nuove proposte per data di creazione; Si e No per data di chiusura.
+            Nuove e pending per data di creazione; Si e No per data di chiusura.
+            Pending = create in settimana e non chiuse entro fine settimana.
           </p>
         </div>
         <div className="proposals-weekly-selectors">
@@ -109,6 +111,13 @@ export function ProposalsWeeklyReview({ proposals }: ProposalsWeeklyReviewProps)
           hint="Chiuse No nella settimana selezionata"
           valueClassName="analysis-kpi-negative"
         />
+        <ProposalsKpiCard
+          label="Ancora pending"
+          value={summary.pendingCount}
+          amountLabel={formatProposalCurrency(summary.pendingTotalValue)}
+          hint="Create in settimana, non chiuse Si/No entro domenica"
+          valueClassName="proposals-kpi-pending"
+        />
       </div>
       <div className="proposals-weekly-lists">
         <ProposalsWeeklyList
@@ -126,6 +135,7 @@ export function ProposalsWeeklyReview({ proposals }: ProposalsWeeklyReviewProps)
           resolveClosedDate={(proposal) => proposal.dataRifiuto}
         />
       </div>
+      <ProposalsWeeklyPendingGroups proposals={summary.pendingProposals} />
     </div>
   );
 }

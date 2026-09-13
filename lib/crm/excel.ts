@@ -768,3 +768,30 @@ export function parseExcelImportBuffer(
   const importYear = detectYearFromFilename(filename) ?? ANALYSIS_YEAR;
   return parseExcelImportBufferWithYear(buffer, importYear, filename);
 }
+
+export function resolveExcelImportFileIssue(file: File): string | null {
+  const normalizedName = file.name.trim().toLowerCase();
+  if (!normalizedName) return 'Seleziona un file valido.';
+  if (normalizedName.endsWith('.xsl') || normalizedName.endsWith('.xslt')) {
+    return 'Il file .xsl non è un foglio Excel. Esporta come .xlsx o .xls da Excel o Google Fogli.';
+  }
+  if (normalizedName.endsWith('.numbers')) {
+    return 'I file Apple Numbers (.numbers) non sono supportati. Esporta in Excel (.xlsx).';
+  }
+  const allowedExtensions = ['.xlsx', '.xls', '.csv'];
+  const hasAllowedExtension = allowedExtensions.some((extension) => normalizedName.endsWith(extension));
+  if (!hasAllowedExtension) {
+    return 'Formato non supportato. Usa .xlsx, .xls o .csv.';
+  }
+  if (file.size <= 0) return 'Il file è vuoto.';
+  return null;
+}
+
+export function buildExcelColumnDetectionMessage(headers: unknown[]): string {
+  const headerPreview = headers
+    .map((header) => String(header ?? '').trim())
+    .filter((header) => header.length > 0)
+    .slice(0, 12)
+    .join(', ');
+  return `Colonne «Cliente» e «Importo» non trovate. Intestazioni rilevate: ${headerPreview || 'nessuna'}.`;
+}

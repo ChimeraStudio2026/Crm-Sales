@@ -8836,3 +8836,172 @@ body:has(.login-page) {
 [data-theme="dark"] .proposals-bar-fill {
     background: var(--primary);
 }
+
+.head-okr-section {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.head-okr-import-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 18px;
+}
+
+.head-okr-import-head {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.head-okr-import-head h3 {
+    margin: 0 0 4px;
+}
+
+.head-okr-import-head p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.head-okr-layout {
+    display: grid;
+    grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+}
+
+.head-okr-sidebar {
+    padding: 14px;
+}
+
+.head-okr-sidebar h3 {
+    margin: 0 0 10px;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.35px;
+    color: var(--text-secondary);
+}
+
+.head-okr-program-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.head-okr-program-item {
+    width: 100%;
+    text-align: left;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    cursor: pointer;
+}
+
+.head-okr-program-item.is-active {
+    border-color: var(--primary);
+    box-shadow: var(--shadow-sm);
+}
+
+.head-okr-program-item span {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+}
+
+.head-okr-empty {
+    padding: 28px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+}
+
+.head-okr-intro {
+    white-space: pre-wrap;
+    color: var(--text-secondary);
+    margin: 0 0 12px;
+}
+
+.head-okr-progress-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    font-size: 0.9rem;
+}
+
+.head-okr-saving {
+    color: var(--text-secondary);
+}
+
+.head-okr-checkpoints {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.head-okr-objective {
+    margin-bottom: 18px;
+}
+
+.head-okr-objective-head h4 {
+    margin: 0 0 6px;
+}
+
+.head-okr-objective-head p {
+    margin: 0 0 10px;
+    color: var(--text-secondary);
+}
+
+.head-okr-table th,
+.head-okr-table td {
+    vertical-align: top;
+}
+
+.head-okr-kr-title {
+    min-width: 180px;
+    white-space: pre-wrap;
+}
+
+.head-okr-metric {
+    white-space: pre-wrap;
+    min-width: 200px;
+}
+
+.head-okr-status-select {
+    min-width: 130px;
+}
+
+.head-okr-admin-note {
+    width: 100%;
+    min-width: 160px;
+    resize: vertical;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px;
+    background: var(--surface);
+    color: var(--text-primary);
+    font: inherit;
+}
+
+@media (max-width: 1100px) {
+    .head-okr-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .head-okr-import-card {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}

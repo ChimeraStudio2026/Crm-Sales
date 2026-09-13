@@ -10,7 +10,7 @@ quando parli con l'ai digli sempre: "usa supabase mcp per fare le modifiche" e a
 bon in realtà basta.
 
 jeck@chimerastudioss.com
-virginia.riva@chimerastudioss.com
+virginia.velcich@chimerastudioss.com
 
 Password: 0987654321 (utilizza queste credenziali per entrambi)
 

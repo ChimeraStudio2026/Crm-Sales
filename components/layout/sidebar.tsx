@@ -15,6 +15,7 @@ import {
   Settings,
   Snowflake,
   Sparkles,
+  Target,
   Users,
   type LucideIcon,
 } from 'lucide-react';
@@ -38,6 +39,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Snowflake,
   FileSpreadsheet,
   Settings,
+  Target,
 };
 
 export function Sidebar() {

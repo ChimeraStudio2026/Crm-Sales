@@ -7,8 +7,10 @@ import {
   SUPPORTED_IMPORT_YEARS,
 } from '@/lib/constants/crm';
 import {
+  buildExcelColumnDetectionMessage,
   getRevenueFieldForImportYear,
   parseExcelImportBufferWithYear,
+  resolveExcelImportFileIssue,
   type ExcelImportParseResult,
 } from '@/lib/crm/excel';
 import { formatCurrency, hasExcelRevenueDifference } from '@/lib/crm/utils';
@@ -49,20 +51,26 @@ export function ImportSection() {
   }, []);
 
   const handleFile = useCallback(async (file: File) => {
+    const fileIssue = resolveExcelImportFileIssue(file);
+    if (fileIssue) {
+      showToast(fileIssue, 'danger');
+      return;
+    }
     showToast(`Analisi del file: ${file.name}...`, 'info');
     try {
       const buffer = await file.arrayBuffer();
       const result = parseExcelBuffer(buffer, file.name);
       if (result.detected.clientCol === -1 || result.detected.importoCol === -1) {
-        showToast('Colonne Cliente e Importo non trovate nel file.', 'danger');
+        showToast(buildExcelColumnDetectionMessage(result.headers), 'danger');
         return;
       }
       setRawBuffer(buffer);
       setSourceFilename(file.name);
       applyParseResult(result);
       showToast(`Anteprima pronta (${result.importYear}).`, 'success');
-    } catch {
-      showToast('Lettura Excel fallita.', 'danger');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Lettura Excel fallita.';
+      showToast(message, 'danger');
     }
   }, [applyParseResult, parseExcelBuffer, showToast]);
 
@@ -116,7 +124,7 @@ export function ImportSection() {
                 <input
                   id="excel-file-input"
                   type="file"
-                  accept=".xlsx,.xls,.csv"
+                  accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
                   style={{ display: 'none' }}
                   onChange={(e) => {
                     const file = e.target.files?.[0];
@@ -125,7 +133,10 @@ export function ImportSection() {
                 />
                 <div className="dropzone-icon"><CloudUpload size={48} /></div>
                 <h3>Trascina il tuo file Excel qui</h3>
-                <p>O clicca per selezionare (.xlsx, .xls o .csv). Supportati import 2023–2026.</p>
+                <p>
+                  O clicca per selezionare (.xlsx, .xls o .csv). Non usare .xsl (non è Excel).
+                  Supportati import 2023–2026.
+                </p>
                 <span className="btn btn-secondary">Seleziona File</span>
               </div>
             )}

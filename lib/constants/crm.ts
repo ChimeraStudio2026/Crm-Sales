@@ -25,7 +25,7 @@ export function resolveOwnerFromEmail(email: string | null | undefined): Owner |
   const normalizedEmail = (email || '').trim().toLowerCase();
   if (!normalizedEmail) return null;
   if (normalizedEmail.includes('martino.ilacqua')) return 'Martino';
-  if (normalizedEmail.includes('virginia.riva')) return 'Virgi';
+  if (normalizedEmail.includes('velcich')) return 'Virgi';
   if (normalizedEmail.includes('martina.gavazzi')) return 'Martina';
   if (normalizedEmail.includes('jeck')) return 'Jeck';
   return null;
@@ -113,6 +113,7 @@ export const EXCEL_IMPORT_DESC_PREFIX = 'Cliente creato da import Excel';
 
 export const NAV_ITEMS = [
   { href: '/analysis', label: 'Analisi', icon: 'BarChart3' },
+  { href: '/okr', label: 'OKR', icon: 'Target' },
   { href: '/proposte', label: 'Proposte', icon: 'FileText' },
   { href: '/clients', label: 'Lista Clienti', icon: 'Users' },
   { href: '/funnel', label: 'Funnel Commerciale', icon: 'GitBranch' },
@@ -123,6 +124,7 @@ export const NAV_ITEMS = [
 
 export const PAGE_META: Record<string, { title: string; subtitle: string }> = {
   '/analysis': { title: 'Analisi', subtitle: 'OKR, previsioni e breakdown per quarter.' },
+  '/okr': { title: 'OKR', subtitle: 'Framework di valutazione per Head of: checkpoint, obiettivi e key result.' },
   '/proposte': { title: 'Proposte', subtitle: 'Preventivi commerciali: KPI, ticket medio e clienti per categoria.' },
   '/clients': {
     title: 'Gestione Clienti',

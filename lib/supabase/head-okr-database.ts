@@ -104,13 +104,33 @@ export async function updateHeadOkrProgramContent(
   programId: string,
   content: HeadOkrProgramContent,
 ): Promise<HeadOkrProgram> {
+  return updateHeadOkrProgram(programId, { content });
+}
+
+export interface HeadOkrProgramUpdatePayload {
+  introText?: string;
+  roleTitle?: string;
+  sheetTitle?: string;
+  frameworkLabel?: string;
+  content?: HeadOkrProgramContent;
+}
+
+export async function updateHeadOkrProgram(
+  programId: string,
+  payload: HeadOkrProgramUpdatePayload,
+): Promise<HeadOkrProgram> {
   const supabase = requireBrowserSupabaseClient();
+  const updatePayload: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+  if (payload.introText !== undefined) updatePayload.intro_text = payload.introText;
+  if (payload.roleTitle !== undefined) updatePayload.role_title = payload.roleTitle;
+  if (payload.sheetTitle !== undefined) updatePayload.sheet_title = payload.sheetTitle;
+  if (payload.frameworkLabel !== undefined) updatePayload.framework_label = payload.frameworkLabel;
+  if (payload.content !== undefined) updatePayload.content = payload.content;
   const { data, error } = await supabase
     .from('head_okr_programs')
-    .update({
-      content,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updatePayload)
     .eq('id', programId)
     .select('*')
     .single();

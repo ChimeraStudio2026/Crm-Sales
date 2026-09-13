@@ -1,6 +1,10 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import {
+  isHeadOkrViewerEmail,
+  isPathHeadOkrSection,
+} from '@/lib/crm/head-okr-access';
+import {
   isPathAllowedForTinytoast,
   isTinytoastUserEmail,
   resolveWorkspaceAccess,
@@ -55,6 +59,12 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   if (user && isTinytoastUserEmail(user.email) && !isPathAllowedForTinytoast(request.nextUrl.pathname)) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = '/funnel';
+    redirectUrl.search = '';
+    return NextResponse.redirect(redirectUrl);
+  }
+  if (user && isPathHeadOkrSection(request.nextUrl.pathname) && !isHeadOkrViewerEmail(user.email)) {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = resolveWorkspaceAccess(user.email).homePath;
     redirectUrl.search = '';
     return NextResponse.redirect(redirectUrl);
   }

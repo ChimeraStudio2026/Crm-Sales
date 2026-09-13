@@ -5,14 +5,20 @@ import { Target } from 'lucide-react';
 import { TopHeader } from '@/components/layout/top-header';
 import { HeadOkrImportCard } from '@/components/head-okr/head-okr-import-card';
 import { HeadOkrProgramView } from '@/components/head-okr/head-okr-program-view';
+import {
+  filterHeadOkrProgramsForViewer,
+  isHeadOkrEditorEmail,
+  isHeadOkrViewerEmail,
+} from '@/lib/crm/head-okr-access';
 import { parseHeadOkrFrameworkBuffer } from '@/lib/head-okr/parse-framework-xlsx';
 import { buildHeadOkrProgressSummary } from '@/lib/head-okr/stats';
 import {
   fetchHeadOkrPrograms,
-  updateHeadOkrProgramContent,
+  updateHeadOkrProgram,
   upsertHeadOkrProgramFromDraft,
 } from '@/lib/supabase/head-okr-database';
 import type { HeadOkrProgram, HeadOkrProgramContent } from '@/lib/types/head-okr';
+import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
 
@@ -23,6 +29,16 @@ export function HeadOkrSection() {
   const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
+  const canEdit = isHeadOkrEditorEmail(userEmail);
+  const canView = isHeadOkrViewerEmail(userEmail);
+  useEffect(() => {
+    const supabase = createBrowserSupabaseClient();
+    if (!supabase) return;
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUserEmail(user?.email || '');
+    });
+  }, []);
   const loadPrograms = useCallback(async (): Promise<void> => {
     setIsLoading(true);
     try {
@@ -42,11 +58,25 @@ export function HeadOkrSection() {
   useEffect(() => {
     void loadPrograms();
   }, [loadPrograms]);
-  const selectedProgram = useMemo(
-    () => programs.find((program) => program.id === selectedProgramId) ?? null,
-    [programs, selectedProgramId],
+  const visiblePrograms = useMemo(
+    () => filterHeadOkrProgramsForViewer(programs, userEmail),
+    [programs, userEmail],
   );
+  const selectedProgram = useMemo(
+    () => visiblePrograms.find((program) => program.id === selectedProgramId) ?? null,
+    [visiblePrograms, selectedProgramId],
+  );
+  useEffect(() => {
+    if (visiblePrograms.length === 0) {
+      setSelectedProgramId(null);
+      return;
+    }
+    if (!selectedProgramId || !visiblePrograms.some((program) => program.id === selectedProgramId)) {
+      setSelectedProgramId(visiblePrograms[0].id);
+    }
+  }, [selectedProgramId, visiblePrograms]);
   const handleImport = async (buffer: ArrayBuffer): Promise<void> => {
+    if (!canEdit) return;
     const draft = parseHeadOkrFrameworkBuffer(buffer);
     const saved = await upsertHeadOkrProgramFromDraft(workspaceId, draft);
     setPrograms((current) => {
@@ -55,11 +85,16 @@ export function HeadOkrSection() {
     });
     setSelectedProgramId(saved.id);
   };
-  const handleSaveContent = async (content: HeadOkrProgramContent): Promise<void> => {
-    if (!selectedProgram) return;
+  const handleSaveProgram = async (payload: {
+    introText?: string;
+    roleTitle?: string;
+    sheetTitle?: string;
+    content?: HeadOkrProgramContent;
+  }): Promise<void> => {
+    if (!selectedProgram || !canEdit) return;
     setIsSaving(true);
     try {
-      const saved = await updateHeadOkrProgramContent(selectedProgram.id, content);
+      const saved = await updateHeadOkrProgram(selectedProgram.id, payload);
       setPrograms((current) => current.map((program) => (
         program.id === saved.id ? saved : program
       )));
@@ -70,47 +105,68 @@ export function HeadOkrSection() {
       setIsSaving(false);
     }
   };
+  if (!canView) {
+    return (
+      <>
+        <TopHeader />
+        <div className="content-body">
+          <p className="proposals-empty">Non hai accesso a questa sezione.</p>
+        </div>
+      </>
+    );
+  }
   return (
     <>
       <TopHeader />
       <div className="content-body">
         <section className="app-section active head-okr-section">
-          <HeadOkrImportCard onImport={handleImport} onToast={showToast} />
+          {canEdit ? (
+            <HeadOkrImportCard onImport={handleImport} onToast={showToast} />
+          ) : null}
           {isLoading ? (
             <p className="proposals-empty">Caricamento framework OKR…</p>
-          ) : programs.length === 0 ? (
-            <div className="glass-card proposals-panel head-okr-empty">
+          ) : visiblePrograms.length === 0 ? (
+            <div className="glass-card head-okr-empty">
               <Target size={28} />
               <h3>Nessun OKR Head</h3>
-              <p>Importa il file Excel del framework (es. OKR-Virginia-Velcich…) per creare la prima scheda.</p>
+              <p>
+                {canEdit
+                  ? 'Importa il file Excel del framework per creare la prima scheda.'
+                  : 'Il tuo framework OKR non è ancora disponibile.'}
+              </p>
             </div>
           ) : (
-            <div className="head-okr-layout">
-              <aside className="glass-card head-okr-sidebar">
-                <h3>Head of</h3>
-                <ul className="head-okr-program-list">
-                  {programs.map((program) => {
-                    const summary = buildHeadOkrProgressSummary(program);
-                    return (
-                      <li key={program.id}>
-                        <button
-                          type="button"
-                          className={`head-okr-program-item${program.id === selectedProgramId ? ' is-active' : ''}`}
-                          onClick={() => setSelectedProgramId(program.id)}
-                        >
-                          <strong>{program.headName}</strong>
-                          <span>{program.roleTitle}</span>
-                          <span>{Math.round(summary.progressRatio * 100)}% · {summary.doneKeyResults}/{summary.totalKeyResults} KR</span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </aside>
+            <div className={`head-okr-layout${visiblePrograms.length === 1 ? ' head-okr-layout--single' : ''}`}>
+              {visiblePrograms.length > 1 ? (
+                <aside className="glass-card head-okr-sidebar">
+                  <h3>Head of</h3>
+                  <ul className="head-okr-program-list">
+                    {visiblePrograms.map((program) => {
+                      const summary = buildHeadOkrProgressSummary(program);
+                      return (
+                        <li key={program.id}>
+                          <button
+                            type="button"
+                            className={`head-okr-program-item${program.id === selectedProgramId ? ' is-active' : ''}`}
+                            onClick={() => setSelectedProgramId(program.id)}
+                          >
+                            <strong>{program.headName}</strong>
+                            <span>{program.roleTitle}</span>
+                            <span className="head-okr-program-item-progress">
+                              {Math.round(summary.progressRatio * 100)}% · {summary.doneKeyResults}/{summary.totalKeyResults} KR
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </aside>
+              ) : null}
               {selectedProgram ? (
                 <HeadOkrProgramView
                   program={selectedProgram}
-                  onSaveContent={handleSaveContent}
+                  canEdit={canEdit}
+                  onSaveProgram={handleSaveProgram}
                   isSaving={isSaving}
                 />
               ) : null}

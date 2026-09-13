@@ -19,9 +19,10 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CrmLogo } from '@/components/ui/crm-logo';
 import { NAV_ITEMS } from '@/lib/constants/crm';
+import { isHeadOkrViewerEmail } from '@/lib/crm/head-okr-access';
 import { getNavItemsForAccess } from '@/lib/crm/workspace-access';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { useUiPreferences } from '@/providers/ui-preferences-provider';
@@ -47,7 +48,6 @@ export function Sidebar() {
   const router = useRouter();
   const { logoDesktopSize } = useUiPreferences();
   const { access } = useWorkspace();
-  const navItems = getNavItemsForAccess(access);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string>('');
   const [isDesktopViewport, setIsDesktopViewport] = useState(false);
@@ -68,6 +68,12 @@ export function Sidebar() {
       setUserEmail(user?.email || '');
     });
   }, []);
+
+  const navItems = useMemo(() => (
+    getNavItemsForAccess(access).filter((item) => (
+      item.href !== '/okr' || isHeadOkrViewerEmail(userEmail)
+    ))
+  ), [access, userEmail]);
 
   const handleSignOut = async () => {
     const supabase = createBrowserSupabaseClient();

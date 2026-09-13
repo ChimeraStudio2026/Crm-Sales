@@ -8840,7 +8840,7 @@ body:has(.login-page) {
 .head-okr-section {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 16px;
 }
 
 .head-okr-import-card {
@@ -8848,7 +8848,8 @@ body:has(.login-page) {
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    padding: 16px 18px;
+    padding: 16px 20px;
+    border: 1px dashed var(--border);
 }
 
 .head-okr-import-head {
@@ -8865,24 +8866,32 @@ body:has(.login-page) {
     margin: 0;
     color: var(--text-secondary);
     font-size: 0.9rem;
+    max-width: 52ch;
 }
 
 .head-okr-layout {
     display: grid;
-    grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
-    gap: 14px;
+    grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+    gap: 16px;
     align-items: start;
 }
 
+.head-okr-layout--single {
+    grid-template-columns: minmax(0, 1fr);
+}
+
 .head-okr-sidebar {
-    padding: 14px;
+    padding: 16px;
+    position: sticky;
+    top: 12px;
 }
 
 .head-okr-sidebar h3 {
-    margin: 0 0 10px;
-    font-size: 0.85rem;
+    margin: 0 0 12px;
+    font-size: 0.78rem;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.35px;
+    letter-spacing: 0.4px;
     color: var(--text-secondary);
 }
 
@@ -8892,7 +8901,7 @@ body:has(.login-page) {
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
 }
 
 .head-okr-program-item {
@@ -8900,17 +8909,23 @@ body:has(.login-page) {
     text-align: left;
     border: 1px solid var(--border);
     background: var(--surface);
-    border-radius: 10px;
-    padding: 10px 12px;
+    border-radius: 12px;
+    padding: 12px 14px;
     display: flex;
     flex-direction: column;
     gap: 4px;
     cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.head-okr-program-item:hover {
+    border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
 }
 
 .head-okr-program-item.is-active {
     border-color: var(--primary);
     box-shadow: var(--shadow-sm);
+    background: color-mix(in srgb, var(--primary) 6%, var(--surface));
 }
 
 .head-okr-program-item span {
@@ -8918,81 +8933,312 @@ body:has(.login-page) {
     color: var(--text-secondary);
 }
 
+.head-okr-program-item-progress {
+    font-weight: 600;
+    color: var(--text-primary) !important;
+}
+
 .head-okr-empty {
-    padding: 28px;
+    padding: 36px 24px;
     text-align: center;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
     align-items: center;
 }
 
-.head-okr-intro {
-    white-space: pre-wrap;
-    color: var(--text-secondary);
-    margin: 0 0 12px;
+.head-okr-program-head {
+    padding: 20px 22px;
 }
 
-.head-okr-progress-row {
+.head-okr-program-head-top {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
-    align-items: center;
-    font-size: 0.9rem;
+    gap: 16px;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 14px;
+}
+
+.head-okr-program-head h3 {
+    margin: 0 0 6px;
+    font-size: 1.35rem;
+}
+
+.head-okr-role-line {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+}
+
+.head-okr-progress-card {
+    min-width: 200px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--primary) 5%, var(--surface));
+}
+
+.head-okr-progress-label {
+    display: block;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.35px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.head-okr-progress-value {
+    font-size: 1.5rem;
+    line-height: 1.1;
+}
+
+.head-okr-progress-bar {
+    height: 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--border) 70%, transparent);
+    margin: 10px 0 8px;
+    overflow: hidden;
+}
+
+.head-okr-progress-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--primary), color-mix(in srgb, var(--primary) 70%, #22c55e));
+}
+
+.head-okr-progress-meta {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+}
+
+.head-okr-intro,
+.head-okr-readonly-hint {
+    white-space: pre-wrap;
+    color: var(--text-secondary);
+    margin: 0;
+    font-size: 0.92rem;
+    line-height: 1.5;
+}
+
+.head-okr-readonly-hint {
+    margin-top: 12px;
+    font-size: 0.82rem;
+    font-style: italic;
 }
 
 .head-okr-saving {
+    margin: 10px 0 0;
     color: var(--text-secondary);
+    font-size: 0.85rem;
 }
 
 .head-okr-checkpoints {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
+}
+
+.head-okr-checkpoint {
+    overflow: hidden;
+    padding: 0;
+}
+
+.head-okr-checkpoint-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 16px;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    font: inherit;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+}
+
+.head-okr-checkpoint.is-open .head-okr-checkpoint-icon {
+    transform: rotate(90deg);
+}
+
+.head-okr-checkpoint-icon {
+    transition: transform 0.15s ease;
+    flex-shrink: 0;
+}
+
+.head-okr-checkpoint-body {
+    padding: 0 16px 16px;
+    border-top: 1px solid var(--border);
 }
 
 .head-okr-objective {
-    margin-bottom: 18px;
+    margin-top: 16px;
 }
 
-.head-okr-objective-head h4 {
-    margin: 0 0 6px;
+.head-okr-objective-head {
+    margin-bottom: 10px;
 }
 
-.head-okr-objective-head p {
-    margin: 0 0 10px;
+.head-okr-objective-title {
+    display: block;
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 6px;
+}
+
+.head-okr-objective-desc {
     color: var(--text-secondary);
+    font-size: 0.92rem;
+    line-height: 1.45;
 }
 
-.head-okr-table th,
-.head-okr-table td {
+.head-okr-table-wrap {
+    overflow: auto;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+
+.head-okr-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+}
+
+.head-okr-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: color-mix(in srgb, var(--surface-elevated, var(--surface)) 92%, var(--primary) 8%);
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.35px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.head-okr-table tbody td {
     vertical-align: top;
+    padding: 10px 12px;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+    line-height: 1.4;
 }
 
-.head-okr-kr-title {
-    min-width: 180px;
-    white-space: pre-wrap;
+.head-okr-table tbody tr:last-child td {
+    border-bottom: none;
 }
 
-.head-okr-metric {
-    white-space: pre-wrap;
-    min-width: 200px;
+.head-okr-row--done {
+    background: color-mix(in srgb, #16a34a 12%, var(--surface));
+}
+
+.head-okr-row--progress {
+    background: color-mix(in srgb, var(--primary) 8%, var(--surface));
+}
+
+.head-okr-row--blocked {
+    background: color-mix(in srgb, var(--danger, #dc2626) 8%, var(--surface));
+}
+
+.head-okr-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+
+.head-okr-status--done {
+    color: #166534;
+    background: #dcfce7;
+    border-color: #86efac;
+}
+
+.head-okr-status--progress {
+    color: #1d4ed8;
+    background: #dbeafe;
+    border-color: #93c5fd;
+}
+
+.head-okr-status--blocked {
+    color: #991b1b;
+    background: #fee2e2;
+    border-color: #fca5a5;
+}
+
+.head-okr-status--pending {
+    color: var(--text-secondary);
+    background: color-mix(in srgb, var(--border) 35%, var(--surface));
+    border-color: var(--border);
+}
+
+.head-okr-status-select.head-okr-status--done {
+    border-color: #86efac;
+    background: #f0fdf4;
+}
+
+.head-okr-status-select.head-okr-status--progress {
+    border-color: #93c5fd;
+    background: #eff6ff;
 }
 
 .head-okr-status-select {
-    min-width: 130px;
+    min-width: 140px;
 }
 
-.head-okr-admin-note {
+.head-okr-field {
     width: 100%;
-    min-width: 160px;
-    resize: vertical;
-    border: 1px solid var(--border);
+    border: 1px solid transparent;
     border-radius: 8px;
-    padding: 8px;
-    background: var(--surface);
+    padding: 6px 8px;
+    background: transparent;
     color: var(--text-primary);
     font: inherit;
+}
+
+.head-okr-field:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: var(--surface);
+}
+
+.head-okr-field-multiline {
+    resize: vertical;
+    min-height: 56px;
+    white-space: pre-wrap;
+}
+
+.head-okr-title-input {
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.head-okr-subtitle-input,
+.head-okr-intro-input {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .head-okr-status--done {
+    color: #bbf7d0;
+    background: color-mix(in srgb, #16a34a 22%, #052e16);
+    border-color: #15803d;
+}
+
+[data-theme="dark"] .head-okr-row--done {
+    background: color-mix(in srgb, #16a34a 18%, var(--surface));
+}
+
+[data-theme="dark"] .head-okr-status--progress {
+    color: #bfdbfe;
+    background: color-mix(in srgb, #2563eb 22%, #0f172a);
 }
 
 @media (max-width: 1100px) {
@@ -9000,8 +9246,16 @@ body:has(.login-page) {
         grid-template-columns: 1fr;
     }
 
+    .head-okr-sidebar {
+        position: static;
+    }
+
     .head-okr-import-card {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .head-okr-program-head-top {
+        flex-direction: column;
     }
 }

@@ -8947,201 +8947,202 @@ body:has(.login-page) {
     align-items: center;
 }
 
-.head-okr-program-head {
-    padding: 20px 22px;
+.head-okr-program {
+    min-width: 0;
 }
 
-.head-okr-program-head-top {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 14px;
-}
-
-.head-okr-program-head h3 {
-    margin: 0 0 6px;
-    font-size: 1.35rem;
-}
-
-.head-okr-role-line {
-    margin: 0;
-    color: var(--text-secondary);
-    font-size: 0.92rem;
-}
-
-.head-okr-progress-card {
-    min-width: 200px;
-    padding: 12px 14px;
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    background: color-mix(in srgb, var(--primary) 5%, var(--surface));
-}
-
-.head-okr-progress-label {
-    display: block;
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.35px;
-    color: var(--text-secondary);
-    margin-bottom: 4px;
-}
-
-.head-okr-progress-value {
-    font-size: 1.5rem;
-    line-height: 1.1;
-}
-
-.head-okr-progress-bar {
-    height: 8px;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--border) 70%, transparent);
-    margin: 10px 0 8px;
+.head-okr-sheet {
+    background: #ffffff;
+    color: #111827;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
     overflow: hidden;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
 }
 
-.head-okr-progress-fill {
-    height: 100%;
-    border-radius: inherit;
-    background: linear-gradient(90deg, var(--primary), color-mix(in srgb, var(--primary) 70%, #22c55e));
+.head-okr-banner {
+    padding: 10px 14px;
 }
 
-.head-okr-progress-meta {
-    font-size: 0.82rem;
-    color: var(--text-secondary);
+.head-okr-banner--main {
+    background: #0b1220;
+}
+
+.head-okr-banner--checkpoint {
+    background: #0b1220;
+    margin-top: 2px;
+}
+
+.head-okr-banner--objective {
+    background: #475569;
+}
+
+.head-okr-banner-text {
+    margin: 0;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 1rem;
+    line-height: 1.35;
+}
+
+.head-okr-banner--main .head-okr-banner-text {
+    font-size: 1.12rem;
+}
+
+.head-okr-banner-input {
+    width: 100%;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    font: inherit;
+    font-weight: 700;
+    padding: 6px 8px;
+}
+
+.head-okr-banner-input--title {
+    font-size: 1.12rem;
+}
+
+.head-okr-banner-input--objective {
+    font-size: 0.98rem;
+}
+
+.head-okr-intro-block {
+    padding: 12px 14px 10px;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
 }
 
 .head-okr-intro,
-.head-okr-readonly-hint {
+.head-okr-intro-input {
     white-space: pre-wrap;
-    color: var(--text-secondary);
-    margin: 0;
+    margin: 0 0 10px;
+    color: #334155;
     font-size: 0.92rem;
-    line-height: 1.5;
+    line-height: 1.55;
+    font-style: italic;
+}
+
+.head-okr-sheet-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    font-size: 0.8rem;
+    color: #64748b;
+}
+
+.head-okr-sheet-progress {
+    font-weight: 700;
+    color: #0f766e;
 }
 
 .head-okr-readonly-hint {
-    margin-top: 12px;
-    font-size: 0.82rem;
     font-style: italic;
 }
 
 .head-okr-saving {
-    margin: 10px 0 0;
-    color: var(--text-secondary);
-    font-size: 0.85rem;
+    font-style: italic;
 }
 
-.head-okr-checkpoints {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+.head-okr-checkpoint-block + .head-okr-checkpoint-block {
+    margin-top: 0;
 }
 
-.head-okr-checkpoint {
-    overflow: hidden;
-    padding: 0;
+.head-okr-objective-block + .head-okr-objective-block {
+    border-top: 6px solid #ffffff;
 }
 
-.head-okr-checkpoint-toggle {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 14px 16px;
-    border: none;
-    background: transparent;
-    color: var(--text-primary);
-    font: inherit;
-    font-weight: 700;
-    text-align: left;
-    cursor: pointer;
-}
-
-.head-okr-checkpoint.is-open .head-okr-checkpoint-icon {
-    transform: rotate(90deg);
-}
-
-.head-okr-checkpoint-icon {
-    transition: transform 0.15s ease;
-    flex-shrink: 0;
-}
-
-.head-okr-checkpoint-body {
-    padding: 0 16px 16px;
-    border-top: 1px solid var(--border);
-}
-
-.head-okr-objective {
-    margin-top: 16px;
-}
-
-.head-okr-objective-head {
-    margin-bottom: 10px;
-}
-
-.head-okr-objective-title {
-    display: block;
-    font-weight: 700;
-    font-size: 1rem;
-    margin-bottom: 6px;
+.head-okr-objective-desc-row {
+    padding: 10px 14px;
+    background: #eef2ff;
+    border-bottom: 1px solid #dbeafe;
 }
 
 .head-okr-objective-desc {
-    color: var(--text-secondary);
-    font-size: 0.92rem;
-    line-height: 1.45;
+    display: block;
+    margin: 0;
+    color: #1e293b;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    font-style: italic;
 }
 
 .head-okr-table-wrap {
     overflow: auto;
-    border: 1px solid var(--border);
-    border-radius: 12px;
+    border-top: 1px solid #cbd5e1;
 }
 
 .head-okr-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.88rem;
+    font-size: 0.86rem;
+    background: #ffffff;
 }
 
 .head-okr-table thead th {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    background: color-mix(in srgb, var(--surface-elevated, var(--surface)) 92%, var(--primary) 8%);
-    text-align: left;
-    padding: 10px 12px;
-    border-bottom: 1px solid var(--border);
-    font-size: 0.74rem;
-    text-transform: uppercase;
-    letter-spacing: 0.35px;
-    color: var(--text-secondary);
+    background: #64748b;
+    color: #ffffff;
+    text-align: center;
+    padding: 8px 10px;
+    border: 1px solid #475569;
+    font-size: 0.78rem;
+    font-weight: 700;
     white-space: nowrap;
 }
 
 .head-okr-table tbody td {
     vertical-align: top;
-    padding: 10px 12px;
-    border-bottom: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
-    line-height: 1.4;
+    padding: 8px 10px;
+    border: 1px solid #dbeafe;
+    line-height: 1.45;
+    background: #ffffff;
+    color: #0f172a;
 }
 
-.head-okr-table tbody tr:last-child td {
-    border-bottom: none;
+.head-okr-col-kr {
+    min-width: 220px;
 }
 
-.head-okr-row--done {
-    background: color-mix(in srgb, #16a34a 12%, var(--surface));
+.head-okr-col-status {
+    width: 150px;
+    text-align: center;
 }
 
-.head-okr-row--progress {
-    background: color-mix(in srgb, var(--primary) 8%, var(--surface));
+.head-okr-col-metric {
+    min-width: 240px;
 }
 
-.head-okr-row--blocked {
-    background: color-mix(in srgb, var(--danger, #dc2626) 8%, var(--surface));
+.head-okr-col-value {
+    width: 120px;
+    text-align: center;
+    font-weight: 600;
+}
+
+.head-okr-col-note {
+    min-width: 160px;
+}
+
+.head-okr-value--required {
+    background: #d1fae5 !important;
+    color: #065f46;
+}
+
+.head-okr-value--secondary {
+    background: #fef3c7 !important;
+    color: #92400e;
+}
+
+.head-okr-row--done td {
+    background: color-mix(in srgb, #bbf7d0 55%, #ffffff) !important;
+}
+
+.head-okr-row--progress td {
+    background: color-mix(in srgb, #dbeafe 50%, #ffffff) !important;
+}
+
+.head-okr-row--blocked td {
+    background: color-mix(in srgb, #fecaca 45%, #ffffff) !important;
 }
 
 .head-okr-status-badge {
@@ -9174,39 +9175,56 @@ body:has(.login-page) {
 }
 
 .head-okr-status--pending {
-    color: var(--text-secondary);
-    background: color-mix(in srgb, var(--border) 35%, var(--surface));
-    border-color: var(--border);
+    color: #9a3412;
+    background: #fef3c7;
+    border-color: #fdba74;
+}
+
+.head-okr-status-select {
+    width: 100%;
+    min-width: 130px;
+    border-radius: 999px;
+    border: 1px solid #fdba74;
+    background: #fff7ed;
+    color: #9a3412;
+    font-weight: 700;
+    font-size: 0.78rem;
+    padding: 6px 10px;
+    text-align: center;
 }
 
 .head-okr-status-select.head-okr-status--done {
     border-color: #86efac;
     background: #f0fdf4;
+    color: #166534;
 }
 
 .head-okr-status-select.head-okr-status--progress {
     border-color: #93c5fd;
     background: #eff6ff;
+    color: #1d4ed8;
 }
 
-.head-okr-status-select {
-    min-width: 140px;
+.head-okr-status-select.head-okr-status--blocked {
+    border-color: #fca5a5;
+    background: #fef2f2;
+    color: #991b1b;
 }
 
 .head-okr-field {
     width: 100%;
     border: 1px solid transparent;
-    border-radius: 8px;
-    padding: 6px 8px;
+    border-radius: 4px;
+    padding: 4px 6px;
     background: transparent;
-    color: var(--text-primary);
+    color: inherit;
     font: inherit;
 }
 
 .head-okr-field:focus {
     outline: none;
-    border-color: var(--primary);
-    background: var(--surface);
+    border-color: #64748b;
+    background: #f8fafc;
 }
 
 .head-okr-field-multiline {
@@ -9215,30 +9233,39 @@ body:has(.login-page) {
     white-space: pre-wrap;
 }
 
-.head-okr-title-input {
-    font-size: 1.35rem;
-    font-weight: 700;
-    margin-bottom: 6px;
+[data-theme="dark"] .head-okr-sheet {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-color: #334155;
 }
 
-.head-okr-subtitle-input,
-.head-okr-intro-input {
-    color: var(--text-secondary);
+[data-theme="dark"] .head-okr-intro-block {
+    background: #0f172a;
+    border-bottom-color: #334155;
 }
 
-[data-theme="dark"] .head-okr-status--done {
-    color: #bbf7d0;
-    background: color-mix(in srgb, #16a34a 22%, #052e16);
-    border-color: #15803d;
+[data-theme="dark"] .head-okr-intro,
+[data-theme="dark"] .head-okr-intro-input {
+    color: #cbd5e1;
 }
 
-[data-theme="dark"] .head-okr-row--done {
-    background: color-mix(in srgb, #16a34a 18%, var(--surface));
+[data-theme="dark"] .head-okr-objective-desc-row {
+    background: #1e293b;
+    border-bottom-color: #334155;
 }
 
-[data-theme="dark"] .head-okr-status--progress {
-    color: #bfdbfe;
-    background: color-mix(in srgb, #2563eb 22%, #0f172a);
+[data-theme="dark"] .head-okr-objective-desc {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .head-okr-table tbody td {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .head-okr-row--done td {
+    background: color-mix(in srgb, #166534 35%, #0f172a) !important;
 }
 
 @media (max-width: 1100px) {
@@ -9253,9 +9280,5 @@ body:has(.login-page) {
     .head-okr-import-card {
         flex-direction: column;
         align-items: stretch;
-    }
-
-    .head-okr-program-head-top {
-        flex-direction: column;
     }
 }

@@ -1,8 +1,11 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { ChevronRight } from 'lucide-react';
-import { resolveHeadOkrRowClassName, resolveHeadOkrStatusClassName } from '@/lib/head-okr/status-style';
+import { useMemo } from 'react';
+import {
+  resolveHeadOkrRowClassName,
+  resolveHeadOkrStatusClassName,
+  resolveHeadOkrValueLabelClassName,
+} from '@/lib/head-okr/status-style';
 import { buildHeadOkrProgressSummary } from '@/lib/head-okr/stats';
 import { HEAD_OKR_STATUS_OPTIONS } from '@/lib/types/head-okr';
 import type { HeadOkrKeyResult, HeadOkrProgram, HeadOkrProgramContent } from '@/lib/types/head-okr';
@@ -76,9 +79,6 @@ export function HeadOkrProgramView({
   isSaving,
 }: HeadOkrProgramViewProps) {
   const progress = useMemo(() => buildHeadOkrProgressSummary(program), [program]);
-  const [openCheckpointId, setOpenCheckpointId] = useState<string | null>(
-    program.content.checkpoints[0]?.id ?? null,
-  );
   const updateContent = async (nextContent: HeadOkrProgramContent): Promise<void> => {
     await onSaveProgram({ content: nextContent });
   };
@@ -129,192 +129,166 @@ export function HeadOkrProgramView({
   };
   return (
     <div className="head-okr-program">
-      <div className="glass-card head-okr-program-head">
-        <div className="head-okr-program-head-top">
-          <div>
-            {canEdit ? (
-              <HeadOkrEditableField
-                canEdit
-                value={program.sheetTitle || program.headName}
-                className="head-okr-title-input"
-                onCommit={(sheetTitle) => void onSaveProgram({ sheetTitle })}
-              />
-            ) : (
-              <h3>{program.sheetTitle || program.headName}</h3>
-            )}
-            {canEdit ? (
-              <HeadOkrEditableField
-                canEdit
-                value={program.roleTitle}
-                className="head-okr-subtitle-input"
-                onCommit={(roleTitle) => void onSaveProgram({ roleTitle })}
-              />
-            ) : (
-              <p className="head-okr-role-line">
-                {program.roleTitle}
-                {program.frameworkLabel ? ` · Framework ${program.frameworkLabel}` : ''}
-                {program.frameworkStartDate ? ` · dal ${new Date(`${program.frameworkStartDate}T00:00:00`).toLocaleDateString('it-IT')}` : ''}
-              </p>
-            )}
-          </div>
-          <div className="head-okr-progress-card">
-            <span className="head-okr-progress-label">Avanzamento</span>
-            <strong className="head-okr-progress-value">{Math.round(progress.progressRatio * 100)}%</strong>
-            <div className="head-okr-progress-bar" aria-hidden="true">
-              <div className="head-okr-progress-fill" style={{ width: `${Math.round(progress.progressRatio * 100)}%` }} />
-            </div>
-            <span className="head-okr-progress-meta">
-              {progress.doneKeyResults}/{progress.totalKeyResults} KR · {progress.inProgressKeyResults} in corso
-            </span>
-          </div>
-        </div>
-        {(program.introText || canEdit) ? (
-          canEdit ? (
+      <div className="head-okr-sheet">
+        <div className="head-okr-banner head-okr-banner--main">
+          {canEdit ? (
             <HeadOkrEditableField
               canEdit
-              multiline
-              value={program.introText}
-              className="head-okr-intro-input"
-              onCommit={(introText) => void onSaveProgram({ introText })}
+              value={program.sheetTitle || program.headName}
+              className="head-okr-banner-input head-okr-banner-input--title"
+              onCommit={(sheetTitle) => void onSaveProgram({ sheetTitle })}
             />
           ) : (
-            <p className="head-okr-intro">{program.introText}</p>
-          )
-        ) : null}
-        {isSaving ? <p className="head-okr-saving">Salvataggio…</p> : null}
-        {!canEdit ? (
-          <p className="head-okr-readonly-hint">Sola lettura — aggiornamenti a cura di Jeck.</p>
-        ) : null}
-      </div>
-      <div className="head-okr-checkpoints">
-        {program.content.checkpoints.map((checkpoint) => {
-          const isOpen = openCheckpointId === checkpoint.id;
-          return (
-            <div key={checkpoint.id} className={`glass-card head-okr-checkpoint${isOpen ? ' is-open' : ''}`}>
-              <button
-                type="button"
-                className="head-okr-checkpoint-toggle"
-                onClick={() => setOpenCheckpointId(isOpen ? null : checkpoint.id)}
-                aria-expanded={isOpen}
-              >
-                <ChevronRight size={18} className="head-okr-checkpoint-icon" />
-                <span>{checkpoint.title}</span>
-              </button>
-              {isOpen ? (
-                <div className="head-okr-checkpoint-body">
-                  {checkpoint.objectives.map((objective) => (
-                    <div key={objective.id} className="head-okr-objective">
-                      <div className="head-okr-objective-head">
-                        <HeadOkrEditableField
-                          canEdit={canEdit}
-                          value={objective.title}
-                          className="head-okr-objective-title"
-                          onCommit={(title) => void patchObjective(checkpoint.id, objective.id, { title })}
-                        />
-                        {(objective.description || canEdit) ? (
-                          <HeadOkrEditableField
-                            canEdit={canEdit}
-                            multiline
-                            value={objective.description}
-                            className="head-okr-objective-desc"
-                            onCommit={(description) => void patchObjective(checkpoint.id, objective.id, { description })}
-                          />
-                        ) : null}
-                      </div>
-                      <div className="head-okr-table-wrap">
-                        <table className="head-okr-table">
-                          <thead>
-                            <tr>
-                              <th>Key Result</th>
-                              <th>Status</th>
-                              <th>Metro Di Valutazione</th>
-                              <th>Valore</th>
-                              <th>Note Jeck</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {objective.keyResults.map((keyResult) => (
-                              <tr
-                                key={keyResult.id}
-                                className={resolveHeadOkrRowClassName(String(keyResult.status))}
-                              >
-                                <td>
-                                  <HeadOkrEditableField
-                                    canEdit={canEdit}
-                                    multiline
-                                    value={keyResult.title}
-                                    onCommit={(title) => void patchKeyResult(checkpoint.id, objective.id, keyResult.id, { title })}
-                                  />
-                                </td>
-                                <td>
-                                  {canEdit ? (
-                                    <select
-                                      className={`filter-select head-okr-status-select ${resolveHeadOkrStatusClassName(String(keyResult.status))}`}
-                                      value={keyResult.status}
-                                      onChange={(event) => {
-                                        void patchKeyResult(checkpoint.id, objective.id, keyResult.id, {
-                                          status: event.target.value,
-                                        });
-                                      }}
-                                    >
-                                      {HEAD_OKR_STATUS_OPTIONS.map((status) => (
-                                        <option key={status} value={status}>{status}</option>
-                                      ))}
-                                    </select>
-                                  ) : (
-                                    <HeadOkrStatusBadge status={String(keyResult.status)} />
-                                  )}
-                                </td>
-                                <td>
-                                  <HeadOkrEditableField
-                                    canEdit={canEdit}
-                                    multiline
-                                    value={keyResult.evaluationMetric}
-                                    onCommit={(evaluationMetric) => void patchKeyResult(
-                                      checkpoint.id,
-                                      objective.id,
-                                      keyResult.id,
-                                      { evaluationMetric },
-                                    )}
-                                  />
-                                </td>
-                                <td>
-                                  <HeadOkrEditableField
-                                    canEdit={canEdit}
-                                    value={keyResult.valueLabel}
-                                    onCommit={(valueLabel) => void patchKeyResult(
-                                      checkpoint.id,
-                                      objective.id,
-                                      keyResult.id,
-                                      { valueLabel },
-                                    )}
-                                  />
-                                </td>
-                                <td>
-                                  <HeadOkrEditableField
-                                    canEdit={canEdit}
-                                    multiline
-                                    value={keyResult.adminNote}
-                                    onCommit={(adminNote) => void patchKeyResult(
-                                      checkpoint.id,
-                                      objective.id,
-                                      keyResult.id,
-                                      { adminNote },
-                                    )}
-                                  />
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
+            <h2 className="head-okr-banner-text">{program.sheetTitle || program.headName}</h2>
+          )}
+        </div>
+        <div className="head-okr-intro-block">
+          {(program.introText || canEdit) ? (
+            canEdit ? (
+              <HeadOkrEditableField
+                canEdit
+                multiline
+                value={program.introText}
+                className="head-okr-intro-input"
+                onCommit={(introText) => void onSaveProgram({ introText })}
+              />
+            ) : (
+              <p className="head-okr-intro">{program.introText}</p>
+            )
+          ) : null}
+          <div className="head-okr-sheet-meta">
+            <span>
+              {program.frameworkLabel ? `Framework ${program.frameworkLabel}` : ''}
+              {program.frameworkStartDate ? ` · dal ${new Date(`${program.frameworkStartDate}T00:00:00`).toLocaleDateString('it-IT')}` : ''}
+            </span>
+            <span className="head-okr-sheet-progress">
+              {progress.doneKeyResults}/{progress.totalKeyResults} KR completati · {Math.round(progress.progressRatio * 100)}%
+            </span>
+            {isSaving ? <span className="head-okr-saving">Salvataggio…</span> : null}
+            {!canEdit ? <span className="head-okr-readonly-hint">Sola lettura</span> : null}
+          </div>
+        </div>
+        {program.content.checkpoints.map((checkpoint) => (
+          <section key={checkpoint.id} className="head-okr-checkpoint-block">
+            <div className="head-okr-banner head-okr-banner--checkpoint">
+              <h3 className="head-okr-banner-text">{checkpoint.title}</h3>
             </div>
-          );
-        })}
+            {checkpoint.objectives.map((objective) => (
+              <div key={objective.id} className="head-okr-objective-block">
+                <div className="head-okr-banner head-okr-banner--objective">
+                  {canEdit ? (
+                    <HeadOkrEditableField
+                      canEdit
+                      value={objective.title}
+                      className="head-okr-banner-input head-okr-banner-input--objective"
+                      onCommit={(title) => void patchObjective(checkpoint.id, objective.id, { title })}
+                    />
+                  ) : (
+                    <h4 className="head-okr-banner-text">{objective.title}</h4>
+                  )}
+                </div>
+                {(objective.description || canEdit) ? (
+                  <div className="head-okr-objective-desc-row">
+                    <HeadOkrEditableField
+                      canEdit={canEdit}
+                      multiline
+                      value={objective.description}
+                      className="head-okr-objective-desc"
+                      onCommit={(description) => void patchObjective(checkpoint.id, objective.id, { description })}
+                    />
+                  </div>
+                ) : null}
+                <div className="head-okr-table-wrap">
+                  <table className="head-okr-table">
+                    <thead>
+                      <tr>
+                        <th>Key Result</th>
+                        <th>Status</th>
+                        <th>Metro Di Valutazione</th>
+                        <th>Valore</th>
+                        <th>Note Jeck</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {objective.keyResults.map((keyResult) => (
+                        <tr
+                          key={keyResult.id}
+                          className={resolveHeadOkrRowClassName(String(keyResult.status))}
+                        >
+                          <td className="head-okr-col-kr">
+                            <HeadOkrEditableField
+                              canEdit={canEdit}
+                              multiline
+                              value={keyResult.title}
+                              onCommit={(title) => void patchKeyResult(checkpoint.id, objective.id, keyResult.id, { title })}
+                            />
+                          </td>
+                          <td className="head-okr-col-status">
+                            {canEdit ? (
+                              <select
+                                className={`head-okr-status-select ${resolveHeadOkrStatusClassName(String(keyResult.status))}`}
+                                value={keyResult.status}
+                                onChange={(event) => {
+                                  void patchKeyResult(checkpoint.id, objective.id, keyResult.id, {
+                                    status: event.target.value,
+                                  });
+                                }}
+                              >
+                                {HEAD_OKR_STATUS_OPTIONS.map((status) => (
+                                  <option key={status} value={status}>{status}</option>
+                                ))}
+                              </select>
+                            ) : (
+                              <HeadOkrStatusBadge status={String(keyResult.status)} />
+                            )}
+                          </td>
+                          <td className="head-okr-col-metric">
+                            <HeadOkrEditableField
+                              canEdit={canEdit}
+                              multiline
+                              value={keyResult.evaluationMetric}
+                              onCommit={(evaluationMetric) => void patchKeyResult(
+                                checkpoint.id,
+                                objective.id,
+                                keyResult.id,
+                                { evaluationMetric },
+                              )}
+                            />
+                          </td>
+                          <td className={`head-okr-col-value ${resolveHeadOkrValueLabelClassName(keyResult.valueLabel)}`}>
+                            <HeadOkrEditableField
+                              canEdit={canEdit}
+                              value={keyResult.valueLabel}
+                              onCommit={(valueLabel) => void patchKeyResult(
+                                checkpoint.id,
+                                objective.id,
+                                keyResult.id,
+                                { valueLabel },
+                              )}
+                            />
+                          </td>
+                          <td className="head-okr-col-note">
+                            <HeadOkrEditableField
+                              canEdit={canEdit}
+                              multiline
+                              value={keyResult.adminNote}
+                              onCommit={(adminNote) => void patchKeyResult(
+                                checkpoint.id,
+                                objective.id,
+                                keyResult.id,
+                                { adminNote },
+                              )}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
+          </section>
+        ))}
       </div>
     </div>
   );

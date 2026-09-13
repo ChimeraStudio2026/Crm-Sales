@@ -13,3 +13,10 @@ export function resolveHeadOkrRowClassName(status: string): string {
   if (normalizedStatus === 'blocked') return 'head-okr-row--blocked';
   return '';
 }
+
+export function resolveHeadOkrValueLabelClassName(valueLabel: string): string {
+  const normalizedValue = valueLabel.trim().toLowerCase();
+  if (normalizedValue === 'necessario') return 'head-okr-value--required';
+  if (normalizedValue === 'secondario') return 'head-okr-value--secondary';
+  return '';
+}

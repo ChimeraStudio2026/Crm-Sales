@@ -8949,155 +8949,123 @@ body:has(.login-page) {
 
 .head-okr-program {
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
 }
 
-.head-okr-sheet {
-    background: #ffffff;
-    color: #111827;
-    border: 1px solid #cbd5e1;
-    border-radius: 4px;
-    overflow: hidden;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+.head-okr-program-head .proposals-panel-head h3 {
+    margin: 0 0 6px;
+    font-size: 1.25rem;
 }
 
-.head-okr-banner {
-    padding: 10px 14px;
-}
-
-.head-okr-banner--main {
-    background: #0b1220;
-}
-
-.head-okr-banner--checkpoint {
-    background: #0b1220;
-    margin-top: 2px;
-}
-
-.head-okr-banner--objective {
-    background: #475569;
-}
-
-.head-okr-banner-text {
+.head-okr-role-line {
     margin: 0;
-    color: #ffffff;
-    font-weight: 700;
-    font-size: 1rem;
-    line-height: 1.35;
-}
-
-.head-okr-banner--main .head-okr-banner-text {
-    font-size: 1.12rem;
-}
-
-.head-okr-banner-input {
-    width: 100%;
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    border-radius: 4px;
-    background: rgba(255, 255, 255, 0.08);
-    color: #ffffff;
-    font: inherit;
-    font-weight: 700;
-    padding: 6px 8px;
-}
-
-.head-okr-banner-input--title {
-    font-size: 1.12rem;
-}
-
-.head-okr-banner-input--objective {
-    font-size: 0.98rem;
-}
-
-.head-okr-intro-block {
-    padding: 12px 14px 10px;
-    background: #ffffff;
-    border-bottom: 1px solid #e2e8f0;
+    color: var(--text-secondary);
+    font-size: 0.92rem;
 }
 
 .head-okr-intro,
 .head-okr-intro-input {
     white-space: pre-wrap;
-    margin: 0 0 10px;
-    color: #334155;
+    margin: 0 0 12px;
+    color: var(--text-secondary);
     font-size: 0.92rem;
     line-height: 1.55;
-    font-style: italic;
 }
 
-.head-okr-sheet-meta {
+.head-okr-progress-row {
     display: flex;
-    flex-wrap: wrap;
-    gap: 10px 16px;
-    font-size: 0.8rem;
-    color: #64748b;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
 }
 
-.head-okr-sheet-progress {
-    font-weight: 700;
-    color: #0f766e;
+.head-okr-progress-bar {
+    height: 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--border) 70%, transparent);
+    overflow: hidden;
 }
 
-.head-okr-readonly-hint {
-    font-style: italic;
+.head-okr-progress-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--primary), color-mix(in srgb, var(--primary) 65%, #22c55e));
 }
 
+.head-okr-readonly-hint,
 .head-okr-saving {
     font-style: italic;
+    font-size: 0.82rem;
 }
 
-.head-okr-checkpoint-block + .head-okr-checkpoint-block {
+.head-okr-checkpoints {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.head-okr-checkpoint-accordion {
+    margin: 0;
+}
+
+.head-okr-checkpoint-body {
+    padding-top: 4px;
+}
+
+.head-okr-objective {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+.head-okr-objective:first-child {
     margin-top: 0;
+    padding-top: 0;
+    border-top: none;
 }
 
-.head-okr-objective-block + .head-okr-objective-block {
-    border-top: 6px solid #ffffff;
+.head-okr-objective-head h4 {
+    margin: 0 0 8px;
+    font-size: 1rem;
+    color: var(--text-primary);
 }
 
-.head-okr-objective-desc-row {
-    padding: 10px 14px;
-    background: #eef2ff;
-    border-bottom: 1px solid #dbeafe;
+.head-okr-objective-title-input {
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 8px;
 }
 
 .head-okr-objective-desc {
     display: block;
-    margin: 0;
-    color: #1e293b;
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--primary) 6%, var(--surface));
+    border: 1px solid color-mix(in srgb, var(--primary) 12%, var(--border));
+    color: var(--text-secondary);
     font-size: 0.9rem;
     line-height: 1.5;
-    font-style: italic;
 }
 
 .head-okr-table-wrap {
-    overflow: auto;
-    border-top: 1px solid #cbd5e1;
-}
-
-.head-okr-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.86rem;
-    background: #ffffff;
+    border-radius: 10px;
+    border: 1px solid var(--border);
 }
 
 .head-okr-table thead th {
-    background: #64748b;
-    color: #ffffff;
     text-align: center;
-    padding: 8px 10px;
-    border: 1px solid #475569;
-    font-size: 0.78rem;
-    font-weight: 700;
-    white-space: nowrap;
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.35px;
 }
 
 .head-okr-table tbody td {
     vertical-align: top;
-    padding: 8px 10px;
-    border: 1px solid #dbeafe;
     line-height: 1.45;
-    background: #ffffff;
-    color: #0f172a;
 }
 
 .head-okr-col-kr {
@@ -9124,25 +9092,24 @@ body:has(.login-page) {
 }
 
 .head-okr-value--required {
-    background: #d1fae5 !important;
-    color: #065f46;
+    background: color-mix(in srgb, #22c55e 14%, var(--surface)) !important;
+    font-weight: 600;
 }
 
 .head-okr-value--secondary {
-    background: #fef3c7 !important;
-    color: #92400e;
+    background: color-mix(in srgb, #f59e0b 12%, var(--surface)) !important;
 }
 
 .head-okr-row--done td {
-    background: color-mix(in srgb, #bbf7d0 55%, #ffffff) !important;
+    background: color-mix(in srgb, #16a34a 12%, var(--surface)) !important;
 }
 
 .head-okr-row--progress td {
-    background: color-mix(in srgb, #dbeafe 50%, #ffffff) !important;
+    background: color-mix(in srgb, var(--primary) 8%, var(--surface)) !important;
 }
 
 .head-okr-row--blocked td {
-    background: color-mix(in srgb, #fecaca 45%, #ffffff) !important;
+    background: color-mix(in srgb, var(--danger, #dc2626) 8%, var(--surface)) !important;
 }
 
 .head-okr-status-badge {
@@ -9183,14 +9150,8 @@ body:has(.login-page) {
 .head-okr-status-select {
     width: 100%;
     min-width: 130px;
-    border-radius: 999px;
-    border: 1px solid #fdba74;
-    background: #fff7ed;
-    color: #9a3412;
-    font-weight: 700;
-    font-size: 0.78rem;
-    padding: 6px 10px;
-    text-align: center;
+    font-weight: 600;
+    font-size: 0.82rem;
 }
 
 .head-okr-status-select.head-okr-status--done {
@@ -9233,39 +9194,13 @@ body:has(.login-page) {
     white-space: pre-wrap;
 }
 
-[data-theme="dark"] .head-okr-sheet {
-    background: #0f172a;
-    color: #e2e8f0;
-    border-color: #334155;
-}
-
-[data-theme="dark"] .head-okr-intro-block {
-    background: #0f172a;
-    border-bottom-color: #334155;
-}
-
-[data-theme="dark"] .head-okr-intro,
-[data-theme="dark"] .head-okr-intro-input {
-    color: #cbd5e1;
-}
-
-[data-theme="dark"] .head-okr-objective-desc-row {
-    background: #1e293b;
-    border-bottom-color: #334155;
-}
-
-[data-theme="dark"] .head-okr-objective-desc {
-    color: #e2e8f0;
-}
-
-[data-theme="dark"] .head-okr-table tbody td {
-    background: #0f172a;
-    color: #e2e8f0;
-    border-color: #334155;
+.head-okr-title-input {
+    font-size: 1.25rem;
+    font-weight: 700;
 }
 
 [data-theme="dark"] .head-okr-row--done td {
-    background: color-mix(in srgb, #166534 35%, #0f172a) !important;
+    background: color-mix(in srgb, #16a34a 18%, var(--surface)) !important;
 }
 
 @media (max-width: 1100px) {

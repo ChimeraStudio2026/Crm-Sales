@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { ChevronRight } from 'lucide-react';
 import {
   resolveHeadOkrRowClassName,
   resolveHeadOkrStatusClassName,
@@ -79,6 +80,29 @@ export function HeadOkrProgramView({
   isSaving,
 }: HeadOkrProgramViewProps) {
   const progress = useMemo(() => buildHeadOkrProgressSummary(program), [program]);
+  const [openCheckpointIds, setOpenCheckpointIds] = useState<Set<string>>(() => (
+    new Set(program.content.checkpoints.slice(0, 1).map((checkpoint) => checkpoint.id))
+  ));
+  useEffect(() => {
+    setOpenCheckpointIds(new Set(program.content.checkpoints.slice(0, 1).map((checkpoint) => checkpoint.id)));
+  }, [program.id]);
+  const toggleCheckpoint = (checkpointId: string): void => {
+    setOpenCheckpointIds((current) => {
+      const next = new Set(current);
+      if (next.has(checkpointId)) next.delete(checkpointId);
+      else next.add(checkpointId);
+      return next;
+    });
+  };
+  const resolveCheckpointSummary = (checkpointId: string): { total: number; done: number } => {
+    const checkpoint = program.content.checkpoints.find((item) => item.id === checkpointId);
+    if (!checkpoint) return { total: 0, done: 0 };
+    const keyResults = checkpoint.objectives.flatMap((objective) => objective.keyResults);
+    return {
+      total: keyResults.length,
+      done: keyResults.filter((item) => item.status === 'Done').length,
+    };
+  };
   const updateContent = async (nextContent: HeadOkrProgramContent): Promise<void> => {
     await onSaveProgram({ content: nextContent });
   };
@@ -129,77 +153,94 @@ export function HeadOkrProgramView({
   };
   return (
     <div className="head-okr-program">
-      <div className="head-okr-sheet">
-        <div className="head-okr-banner head-okr-banner--main">
+      <div className="glass-card proposals-panel head-okr-program-head">
+        <div className="proposals-panel-head">
           {canEdit ? (
             <HeadOkrEditableField
               canEdit
               value={program.sheetTitle || program.headName}
-              className="head-okr-banner-input head-okr-banner-input--title"
+              className="head-okr-title-input"
               onCommit={(sheetTitle) => void onSaveProgram({ sheetTitle })}
             />
           ) : (
-            <h2 className="head-okr-banner-text">{program.sheetTitle || program.headName}</h2>
+            <h3>{program.sheetTitle || program.headName}</h3>
           )}
+          <p className="head-okr-role-line">
+            {program.roleTitle}
+            {program.frameworkLabel ? ` · Framework ${program.frameworkLabel}` : ''}
+            {program.frameworkStartDate ? ` · dal ${new Date(`${program.frameworkStartDate}T00:00:00`).toLocaleDateString('it-IT')}` : ''}
+          </p>
         </div>
-        <div className="head-okr-intro-block">
-          {(program.introText || canEdit) ? (
-            canEdit ? (
-              <HeadOkrEditableField
-                canEdit
-                multiline
-                value={program.introText}
-                className="head-okr-intro-input"
-                onCommit={(introText) => void onSaveProgram({ introText })}
-              />
-            ) : (
-              <p className="head-okr-intro">{program.introText}</p>
-            )
-          ) : null}
-          <div className="head-okr-sheet-meta">
-            <span>
-              {program.frameworkLabel ? `Framework ${program.frameworkLabel}` : ''}
-              {program.frameworkStartDate ? ` · dal ${new Date(`${program.frameworkStartDate}T00:00:00`).toLocaleDateString('it-IT')}` : ''}
-            </span>
-            <span className="head-okr-sheet-progress">
-              {progress.doneKeyResults}/{progress.totalKeyResults} KR completati · {Math.round(progress.progressRatio * 100)}%
-            </span>
-            {isSaving ? <span className="head-okr-saving">Salvataggio…</span> : null}
-            {!canEdit ? <span className="head-okr-readonly-hint">Sola lettura</span> : null}
+        {(program.introText || canEdit) ? (
+          canEdit ? (
+            <HeadOkrEditableField
+              canEdit
+              multiline
+              value={program.introText}
+              className="head-okr-intro-input"
+              onCommit={(introText) => void onSaveProgram({ introText })}
+            />
+          ) : (
+            <p className="head-okr-intro">{program.introText}</p>
+          )
+        ) : null}
+        <div className="head-okr-progress-row">
+          <div className="head-okr-progress-bar" aria-hidden="true">
+            <div className="head-okr-progress-fill" style={{ width: `${Math.round(progress.progressRatio * 100)}%` }} />
           </div>
+          <span>{progress.doneKeyResults}/{progress.totalKeyResults} KR completati · {Math.round(progress.progressRatio * 100)}%</span>
+          {isSaving ? <span className="head-okr-saving">Salvataggio…</span> : null}
+          {!canEdit ? <span className="head-okr-readonly-hint">Sola lettura — aggiornamenti a cura di Jeck.</span> : null}
         </div>
-        {program.content.checkpoints.map((checkpoint) => (
-          <section key={checkpoint.id} className="head-okr-checkpoint-block">
-            <div className="head-okr-banner head-okr-banner--checkpoint">
-              <h3 className="head-okr-banner-text">{checkpoint.title}</h3>
-            </div>
-            {checkpoint.objectives.map((objective) => (
-              <div key={objective.id} className="head-okr-objective-block">
-                <div className="head-okr-banner head-okr-banner--objective">
-                  {canEdit ? (
-                    <HeadOkrEditableField
-                      canEdit
-                      value={objective.title}
-                      className="head-okr-banner-input head-okr-banner-input--objective"
-                      onCommit={(title) => void patchObjective(checkpoint.id, objective.id, { title })}
-                    />
-                  ) : (
-                    <h4 className="head-okr-banner-text">{objective.title}</h4>
-                  )}
-                </div>
-                {(objective.description || canEdit) ? (
-                  <div className="head-okr-objective-desc-row">
-                    <HeadOkrEditableField
-                      canEdit={canEdit}
-                      multiline
-                      value={objective.description}
-                      className="head-okr-objective-desc"
-                      onCommit={(description) => void patchObjective(checkpoint.id, objective.id, { description })}
-                    />
-                  </div>
-                ) : null}
-                <div className="head-okr-table-wrap">
-                  <table className="head-okr-table">
+      </div>
+      <div className="head-okr-checkpoints">
+        {program.content.checkpoints.map((checkpoint) => {
+          const isOpen = openCheckpointIds.has(checkpoint.id);
+          const checkpointSummary = resolveCheckpointSummary(checkpoint.id);
+          return (
+            <div
+              key={checkpoint.id}
+              className={`analysis-accordion head-okr-checkpoint-accordion${isOpen ? ' is-open' : ''}`}
+            >
+              <button
+                type="button"
+                className="analysis-accordion-toggle"
+                onClick={() => toggleCheckpoint(checkpoint.id)}
+                aria-expanded={isOpen}
+              >
+                <ChevronRight size={18} className="analysis-accordion-icon" />
+                <span>{checkpoint.title}</span>
+                <span className="analysis-accordion-meta">
+                  {checkpointSummary.done}/{checkpointSummary.total} KR completati
+                </span>
+              </button>
+              {isOpen ? (
+                <div className="analysis-accordion-body head-okr-checkpoint-body">
+                  {checkpoint.objectives.map((objective) => (
+                    <div key={objective.id} className="head-okr-objective">
+                      <div className="head-okr-objective-head">
+                        {canEdit ? (
+                          <HeadOkrEditableField
+                            canEdit
+                            value={objective.title}
+                            className="head-okr-objective-title-input"
+                            onCommit={(title) => void patchObjective(checkpoint.id, objective.id, { title })}
+                          />
+                        ) : (
+                          <h4>{objective.title}</h4>
+                        )}
+                        {(objective.description || canEdit) ? (
+                          <HeadOkrEditableField
+                            canEdit={canEdit}
+                            multiline
+                            value={objective.description}
+                            className="head-okr-objective-desc"
+                            onCommit={(description) => void patchObjective(checkpoint.id, objective.id, { description })}
+                          />
+                        ) : null}
+                      </div>
+                      <div className="analysis-table-wrap head-okr-table-wrap">
+                        <table className="analysis-table head-okr-table">
                     <thead>
                       <tr>
                         <th>Key Result</th>
@@ -226,7 +267,7 @@ export function HeadOkrProgramView({
                           <td className="head-okr-col-status">
                             {canEdit ? (
                               <select
-                                className={`head-okr-status-select ${resolveHeadOkrStatusClassName(String(keyResult.status))}`}
+                                className={`filter-select head-okr-status-select ${resolveHeadOkrStatusClassName(String(keyResult.status))}`}
                                 value={keyResult.status}
                                 onChange={(event) => {
                                   void patchKeyResult(checkpoint.id, objective.id, keyResult.id, {
@@ -284,11 +325,14 @@ export function HeadOkrProgramView({
                       ))}
                     </tbody>
                   </table>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
-            ))}
-          </section>
-        ))}
+              ) : null}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

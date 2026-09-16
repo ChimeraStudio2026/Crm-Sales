@@ -108,7 +108,7 @@ export async function fetchSalesProposals(
   return proposals;
 }
 
-export async function insertSalesProposalsIgnoringDuplicates(
+export async function upsertSalesProposalsFromImport(
   db: SupabaseClient,
   rows: SalesProposalImportRow[],
   workspaceId: string,
@@ -120,8 +120,17 @@ export async function insertSalesProposalsIgnoringDuplicates(
     const chunk = payload.slice(offset, offset + INSERT_CHUNK_SIZE);
     const { error } = await db.from('sales_proposals').upsert(chunk, {
       onConflict: 'nome,creato_il',
-      ignoreDuplicates: true,
     });
     if (error) throw error;
   }
+}
+
+/** @deprecated Usa upsertSalesProposalsFromImport */
+export async function insertSalesProposalsIgnoringDuplicates(
+  db: SupabaseClient,
+  rows: SalesProposalImportRow[],
+  workspaceId: string,
+  importBatch: string,
+): Promise<void> {
+  return upsertSalesProposalsFromImport(db, rows, workspaceId, importBatch);
 }

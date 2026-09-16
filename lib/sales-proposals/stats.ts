@@ -1,3 +1,4 @@
+import { parseProposalDate } from '@/lib/sales-proposals/parse';
 import {
   KNOWN_PROPOSAL_CATEGORIES,
   PROPOSAL_STATUS_ACCEPTED,
@@ -129,13 +130,18 @@ export function buildProposalKpis(proposals: SalesProposal[]): ProposalKpiSummar
   };
 }
 
-function normalizeProposalDateKey(value: string | null | undefined): string | null {
+export function normalizeProposalDateKey(value: string | null | undefined): string | null {
   if (!value || !value.trim()) return null;
+  const parsedIso = parseProposalDate(value);
+  if (parsedIso) return parsedIso.slice(0, 10);
   const trimmed = value.trim();
-  const isoDate = trimmed.length >= 10 ? trimmed.slice(0, 10) : trimmed;
-  const date = new Date(`${isoDate}T00:00:00Z`);
-  if (Number.isNaN(date.getTime())) return null;
-  return isoDate;
+  const isoPrefixMatch = trimmed.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (isoPrefixMatch) {
+    const isoDate = isoPrefixMatch[1];
+    const date = new Date(`${isoDate}T00:00:00Z`);
+    if (!Number.isNaN(date.getTime())) return isoDate;
+  }
+  return null;
 }
 
 function parseProposalDateKey(value: string | null | undefined): number | null {

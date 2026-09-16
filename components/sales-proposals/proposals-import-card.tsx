@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { CloudUpload, FileSpreadsheet } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { parseSalesProposalsBuffer, buildProposalDedupKey } from '@/lib/sales-proposals/parse';
-import { insertSalesProposalsIgnoringDuplicates } from '@/lib/supabase/sales-proposals-database';
+import { upsertSalesProposalsFromImport } from '@/lib/supabase/sales-proposals-database';
 import type { SalesProposal, SalesProposalImportRow, SalesProposalParseIssue } from '@/lib/types/sales-proposals';
 import type { ToastType } from '@/providers/crm-provider';
 
@@ -81,7 +81,7 @@ export function ProposalsImportCard({
   };
 
   const handleImport = async (): Promise<void> => {
-    if (!preview || preview.newRows.length === 0) return;
+    if (!preview || preview.incoming.length === 0) return;
     const db = createBrowserSupabaseClient();
     if (!db) {
       onToast('Supabase non configurato.', 'danger');
@@ -89,14 +89,19 @@ export function ProposalsImportCard({
     }
     setIsImporting(true);
     try {
-      await insertSalesProposalsIgnoringDuplicates(
+      await upsertSalesProposalsFromImport(
         db,
-        preview.newRows,
+        preview.incoming,
         workspaceId,
         getTodayBatchDate(),
       );
       await onImported();
-      onToast(`Importate ${preview.newRows.length} nuove proposte. Le esistenti non sono state sovrascritte.`, 'success');
+      const updatedCount = preview.alreadyPresent;
+      const createdCount = preview.newRows.length;
+      onToast(
+        `Sincronizzate ${preview.incoming.length} proposte (${createdCount} nuove, ${updatedCount} aggiornate).`,
+        'success',
+      );
       setPreview(null);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Import fallito.';
@@ -111,7 +116,10 @@ export function ProposalsImportCard({
       <div className="proposals-import-head">
         <div>
           <h3><FileSpreadsheet size={18} /> Importa scarico CSV</h3>
-          <p>Ad ogni ricarica mensile vengono inserite solo le proposte nuove. Le già importate non si aggiornano.</p>
+          <p>
+            Ogni ricarica allinea stato, date Si/No e importi sul file CSV.
+            Le proposte già presenti (Nome + Creato il) vengono aggiornate.
+          </p>
         </div>
         <label className="btn btn-secondary proposals-import-btn">
           <CloudUpload size={16} />
@@ -141,17 +149,17 @@ export function ProposalsImportCard({
             {' · '}
             {preview.newRows.length} nuove
             {' · '}
-            {preview.alreadyPresent} già presenti
+            {preview.alreadyPresent} da aggiornare
             {preview.skipped.length > 0 ? ` · ${preview.skipped.length} saltate` : ''}
           </p>
           <div className="proposals-import-actions">
             <button
               type="button"
               className="btn btn-primary"
-              disabled={isImporting || preview.newRows.length === 0}
+              disabled={isImporting || preview.incoming.length === 0}
               onClick={() => void handleImport()}
             >
-              {isImporting ? 'Import in corso...' : `Importa ${preview.newRows.length} nuove`}
+              {isImporting ? 'Sincronizzazione...' : `Sincronizza ${preview.incoming.length} proposte`}
             </button>
             <button type="button" className="btn btn-secondary" onClick={() => setPreview(null)}>
               Annulla

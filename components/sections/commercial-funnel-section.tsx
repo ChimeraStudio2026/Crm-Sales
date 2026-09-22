@@ -1,10 +1,22 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { GitBranch, Download, Plus, Search } from 'lucide-react';
-import { buildFunnelCampaignDashboardRow, filterCampaignsByWorkspace, filterFunnelEntriesByWorkspace, searchFunnelEntriesByBrandName } from '@/lib/commercial-funnel/campaigns';
+import {
+  buildFunnelCampaignDashboardRow,
+  filterCampaignsByWorkspace,
+  filterEntriesByVisibleCampaigns,
+  filterFunnelEntriesByWorkspace,
+  filterVisibleCampaigns,
+  isClosedCampaign,
+  searchFunnelEntriesByBrandName,
+} from '@/lib/commercial-funnel/campaigns';
+import {
+  readHideClosedFunnelCampaignsPreference,
+  writeHideClosedFunnelCampaignsPreference,
+} from '@/lib/commercial-funnel/preferences';
 import { downloadCommercialFunnelExcel } from '@/lib/commercial-funnel/export';
 import { resolveFunnelSemaforo, resolveFunnelStageDisplay } from '@/lib/commercial-funnel/index';
 import { buildFunnelStatsSummary } from '@/lib/commercial-funnel/stats';
@@ -46,6 +58,18 @@ export function CommercialFunnelSection() {
   const [owner, setOwner] = useState<Owner | ''>('');
   const [brandSearch, setBrandSearch] = useState('');
   const [pageView, setPageView] = useState<FunnelPageView>('campaigns');
+  const [hideClosedCampaigns, setHideClosedCampaigns] = useState(true);
+  const [hideClosedPreferenceReady, setHideClosedPreferenceReady] = useState(false);
+
+  useEffect(() => {
+    setHideClosedCampaigns(readHideClosedFunnelCampaignsPreference());
+    setHideClosedPreferenceReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hideClosedPreferenceReady) return;
+    writeHideClosedFunnelCampaignsPreference(hideClosedCampaigns);
+  }, [hideClosedCampaigns, hideClosedPreferenceReady]);
 
   const scopedCampaigns = useMemo(
     () => filterCampaignsByWorkspace(mailCampaigns, workspaceId),
@@ -55,28 +79,44 @@ export function CommercialFunnelSection() {
     () => filterFunnelEntriesByWorkspace(commercialFunnelEntries, workspaceId),
     [commercialFunnelEntries, workspaceId],
   );
+  const closedCampaignCount = useMemo(
+    () => scopedCampaigns.filter((campaign) => isClosedCampaign(campaign)).length,
+    [scopedCampaigns],
+  );
+  const visibleCampaigns = useMemo(
+    () => filterVisibleCampaigns(scopedCampaigns, hideClosedCampaigns),
+    [hideClosedCampaigns, scopedCampaigns],
+  );
+  const visibleCampaignIds = useMemo(
+    () => new Set(visibleCampaigns.map((campaign) => campaign.id)),
+    [visibleCampaigns],
+  );
+  const visibleEntries = useMemo(
+    () => filterEntriesByVisibleCampaigns(scopedEntries, visibleCampaignIds),
+    [scopedEntries, visibleCampaignIds],
+  );
   const workspaceStats = useMemo(
-    () => buildFunnelStatsSummary(scopedEntries),
-    [scopedEntries],
+    () => buildFunnelStatsSummary(visibleEntries),
+    [visibleEntries],
   );
 
   const rows = useMemo(
-    () => scopedCampaigns.map((campaign) => buildFunnelCampaignDashboardRow(
+    () => visibleCampaigns.map((campaign) => buildFunnelCampaignDashboardRow(
       campaign,
-      scopedEntries,
+      visibleEntries,
     )),
-    [scopedCampaigns, scopedEntries],
+    [visibleCampaigns, visibleEntries],
   );
 
   const brandSearchResults = useMemo(
     () => searchFunnelEntriesByBrandName(
       brandSearch,
-      scopedEntries,
+      visibleEntries,
       clients,
-      scopedCampaigns,
+      visibleCampaigns,
       workspaceId,
     ),
-    [brandSearch, clients, scopedEntries, scopedCampaigns, workspaceId],
+    [brandSearch, clients, visibleEntries, visibleCampaigns, workspaceId],
   );
 
   const filteredRows = useMemo(() => {
@@ -143,9 +183,9 @@ export function CommercialFunnelSection() {
 
   const handleDownloadExcel = (): void => {
     downloadCommercialFunnelExcel({
-      entries: scopedEntries,
+      entries: visibleEntries,
       clients,
-      mailCampaigns: scopedCampaigns,
+      mailCampaigns: visibleCampaigns,
       workspaceLabel: resolveWorkspaceLabel(workspaceId),
     });
   };
@@ -191,6 +231,17 @@ export function CommercialFunnelSection() {
                   Clienti
                 </button>
               </div>
+              {closedCampaignCount > 0 ? (
+                <button
+                  type="button"
+                  className={`clients-filter-chip ${hideClosedCampaigns ? 'is-active' : ''}`}
+                  onClick={() => setHideClosedCampaigns((prev) => !prev)}
+                  title={hideClosedCampaigns ? 'Mostra campagne chiuse' : 'Nascondi campagne chiuse'}
+                >
+                  {hideClosedCampaigns ? 'Chiuse nascoste' : 'Chiuse visibili'}
+                  <span className="clients-filter-chip-count">{closedCampaignCount}</span>
+                </button>
+              ) : null}
               <button type="button" className="btn btn-secondary" onClick={handleDownloadExcel}>
                 <Download size={16} />
                 <span>Scarica Excel</span>
@@ -204,9 +255,9 @@ export function CommercialFunnelSection() {
           <FunnelStatsCharts title="Totali funnel" stats={workspaceStats} />
           {pageView === 'clients' ? (
             <FunnelClientsView
-              entries={scopedEntries}
+              entries={visibleEntries}
               clients={clients}
-              mailCampaigns={scopedCampaigns}
+              mailCampaigns={visibleCampaigns}
               showCampaignColumn
             />
           ) : (
@@ -279,7 +330,11 @@ export function CommercialFunnelSection() {
                 {displayRows.length === 0 ? (
                   <tr>
                     <td colSpan={10} className="mail-campaigns-empty">
-                      {isBrandSearchActive ? 'Nessuna campagna corrisponde alla ricerca.' : 'Nessuna campagna funnel. Creane una nuova.'}
+                      {isBrandSearchActive
+                        ? 'Nessuna campagna corrisponde alla ricerca.'
+                        : hideClosedCampaigns && closedCampaignCount > 0
+                          ? 'Tutte le campagne visibili sono chiuse. Mostrale con «Chiuse nascoste».'
+                          : 'Nessuna campagna funnel. Creane una nuova.'}
                     </td>
                   </tr>
                 ) : (

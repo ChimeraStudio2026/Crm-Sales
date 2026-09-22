@@ -20,6 +20,27 @@ export function filterCampaignsByWorkspace(
   return campaigns.filter((campaign) => (campaign.workspaceId || DEFAULT_WORKSPACE_ID) === workspaceId);
 }
 
+export function isClosedCampaign(campaign: MailCampaign): boolean {
+  return campaign.status === 'Chiusa';
+}
+
+export function filterVisibleCampaigns(
+  campaigns: MailCampaign[],
+  hideClosed: boolean,
+): MailCampaign[] {
+  if (!hideClosed) {
+    return campaigns;
+  }
+  return campaigns.filter((campaign) => !isClosedCampaign(campaign));
+}
+
+export function filterEntriesByVisibleCampaigns(
+  entries: CommercialFunnelEntry[],
+  visibleCampaignIds: ReadonlySet<string>,
+): CommercialFunnelEntry[] {
+  return entries.filter((entry) => visibleCampaignIds.has(entry.campaignId));
+}
+
 export function filterFunnelEntriesByWorkspace(
   entries: CommercialFunnelEntry[],
   workspaceId: string,

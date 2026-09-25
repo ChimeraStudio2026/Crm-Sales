@@ -7,6 +7,7 @@ import type {
   SpecialDiscount,
   SpecialDiscountType,
 } from '@/lib/types/propositivita';
+import { normalizeOwnerDisplay } from '@/lib/crm/owners';
 import { isCreativeProposalStage, isSpecialDiscountType } from '@/lib/types/propositivita';
 
 interface CreativeProposalRow {
@@ -67,7 +68,7 @@ function rowToCreativeProposal(row: CreativeProposalRow): CreativeProposal {
     title: row.title,
     description: row.description || '',
     reference: row.reference || '',
-    owner: row.owner || '',
+    owner: normalizeOwnerDisplay(row.owner || ''),
     stage: normalizeStage(row.stage),
     progressPct: Number(row.progress_pct) || 0,
     deadline: row.deadline || '',
@@ -92,7 +93,7 @@ function creativeProposalToRow(proposal: CreativeProposal): Record<string, unkno
     title: proposal.title,
     description: proposal.description || '',
     reference: proposal.reference || '',
-    owner: proposal.owner || '',
+    owner: normalizeOwnerDisplay(proposal.owner || ''),
     stage: proposal.stage,
     progress_pct: proposal.progressPct,
     deadline: proposal.deadline || null,
@@ -113,7 +114,7 @@ function rowToSpecialDiscount(row: SpecialDiscountRow): SpecialDiscount {
     clientId: row.client_id,
     workspaceId: row.workspace_id || DEFAULT_WORKSPACE_ID,
     creativeProposalId: row.creative_proposal_id || '',
-    owner: row.owner || '',
+    owner: normalizeOwnerDisplay(row.owner || ''),
     type: normalizeDiscountType(row.type),
     amount: Number(row.amount) || 0,
     reason: row.reason || '',
@@ -131,7 +132,7 @@ function specialDiscountToRow(discount: SpecialDiscount): Record<string, unknown
     client_id: discount.clientId,
     workspace_id: discount.workspaceId || DEFAULT_WORKSPACE_ID,
     creative_proposal_id: discount.creativeProposalId || null,
-    owner: discount.owner || '',
+    owner: normalizeOwnerDisplay(discount.owner || ''),
     type: discount.type,
     amount: discount.amount,
     reason: discount.reason || '',

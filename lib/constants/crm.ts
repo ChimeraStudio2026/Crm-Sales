@@ -1,3 +1,12 @@
+import {
+  CHIMERA_OWNERS,
+  isOwnerValue,
+  normalizeOwner,
+  OWNER_JECK_SCARDY,
+  OWNER_MARTINA_GAVAZZI,
+  OWNER_MARTINO,
+  OWNER_VIRGINIA_VELCICH,
+} from '@/lib/crm/owners';
 import type { ClientOrigin, ClientType, IdeaCategory, Owner, Relationship } from '@/lib/types/crm';
 
 export const ANALYSIS_YEAR = 2026;
@@ -13,23 +22,30 @@ export const TOP_20_REV_THRESHOLD = 30000;
 export const RECURRENT_REV_THRESHOLD = 10000;
 export const EXCEL_REV_EPSILON = 0.005;
 
-export const OWNERS: Owner[] = ['Jeck', 'Virgi', 'Martina'];
+export const OWNERS: Owner[] = [...CHIMERA_OWNERS];
 
-export const OWNER_ZOD_ENUM = ['Jeck', 'Virgi', 'Martina', 'Martino'] as const satisfies readonly Owner[];
+export const OWNER_ZOD_ENUM = [
+  OWNER_VIRGINIA_VELCICH,
+  OWNER_JECK_SCARDY,
+  OWNER_MARTINA_GAVAZZI,
+  OWNER_MARTINO,
+] as const satisfies readonly Owner[];
 
 export function isOwner(value: unknown): value is Owner {
-  return typeof value === 'string' && OWNERS.includes(value as Owner);
+  return isOwnerValue(value);
 }
 
 export function resolveOwnerFromEmail(email: string | null | undefined): Owner | null {
   const normalizedEmail = (email || '').trim().toLowerCase();
   if (!normalizedEmail) return null;
-  if (normalizedEmail.includes('martino.ilacqua')) return 'Martino';
-  if (normalizedEmail.includes('velcich')) return 'Virgi';
-  if (normalizedEmail.includes('martina.gavazzi')) return 'Martina';
-  if (normalizedEmail.includes('jeck')) return 'Jeck';
+  if (normalizedEmail.includes('martino.ilacqua')) return OWNER_MARTINO;
+  if (normalizedEmail.includes('velcich')) return OWNER_VIRGINIA_VELCICH;
+  if (normalizedEmail.includes('martina.gavazzi')) return OWNER_MARTINA_GAVAZZI;
+  if (normalizedEmail.includes('jeck')) return OWNER_JECK_SCARDY;
   return null;
 }
+
+export { normalizeOwner };
 
 export const CLIENT_TYPES: ClientType[] = [
   'Cliente Diretto',

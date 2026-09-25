@@ -1,8 +1,8 @@
 import type { Dispatch, SetStateAction } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { applyCreativeProposalStageChange, buildCreativeActionTimestamp, resolveProgressPctForStage } from '@/lib/propositivita/index';
-import { isOwner } from '@/lib/constants/crm';
 import { getDefaultOwnerForWorkspace } from '@/lib/crm/workspace-clients';
+import { normalizeOwner } from '@/lib/crm/owners';
 import { createUniqueId, getTodayString } from '@/lib/crm/utils';
 import {
   deleteCreativeProposal,
@@ -65,9 +65,13 @@ export function createPropositivitaActions(
   };
 
   const resolveOwner = (clientId: string, workspaceId: string, owner?: string): string => {
-    if (owner && isOwner(owner)) return owner;
+    const fromInput = owner ? normalizeOwner(owner) : null;
+    if (fromInput) return fromInput;
     const client = deps.getClientById(clientId);
-    if (client?.owner && isOwner(client.owner)) return client.owner;
+    if (client?.owner) {
+      const fromClient = normalizeOwner(client.owner);
+      if (fromClient) return fromClient;
+    }
     return getDefaultOwnerForWorkspace(workspaceId);
   };
 

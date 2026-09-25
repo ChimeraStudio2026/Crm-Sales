@@ -31,6 +31,8 @@ import {
   resolveOwnerFromEmail,
 } from '@/lib/constants/crm';
 import { DEFAULT_WORKSPACE_ID } from '@/lib/constants/workspaces';
+import { normalizeOwner, normalizeOwnerList, OWNER_JECK_SCARDY } from '@/lib/crm/owners';
+import { getDefaultOwnerForWorkspace } from '@/lib/crm/workspace-clients';
 import { createDefaultForecasts, createEmptyForecastsByYear } from '@/lib/analysis/index';
 import type {
   MailCampaign,
@@ -737,7 +739,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
         workspaceId,
         name: input.name,
         type: input.type || 'Cliente Diretto',
-        owner: input.owner || 'Jeck',
+        owner: normalizeOwner(input.owner) || getDefaultOwnerForWorkspace(workspaceId),
         clientOrigin: input.clientOrigin || '',
         relationship: input.relationship || (isCold ? 'Freddo' : 'Nuovo Cliente'),
         manualRelationship: isCold || input.relationship === 'Freddo',
@@ -779,7 +781,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
           workspaceId: DEFAULT_WORKSPACE_ID,
           name: input.name.trim(),
           type: input.type || 'Cliente Diretto',
-          owner: input.owner || 'Jeck',
+          owner: normalizeOwner(input.owner) || getDefaultOwnerForWorkspace(DEFAULT_WORKSPACE_ID),
           clientOrigin: input.clientOrigin || '',
           relationship: input.relationship || (isCold ? 'Freddo' : 'Nuovo Cliente'),
           manualRelationship: isCold || input.relationship === 'Freddo',
@@ -888,7 +890,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
   ) => {
     const prev = ideasRef.current;
     const normalizedAssignees: Owner[] = input.itemType === 'task'
-      ? (input.assignees?.length ? input.assignees.slice(0, 2) : ['Jeck'])
+      ? normalizeOwnerList(input.assignees?.length ? input.assignees.slice(0, 2) : [OWNER_JECK_SCARDY])
       : [];
     const isUpdate = Boolean(input.id && prev.some((item) => item.id === input.id));
     let savedIdea: Idea;
@@ -1054,7 +1056,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
         title: input.title,
         taskType: input.taskType || 'follow-up',
         dueDate: input.dueDate || '',
-        assignee: input.assignee || 'Jeck',
+        assignee: normalizeOwner(input.assignee) || OWNER_JECK_SCARDY,
         completed: false,
         notes: input.notes || '',
         createdAt: new Date().toISOString(),

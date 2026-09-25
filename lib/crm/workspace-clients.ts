@@ -1,8 +1,9 @@
 import { CLIENT_ORIGINS, OWNERS } from '@/lib/constants/crm';
+import { OWNER_JECK_SCARDY, OWNER_MARTINO } from '@/lib/crm/owners';
 import { DEFAULT_WORKSPACE_ID, TINYTOAST_WORKSPACE_ID } from '@/lib/constants/workspaces';
 import type { ClientOrigin, Owner } from '@/lib/types/crm';
 
-export const TINYTOAST_OWNERS: readonly Owner[] = ['Martino', 'Jeck'];
+export const TINYTOAST_OWNERS: readonly Owner[] = [OWNER_MARTINO, OWNER_JECK_SCARDY];
 
 export const TINYTOAST_CLIENT_ORIGINS: readonly ClientOrigin[] = [
   ...CLIENT_ORIGINS,
@@ -25,7 +26,7 @@ export function getClientOriginsForWorkspace(workspaceId: string = DEFAULT_WORKS
 
 export function getDefaultOwnerForWorkspace(workspaceId: string = DEFAULT_WORKSPACE_ID): Owner {
   if (workspaceId === TINYTOAST_WORKSPACE_ID) {
-    return 'Martino';
+    return OWNER_MARTINO;
   }
-  return 'Jeck';
+  return OWNER_JECK_SCARDY;
 }

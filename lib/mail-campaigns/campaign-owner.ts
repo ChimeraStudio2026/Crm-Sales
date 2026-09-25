@@ -1,3 +1,5 @@
+import { normalizeOwnerDisplay } from '@/lib/crm/owners';
+
 const CAMPAIGN_OWNER_TAG_REGEX = /\n?<!--crm-campaign-owner:([\s\S]*?)-->$/;
 
 export function extractCampaignOwnerFromDescription(description: string): {
@@ -26,9 +28,9 @@ export function resolveCampaignOwner(
   description: string,
 ): { description: string; owner: string } {
   const fromDescription = extractCampaignOwnerFromDescription(description);
-  const owner = (ownerColumn || '').trim() || fromDescription.owner;
+  const rawOwner = (ownerColumn || '').trim() || fromDescription.owner;
   return {
     description: fromDescription.description,
-    owner,
+    owner: normalizeOwnerDisplay(rawOwner),
   };
 }

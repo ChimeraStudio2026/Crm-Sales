@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { DEFAULT_WORKSPACE_ID } from '@/lib/constants/workspaces';
 import { buildPersistedFunnelEntry, normalizeFunnelActions, normalizeFunnelStage } from '@/lib/commercial-funnel/index';
+import { normalizeOwnerDisplay } from '@/lib/crm/owners';
 import type {
   CommercialFunnelEntry,
   FunnelBrandSearchResult,
@@ -35,7 +36,7 @@ function rowToEntry(row: CommercialFunnelEntryRow): CommercialFunnelEntry {
     clientId: row.client_id,
     contactId: row.contact_id || '',
     clientSource: normalizeClientSource(row.client_source),
-    owner: row.owner || '',
+    owner: normalizeOwnerDisplay(row.owner || ''),
     stage: normalizeFunnelStage(row.stage),
     actions,
     lostReason,
@@ -53,7 +54,7 @@ function entryToRow(entry: CommercialFunnelEntry): Record<string, unknown> {
     client_id: persisted.clientId,
     contact_id: persisted.contactId || '',
     client_source: persisted.clientSource,
-    owner: persisted.owner || '',
+    owner: normalizeOwnerDisplay(persisted.owner || ''),
     stage: persisted.stage,
     actions: persisted.actions,
     lost_reason: persisted.lostReason || '',

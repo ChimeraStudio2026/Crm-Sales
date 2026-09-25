@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Plus, Trash2, X } from 'lucide-react';
 import { CLIENT_ORIGINS, CLIENT_TYPES, OWNERS } from '@/lib/constants/crm';
+import { getDefaultOwnerForWorkspace } from '@/lib/crm/workspace-clients';
 import { createUniqueId } from '@/lib/crm/utils';
 import { useCrm } from '@/providers/crm-provider';
 import type { Client, ClientOrigin, ClientType, Owner } from '@/lib/types/crm';
@@ -20,7 +21,7 @@ function createEmptyDraftRow(): DraftClientRow {
     id: createUniqueId('draft-client'),
     name: '',
     type: CLIENT_TYPES[0],
-    owner: 'Jeck',
+    owner: getDefaultOwnerForWorkspace(),
     clientOrigin: '',
   };
 }

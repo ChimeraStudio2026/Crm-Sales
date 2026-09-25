@@ -79,7 +79,7 @@ export function mergeClientsWithExcelImport(
         workspaceId: DEFAULT_WORKSPACE_ID,
         name: imported.name,
         type: 'Cliente Diretto',
-        owner: 'Jeck',
+        owner: 'Jeck Scardy',
         clientOrigin: '',
         relationship: 'Nuovo Cliente',
         manualRelationship: false,

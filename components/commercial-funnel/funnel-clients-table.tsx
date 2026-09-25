@@ -22,7 +22,7 @@ import {
 import { filterCampaignsByWorkspace } from '@/lib/commercial-funnel/campaigns';
 import { formatActionDateDisplay } from '@/lib/crm/utils';
 import { getOwnersForWorkspace } from '@/lib/crm/workspace-clients';
-import { isOwner } from '@/lib/constants/crm';
+import { normalizeOwner } from '@/lib/crm/owners';
 import { DEFAULT_WORKSPACE_ID } from '@/lib/constants/workspaces';
 import { FUNNEL_ACTION_TYPES } from '@/lib/types/commercial-funnel';
 import type { CommercialFunnelEntry, FunnelActionType } from '@/lib/types/commercial-funnel';
@@ -43,8 +43,10 @@ interface FunnelClientsTableProps {
 }
 
 function resolveDisplayOwner(entry: CommercialFunnelEntry, client?: Client): string {
-  if (entry.owner && isOwner(entry.owner)) return entry.owner;
-  if (client?.owner && isOwner(client.owner)) return client.owner;
+  const fromEntry = normalizeOwner(entry.owner);
+  if (fromEntry) return fromEntry;
+  const fromClient = client?.owner ? normalizeOwner(client.owner) : null;
+  if (fromClient) return fromClient;
   return '';
 }
 

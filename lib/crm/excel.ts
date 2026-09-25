@@ -9,6 +9,7 @@ import {
 import { createUniqueId } from '@/lib/crm/utils';
 import { resolveCanonicalClientBrandName } from '@/lib/crm/client-brand-aliases';
 import { getOkrRecordMergeKey } from '@/lib/crm/import-merge';
+import { normalizeOwnerDisplay } from '@/lib/crm/owners';
 
 function sanitizeImportedClientName(rawName: unknown): string {
   const cleanedName = String(rawName ?? '').trim().replace(/\s+/g, ' ');
@@ -654,7 +655,7 @@ export function buildOkrRecordsFromImport(
       monthNumber: dateParts?.monthNumber ?? 0,
       quarter: dateParts?.quarter ?? 0,
       projectCode: String(projectRaw ?? '').trim(),
-      owner: String(ownerRaw || ''),
+      owner: normalizeOwnerDisplay(String(ownerRaw || '')),
       year: recordYear,
       sourceUpdatedAt: sourceUpdatedAt || undefined,
     };

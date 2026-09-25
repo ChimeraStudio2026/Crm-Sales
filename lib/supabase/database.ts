@@ -11,7 +11,14 @@ import type {
   TaskAttachment,
   TaskSubtask,
 } from '@/lib/types/crm';
-import { ANALYSIS_YEAR, isOwner } from '@/lib/constants/crm';
+import { ANALYSIS_YEAR } from '@/lib/constants/crm';
+import {
+  normalizeOwner,
+  normalizeOwnerDisplay,
+  normalizeOwnerList,
+  OWNER_JECK_SCARDY,
+} from '@/lib/crm/owners';
+import { getDefaultOwnerForWorkspace } from '@/lib/crm/workspace-clients';
 import { createDefaultForecasts, createEmptyForecastsByYear, parseOkrMonthNumber } from '@/lib/analysis/index';
 import { isClientOrigin } from '@/lib/crm/client-origin';
 import { normalizeStoredRelationship } from '@/lib/crm/relationship-rules';
@@ -133,7 +140,7 @@ function clientToRow(client: Client, includeHistoricalRevenue: boolean): Record<
     workspace_id: client.workspaceId || DEFAULT_WORKSPACE_ID,
     name: client.name,
     type: client.type || 'Cliente Diretto',
-    owner: client.owner || 'Jeck',
+    owner: normalizeOwner(client.owner) || getDefaultOwnerForWorkspace(client.workspaceId),
     client_origin: client.clientOrigin || '',
     relationship: normalizeStoredRelationship(client.relationship || 'Nuovo Cliente'),
     manual_relationship: !!client.manualRelationship,
@@ -163,7 +170,7 @@ function rowToClient(row: ClientRow): Client {
     workspaceId: row.workspace_id || DEFAULT_WORKSPACE_ID,
     name: row.name,
     type: clientType,
-    owner: row.owner as Client['owner'],
+    owner: (normalizeOwner(row.owner) || getDefaultOwnerForWorkspace(row.workspace_id || DEFAULT_WORKSPACE_ID)) as Client['owner'],
     clientOrigin: isClientOrigin(row.client_origin) ? row.client_origin : '',
     relationship: normalizeStoredRelationship(row.relationship || 'Nuovo Cliente'),
     manualRelationship: row.manual_relationship,
@@ -222,9 +229,7 @@ export async function fetchIdeas(db: SupabaseClient): Promise<Idea[]> {
     dateAdded: row.date_added || '',
     itemType: row.item_type === 'task' ? 'task' : 'idea',
     dueDate: row.due_date || '',
-    assignees: Array.isArray(row.assignees)
-      ? row.assignees.filter((value: unknown): value is Idea['assignees'][number] => isOwner(value))
-      : [],
+    assignees: Array.isArray(row.assignees) ? normalizeOwnerList(row.assignees) : [],
     attachments: normalizeTaskAttachments(row.attachments),
     subtasks: normalizeTaskSubtasks(row.subtasks),
   }));
@@ -265,7 +270,7 @@ function ideaToRow(idea: Idea): Record<string, unknown> {
     date_added: idea.dateAdded || null,
     item_type: idea.itemType || 'idea',
     due_date: idea.dueDate || null,
-    assignees: idea.assignees || [],
+    assignees: normalizeOwnerList(idea.assignees || []),
     attachments: idea.attachments || [],
     subtasks: idea.subtasks || [],
   };
@@ -312,7 +317,7 @@ export async function fetchClientTasks(db: SupabaseClient): Promise<ClientTask[]
     title: row.title,
     taskType: row.task_type || 'follow-up',
     dueDate: row.due_date || '',
-    assignee: row.assignee || 'Jeck',
+    assignee: normalizeOwner(row.assignee) || OWNER_JECK_SCARDY,
     completed: !!row.completed,
     notes: row.notes || '',
     createdAt: row.created_at || '',
@@ -332,7 +337,7 @@ export async function persistClientTasks(
     title: task.title,
     task_type: task.taskType || 'follow-up',
     due_date: task.dueDate || null,
-    assignee: task.assignee || 'Jeck',
+    assignee: normalizeOwner(task.assignee) || OWNER_JECK_SCARDY,
     completed: !!task.completed,
     notes: task.notes || '',
     created_at: task.createdAt || new Date().toISOString(),
@@ -359,7 +364,7 @@ function mapOkrRecordRow(row: Record<string, unknown>): OkrRecord {
     monthNumber: Number(row.month_number) || parseOkrMonthNumber(String(row.month_label || '')),
     quarter: Number(row.quarter) || 0,
     projectCode: String(row.project_code || ''),
-    owner: String(row.owner || ''),
+    owner: normalizeOwnerDisplay(String(row.owner || '')),
     year: Number(row.year) || ANALYSIS_YEAR,
     sourceUpdatedAt: row.source_updated_at ? String(row.source_updated_at) : undefined,
   };
@@ -455,7 +460,7 @@ export async function upsertOkrRecords(
     month_number: record.monthNumber || parseOkrMonthNumber(record.monthLabel),
     quarter: Number(record.quarter) || 0,
     project_code: record.projectCode || '',
-    owner: record.owner || '',
+    owner: normalizeOwnerDisplay(record.owner || ''),
     year: Number(record.year) || ANALYSIS_YEAR,
     source_updated_at: record.sourceUpdatedAt || null,
   }));

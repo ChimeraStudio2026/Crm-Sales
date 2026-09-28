@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { UserPlus, X } from 'lucide-react';
 import type { ProductOfferId } from '@/lib/constants/product-offers';
 import { getDefaultProductOfferIds, resolveClientProductOffers } from '@/lib/crm/product-offers';
@@ -36,13 +36,20 @@ export function ClientDetailPanel({
 }: ClientDetailPanelProps) {
   const { okrRecords } = useCrm();
   const [activeTab, setActiveTab] = useState<ClientDetailTab>('overview');
-  const [contacts, setContacts] = useState<ClientContact[]>(client.contacts);
+  const [contacts, setContacts] = useState<ClientContact[]>(() => (
+    client.contacts.length > 0 ? client.contacts : [createEmptyContact()]
+  ));
+  const contactsRef = useRef(contacts);
   const enabledOfferIds = resolveClientProductOffers(client.type, client.productOffers);
+
+  useEffect(() => {
+    contactsRef.current = contacts;
+  }, [contacts]);
 
   useEffect(() => {
     setContacts(client.contacts.length > 0 ? client.contacts : [createEmptyContact()]);
     setActiveTab('overview');
-  }, [client.id, client.contacts]);
+  }, [client.id]);
 
   const persistContacts = async (nextContacts: ClientContact[]) => {
     const filtered = nextContacts.filter(
@@ -58,7 +65,7 @@ export function ClientDetailPanel({
   };
 
   const handleContactBlur = async () => {
-    await persistContacts(contacts);
+    await persistContacts(contactsRef.current);
   };
 
   const handleAddContact = () => {

@@ -43,6 +43,9 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Target,
 };
 
+// Shown below a divider, like the secondary links in the Caronte sidebar.
+const SECONDARY_NAV_HREFS = new Set<string>(['/import', '/settings']);
+
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -75,6 +78,23 @@ export function Sidebar() {
     ))
   ), [access, userEmail]);
 
+  const roleLabel = access.navMode === 'tinytoast' ? 'Tinytoast' : 'Sales Team';
+  const primaryNavItems = navItems.filter((item) => !SECONDARY_NAV_HREFS.has(item.href));
+  const secondaryNavItems = navItems.filter((item) => SECONDARY_NAV_HREFS.has(item.href));
+
+  const renderNavItem = (item: (typeof navItems)[number]) => {
+    const Icon = ICON_MAP[item.icon];
+    const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+    return (
+      <li key={item.href} className={`menu-item${isActive ? ' active' : ''}`}>
+        <Link href={item.href} onClick={() => setMobileOpen(false)}>
+          {Icon && <Icon size={19} strokeWidth={1.75} />}
+          <span>{item.label}</span>
+        </Link>
+      </li>
+    );
+  };
+
   const handleSignOut = async () => {
     const supabase = createBrowserSupabaseClient();
     if (supabase) await supabase.auth.signOut();
@@ -103,29 +123,22 @@ export function Sidebar() {
             >
               <CrmLogo size={sidebarLogoSize} />
             </div>
-            <span className="logo-text">CRM Sales</span>
+            <div className="logo-meta">
+              <span className="logo-text">CRM Sales</span>
+              <span className="logo-chip">{roleLabel}</span>
+            </div>
           </div>
         </div>
-        <div className="sidebar-nav-label">Navigazione</div>
         <ul className="sidebar-menu">
-          {navItems.map((item) => {
-            const Icon = ICON_MAP[item.icon];
-            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-            return (
-              <li key={item.href} className={`menu-item${isActive ? ' active' : ''}`}>
-                <Link href={item.href} onClick={() => setMobileOpen(false)}>
-                  {Icon && <Icon size={20} strokeWidth={2} />}
-                  <span>{item.label}</span>
-                </Link>
-              </li>
-            );
-          })}
+          {primaryNavItems.map(renderNavItem)}
+          {secondaryNavItems.length > 0 && <li className="sidebar-divider" aria-hidden />}
+          {secondaryNavItems.map(renderNavItem)}
         </ul>
         <div className="sidebar-footer">
           <div className="user-avatar">{userEmail ? userEmail[0].toUpperCase() : 'A'}</div>
           <div className="user-info">
             <span className="user-name">{userEmail || 'Utente'}</span>
-            <span className="user-role">{access.navMode === 'tinytoast' ? 'Tinytoast' : 'Sales Team'}</span>
+            <span className="user-role">{roleLabel}</span>
           </div>
           <button type="button" className="sidebar-signout" onClick={() => void handleSignOut()} title="Esci">
             <LogOut size={18} />

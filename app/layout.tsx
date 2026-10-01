@@ -6,7 +6,7 @@ import { UiPreferencesProvider } from '@/providers/ui-preferences-provider';
 import './globals.css';
 
 export const viewport: Viewport = {
-  themeColor: '#266df0',
+  themeColor: '#f7f6f9',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,

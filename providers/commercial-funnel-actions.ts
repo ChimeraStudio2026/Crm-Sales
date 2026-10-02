@@ -220,6 +220,31 @@ export function createCommercialFunnelActions(
     });
   };
 
+  const updateFunnelEntryContact = async (entryId: string, contactId: string): Promise<void> => {
+    await runMutation(async () => {
+      const state = getEntries();
+      const entry = state.find((item) => item.id === entryId);
+      if (!entry) return;
+      if ((entry.contactId || '') === contactId) return;
+      const nextKey = buildFunnelEntryKey(entry.clientId, contactId);
+      const duplicate = state.some(
+        (item) => item.id !== entryId
+          && item.campaignId === entry.campaignId
+          && buildFunnelEntryKey(item.clientId, item.contactId) === nextKey,
+      );
+      if (duplicate) {
+        deps.showToast('Questo contatto è già presente nella campagna.', 'warning');
+        return;
+      }
+      const nextEntry = persistableEntry({ ...entry, contactId });
+      await applyEntries(
+        state.map((item) => (item.id === entryId ? nextEntry : item)),
+        [nextEntry],
+      );
+      deps.showToast('Contatto associato aggiornato.', 'success');
+    });
+  };
+
   const updateFunnelActionNote = async (
     entryId: string,
     slotIndex: number,
@@ -334,6 +359,7 @@ export function createCommercialFunnelActions(
     updateFunnelLostReason,
     markFunnelEntryLost,
     updateFunnelEntryOwner,
+    updateFunnelEntryContact,
     updateFunnelActionNote,
     addTaskToFunnelAction,
     removeFunnelEntry,

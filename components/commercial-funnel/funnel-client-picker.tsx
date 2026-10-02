@@ -7,13 +7,11 @@ import {
   getAvailableFunnelContacts,
   isFunnelClientFullyAdded,
 } from '@/lib/commercial-funnel/contacts';
-import { isClientInColdSection, isClientInMainList } from '@/lib/crm/utils';
+import { isClientInColdSection } from '@/lib/crm/utils';
 import { isClientInWorkspace } from '@/lib/crm/workspace-access';
 import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
-import type { FunnelClientRef, FunnelClientSource } from '@/lib/types/commercial-funnel';
-
-type FunnelPickerTab = 'cold' | 'main';
+import type { FunnelClientRef } from '@/lib/types/commercial-funnel';
 
 interface FunnelClientPickerProps {
   existingEntryKeys: Set<string>;
@@ -30,20 +28,12 @@ export function FunnelClientPicker({
   const { workspaceId } = useWorkspace();
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
-  const [activeTab, setActiveTab] = useState<FunnelPickerTab>('cold');
   const [selectedContactByClient, setSelectedContactByClient] = useState<Record<string, string>>({});
-
-  const clientSource: FunnelClientSource = activeTab === 'main' ? 'main' : 'cold';
 
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase();
     return clients
       .filter((client) => isClientInWorkspace(client, workspaceId))
-      .filter((client) => (
-        activeTab === 'cold'
-          ? isClientInColdSection(client)
-          : isClientInMainList(client)
-      ))
       .filter((client) => !isFunnelClientFullyAdded(client, existingEntryKeys))
       .filter((client) => !typeFilter || client.type === typeFilter)
       .filter((client) => {
@@ -57,7 +47,7 @@ export function FunnelClientPicker({
         ].some((value) => value.toLowerCase().includes(query));
       })
       .sort((a, b) => a.name.localeCompare(b.name, 'it'));
-  }, [activeTab, clients, existingEntryKeys, search, typeFilter, workspaceId]);
+  }, [clients, existingEntryKeys, search, typeFilter, workspaceId]);
 
   const selectedClientIds = useMemo(
     () => new Set(Object.keys(selectedContactByClient)),
@@ -99,17 +89,15 @@ export function FunnelClientPicker({
     setSelectedContactByClient(next);
   };
 
-  const handleTabChange = (tab: FunnelPickerTab): void => {
-    setActiveTab(tab);
-    setSelectedContactByClient({});
-  };
-
   const handleSubmit = (): void => {
-    const refs = Object.entries(selectedContactByClient).map(([clientId, contactId]) => ({
-      clientId,
-      contactId,
-      clientSource,
-    }));
+    const refs: FunnelClientRef[] = Object.entries(selectedContactByClient).map(([clientId, contactId]) => {
+      const client = clients.find((item) => item.id === clientId);
+      return {
+        clientId,
+        contactId,
+        clientSource: client && isClientInColdSection(client) ? 'cold' : 'main',
+      };
+    });
     onAdd(refs);
   };
 
@@ -119,22 +107,6 @@ export function FunnelClientPicker({
       <div className="drawer open mail-contact-picker-drawer">
         <div className="drawer-header"><h3>Aggiungi clienti alla campagna</h3></div>
         <div className="drawer-body">
-          <div className="funnel-picker-tabs">
-            <button
-              type="button"
-              className={`funnel-picker-tab${activeTab === 'cold' ? ' is-active' : ''}`}
-              onClick={() => handleTabChange('cold')}
-            >
-              Clienti freddi
-            </button>
-            <button
-              type="button"
-              className={`funnel-picker-tab${activeTab === 'main' ? ' is-active' : ''}`}
-              onClick={() => handleTabChange('main')}
-            >
-              Lista clienti
-            </button>
-          </div>
           <div className="mail-picker-toolbar">
             <div className="search-box">
               <Search size={18} />
@@ -160,9 +132,7 @@ export function FunnelClientPicker({
             </button>
           </div>
           <p className="mail-picker-hint">
-            {activeTab === 'cold'
-              ? 'Seleziona il cliente e associa il contatto di riferimento per questa campagna.'
-              : 'Seleziona il cliente dalla lista principale e scegli il contatto associato.'}
+            Seleziona il cliente (freddo o dalla lista clienti) e associa il contatto di riferimento per questa campagna.
           </p>
           <div className="mail-picker-list">
             {rows.length === 0 ? (
@@ -186,7 +156,12 @@ export function FunnelClientPicker({
                         onChange={() => toggleRow(client.id)}
                       />
                       <div className="mail-picker-row-body">
-                        <strong>{client.name}</strong>
+                        <strong>
+                          {client.name}
+                          {isClientInColdSection(client) && (
+                            <span className="funnel-cold-badge">Freddo</span>
+                          )}
+                        </strong>
                         <span>{client.type} · {client.owner}</span>
                         <small>
                           {client.contacts.length > 0

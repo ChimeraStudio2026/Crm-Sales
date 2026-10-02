@@ -7037,6 +7037,35 @@ body:has(.login-page) {
     background: rgba(34, 197, 94, 0.08);
 }
 
+.funnel-brand-search-row {
+    cursor: pointer;
+}
+
+.funnel-row.is-focused td {
+    background: rgba(59, 130, 246, 0.12);
+    transition: background 0.6s ease;
+}
+
+.funnel-entry-contact-select {
+    display: block;
+    width: 100%;
+    max-width: 260px;
+    margin-top: 4px;
+    font-size: 0.78rem;
+}
+
+.funnel-cold-badge {
+    display: inline-flex;
+    margin-left: 6px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #e0f2fe;
+    color: #0369a1;
+    font-size: 0.68rem;
+    font-weight: 700;
+    vertical-align: middle;
+}
+
 .funnel-converted-count {
     color: #166534;
     font-weight: 600;

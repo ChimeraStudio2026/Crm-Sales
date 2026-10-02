@@ -2,9 +2,12 @@ import { FunnelCampaignDetailSection } from '@/components/sections/funnel-campai
 
 interface FunnelCampaignPageProps {
   params: Promise<{ campaignId: string }>;
+  searchParams: Promise<{ entry?: string | string[] }>;
 }
 
-export default async function FunnelCampaignPage({ params }: FunnelCampaignPageProps) {
+export default async function FunnelCampaignPage({ params, searchParams }: FunnelCampaignPageProps) {
   const { campaignId } = await params;
-  return <FunnelCampaignDetailSection campaignId={campaignId} />;
+  const { entry } = await searchParams;
+  const focusEntryId = Array.isArray(entry) ? entry[0] : entry;
+  return <FunnelCampaignDetailSection campaignId={campaignId} focusEntryId={focusEntryId} />;
 }

@@ -16,11 +16,12 @@ import { TopHeader } from '@/components/layout/top-header';
 
 interface FunnelCampaignDetailSectionProps {
   campaignId: string;
+  focusEntryId?: string;
 }
 
 type CampaignDetailView = 'table' | 'clients';
 
-export function FunnelCampaignDetailSection({ campaignId }: FunnelCampaignDetailSectionProps) {
+export function FunnelCampaignDetailSection({ campaignId, focusEntryId }: FunnelCampaignDetailSectionProps) {
   const { clients, mailCampaigns, commercialFunnelEntries, updateMailCampaignStatus } = useCrm();
   const { workspaceId } = useWorkspace();
   const [detailView, setDetailView] = useState<CampaignDetailView>('table');
@@ -106,7 +107,7 @@ export function FunnelCampaignDetailSection({ campaignId }: FunnelCampaignDetail
               mailCampaigns={mailCampaigns}
             />
           ) : (
-            <FunnelClientsTable campaignId={campaignId} entries={entries} />
+            <FunnelClientsTable campaignId={campaignId} entries={entries} focusEntryId={focusEntryId} />
           )}
         </section>
       </div>

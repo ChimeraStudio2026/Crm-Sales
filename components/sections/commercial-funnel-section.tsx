@@ -282,8 +282,13 @@ export function CommercialFunnelSection() {
                       const entry = commercialFunnelEntries.find((item) => item.id === result.entryId);
                       const status = entry ? resolveFunnelStageDisplay(entry) : null;
                       const semaforo = entry ? resolveFunnelSemaforo(entry.actions) : 'green';
+                      const entryHref = `/funnel/${result.campaignId}?entry=${encodeURIComponent(result.entryId)}`;
                       return (
-                        <tr key={result.entryId}>
+                        <tr
+                          key={result.entryId}
+                          className="funnel-brand-search-row"
+                          onClick={() => router.push(entryHref)}
+                        >
                           <td>{result.clientName}</td>
                           <td>{result.campaignName}</td>
                           <td>
@@ -298,7 +303,11 @@ export function CommercialFunnelSection() {
                             />
                           </td>
                           <td>
-                            <Link href={`/funnel/${result.campaignId}`} className="funnel-brand-search-link">
+                            <Link
+                              href={entryHref}
+                              className="funnel-brand-search-link"
+                              onClick={(event) => event.stopPropagation()}
+                            >
                               Apri
                             </Link>
                           </td>

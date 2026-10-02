@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { ChevronRight, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { FunnelActionNoteBlock } from '@/components/commercial-funnel/funnel-action-note-block';
 import { FunnelClientPicker } from '@/components/commercial-funnel/funnel-client-picker';
@@ -40,6 +40,7 @@ interface FunnelClientsTableProps {
   campaignId: string;
   entries: CommercialFunnelEntry[];
   showAddButton?: boolean;
+  focusEntryId?: string;
 }
 
 function resolveDisplayOwner(entry: CommercialFunnelEntry, client?: Client): string {
@@ -54,6 +55,7 @@ export function FunnelClientsTable({
   campaignId,
   entries,
   showAddButton = true,
+  focusEntryId,
 }: FunnelClientsTableProps) {
   const {
     clients,
@@ -63,11 +65,15 @@ export function FunnelClientsTable({
     updateFunnelLostReason,
     markFunnelEntryLost,
     updateFunnelEntryOwner,
+    updateFunnelEntryContact,
     removeFunnelEntry,
     moveFunnelEntryToCampaign,
   } = useCrm();
   const [showPicker, setShowPicker] = useState(false);
-  const [expandedEntries, setExpandedEntries] = useState<Set<string>>(new Set());
+  const [expandedEntries, setExpandedEntries] = useState<Set<string>>(
+    () => new Set(focusEntryId ? [focusEntryId] : []),
+  );
+  const [highlightedEntryId, setHighlightedEntryId] = useState(focusEntryId || '');
   const [persoModal, setPersoModal] = useState<PersoModalState | null>(null);
 
   const workspaceId = useMemo(
@@ -85,6 +91,23 @@ export function FunnelClientsTable({
     () => new Set(entries.map((entry) => buildFunnelEntryKey(entry.clientId, entry.contactId))),
     [entries],
   );
+
+  const hasFocusEntry = Boolean(focusEntryId && entries.some((entry) => entry.id === focusEntryId));
+
+  useEffect(() => {
+    if (!focusEntryId || !hasFocusEntry) return;
+    setExpandedEntries((prev) => (prev.has(focusEntryId) ? prev : new Set(prev).add(focusEntryId)));
+    setHighlightedEntryId(focusEntryId);
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById(`funnel-entry-${focusEntryId}`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+    const timeout = window.setTimeout(() => setHighlightedEntryId(''), 2500);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timeout);
+    };
+  }, [focusEntryId, hasFocusEntry]);
 
   const maxActionColumns = useMemo(
     () => getMaxDisplayActionColumns(entries),
@@ -222,7 +245,7 @@ export function FunnelClientsTable({
               {rows.length === 0 ? (
                 <tr>
                   <td colSpan={maxActionColumns + 5} className="mail-campaigns-empty">
-                    Nessun cliente in questa campagna. Usa + per aggiungere clienti freddi.
+                    Nessun cliente in questa campagna. Usa + per aggiungere clienti.
                   </td>
                 </tr>
               ) : (
@@ -232,9 +255,22 @@ export function FunnelClientsTable({
                   const contactLabel = resolveFunnelContactLabel(client, entry.contactId);
                   const displayOwner = resolveDisplayOwner(entry, client);
                   const displaySemaforo = isConverted ? 'green' : semaforo;
+                  const ownKey = buildFunnelEntryKey(entry.clientId, entry.contactId);
+                  const switchableContacts = client
+                    ? client.contacts.filter((contact) => {
+                      const key = buildFunnelEntryKey(client.id, contact.id);
+                      return key === ownKey || !existingEntryKeys.has(key);
+                    })
+                    : [];
+                  const selectedContactId = entry.contactId || client?.contacts[0]?.id || '';
+                  const canSwitchContact = switchableContacts.length > 1
+                    || (switchableContacts.length === 1 && switchableContacts[0]?.id !== selectedContactId);
                   return (
                     <Fragment key={entry.id}>
-                      <tr className={`funnel-row${isLost ? ' is-lost' : ''}${isConverted ? ' is-converted' : ''}`}>
+                      <tr
+                        id={`funnel-entry-${entry.id}`}
+                        className={`funnel-row${isLost ? ' is-lost' : ''}${isConverted ? ' is-converted' : ''}${highlightedEntryId === entry.id ? ' is-focused' : ''}`}
+                      >
                         <td className="funnel-col-semaforo">
                           <span
                             className={`funnel-semaforo funnel-semaforo-${displaySemaforo}`}
@@ -253,7 +289,9 @@ export function FunnelClientsTable({
                             />
                             <span className="funnel-client-toggle-text">
                               <strong>{clientName}</strong>
-                              <small className="funnel-entry-contact">{contactLabel}</small>
+                              {!canSwitchContact && (
+                                <small className="funnel-entry-contact">{contactLabel}</small>
+                              )}
                             </span>
                             {entry.clientSource === 'main' && (
                                   <span className="funnel-main-list-badge">Lista</span>
@@ -261,6 +299,21 @@ export function FunnelClientsTable({
                                 {isLost && <span className="funnel-lost-badge">Perso</span>}
                                 {isConverted && <span className="funnel-converted-badge">Convertito</span>}
                           </button>
+                          {canSwitchContact && client && (
+                            <select
+                              className="table-cell-select funnel-entry-contact-select"
+                              value={selectedContactId}
+                              title="Cambia contatto associato"
+                              onChange={(event) => void updateFunnelEntryContact(entry.id, event.target.value)}
+                            >
+                              {switchableContacts.map((contact) => (
+                                <option key={contact.id} value={contact.id}>
+                                  {contact.name.trim() || client.name}
+                                  {contact.email ? ` · ${contact.email}` : ''}
+                                </option>
+                              ))}
+                            </select>
+                          )}
                         </td>
                         <td className="funnel-col-owner">
                           <select

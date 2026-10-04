@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { GitBranch, Download, Plus, Search } from 'lucide-react';
+import { Download, Plus, Search } from 'lucide-react';
 import {
   buildFunnelCampaignDashboardRow,
   filterCampaignsByWorkspace,
@@ -20,7 +20,7 @@ import {
 import { downloadCommercialFunnelExcel } from '@/lib/commercial-funnel/export';
 import { resolveFunnelSemaforo, resolveFunnelStageDisplay } from '@/lib/commercial-funnel/index';
 import { buildFunnelStatsSummary } from '@/lib/commercial-funnel/stats';
-import { formatActionDateDisplay } from '@/lib/crm/utils';
+import { formatActionDateDisplay, formatShortItalianDate } from '@/lib/crm/utils';
 import { resolveWorkspaceLabel } from '@/lib/constants/workspaces';
 import { CampaignNameCell } from '@/components/mail-campaigns/campaign-name-cell';
 import { CampaignStatusSelect } from '@/components/mail-campaigns/campaign-status-select';
@@ -200,10 +200,6 @@ export function CommercialFunnelSection() {
         <section className="app-section active">
           <div className="table-filter-bar">
             <div className="filter-left funnel-filter-left">
-              <h3 className="commercial-funnel-title">
-                <GitBranch size={20} />
-                Funnel Commerciale
-              </h3>
               <div className="search-box funnel-brand-search-box">
                 <Search size={18} />
                 <input
@@ -373,7 +369,7 @@ export function CommercialFunnelSection() {
                           onChange={(nextStatus) => void handleStatusChange(campaign.id, nextStatus)}
                         />
                       </td>
-                      <td>{campaign.startDate || '—'}</td>
+                      <td className="funnel-campaign-date">{campaign.startDate ? formatShortItalianDate(campaign.startDate) : '—'}</td>
                       <td className="analysis-num">{totalClients}</td>
                       <td className="analysis-num">{activeCount}</td>
                       <td className="analysis-num funnel-converted-count">{convertedCount}</td>

@@ -49,6 +49,13 @@ export function escapeHtml(text: string | null | undefined): string {
     .replace(/"/g, '&quot;');
 }
 
+/** "2026-09-28" → "28 set 2026" (compact, for table cells). */
+export function formatShortItalianDate(dateStr: string): string {
+  const date = new Date(`${dateStr.slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return dateStr;
+  return date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
 export function formatItalianDate(dateStr: string): string {
   const date = new Date(`${dateStr}T00:00:00`);
   if (Number.isNaN(date.getTime())) return dateStr;

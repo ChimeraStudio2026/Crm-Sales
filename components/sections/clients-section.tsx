@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { ChevronRight, Download, Edit, FilterX, Search, Sparkles, Trash2 } from 'lucide-react';
+import { ChevronRight, Download, Edit, FilterX, Info, Search, Sparkles, Trash2 } from 'lucide-react';
 import {
   CLIENT_TYPES,
   CRM_TABLE_COLUMN_DEFS,
@@ -26,6 +26,8 @@ import { useCrmTableHorizontalScroll } from '@/components/clients/use-crm-table-
 import { ClientOriginSelect } from '@/components/clients/client-origin-select';
 import { TopHeader } from '@/components/layout/top-header';
 import { getClientOriginCellClass } from '@/lib/crm/client-origin';
+import { downloadClientsExcel } from '@/lib/crm/clients-export';
+import { resolveWorkspaceLabel } from '@/lib/constants/workspaces';
 import type { Client, Relationship, SortState } from '@/lib/types/crm';
 
 const REVENUE_COLUMNS = ['rev2023', 'rev2024', 'rev2025', 'rev2026'] as const;
@@ -307,23 +309,29 @@ export function ClientsSection() {
       <TopHeader onQuickAdd={openNew} />
       <div className="content-body is-clients-section">
         <section id="section-clients" className="app-section active">
-          <div className="clients-relationship-legend recall-legend">
-            <span className="recall-legend-item">
-              <strong>⭐</strong> Nuovo Cliente · fino a {formatCurrency(RECURRENT_REV_THRESHOLD)}
-            </span>
-            <span className="recall-legend-item">
-              <strong>⭐⭐</strong> Ricorrente · {formatCurrency(RECURRENT_REV_THRESHOLD)}–{formatCurrency(TOP_20_REV_THRESHOLD)}
-            </span>
-            <span className="recall-legend-item">
-              <strong>⭐⭐⭐</strong> Top 20% · oltre {formatCurrency(TOP_20_REV_THRESHOLD)}
-            </span>
-            <span className="recall-legend-item">
-              ❄️ Freddo · prospect cold
-            </span>
-            <span className="recall-legend-item">
-              🟡 Da recuperare · 🔴 Eliminato · solo manuali
-            </span>
-          </div>
+          <details className="clients-legend">
+            <summary>
+              <Info size={14} />
+              Legenda rapporti
+            </summary>
+            <div className="clients-relationship-legend recall-legend">
+              <span className="recall-legend-item">
+                <strong>⭐</strong> Nuovo Cliente · fino a {formatCurrency(RECURRENT_REV_THRESHOLD)}
+              </span>
+              <span className="recall-legend-item">
+                <strong>⭐⭐</strong> Ricorrente · {formatCurrency(RECURRENT_REV_THRESHOLD)}–{formatCurrency(TOP_20_REV_THRESHOLD)}
+              </span>
+              <span className="recall-legend-item">
+                <strong>⭐⭐⭐</strong> Top 20% · oltre {formatCurrency(TOP_20_REV_THRESHOLD)}
+              </span>
+              <span className="recall-legend-item">
+                ❄️ Freddo · prospect cold
+              </span>
+              <span className="recall-legend-item">
+                🟡 Da recuperare · 🔴 Eliminato · solo manuali
+              </span>
+            </div>
+          </details>
           <div className="table-filter-bar">
             <div className="filter-left">
               <div className="search-box">
@@ -376,16 +384,18 @@ export function ClientsSection() {
                   className={`clients-filter-chip ${showRev2023 ? 'is-active' : ''}`}
                   onClick={() => setShowRev2023((prev) => !prev)}
                   title="Mostra o nascondi colonna Fatturato 2023"
+                  aria-pressed={showRev2023}
                 >
-                  2023
+                  Fatt. 2023
                 </button>
                 <button
                   type="button"
                   className={`clients-filter-chip ${showRev2024 ? 'is-active' : ''}`}
                   onClick={() => setShowRev2024((prev) => !prev)}
                   title="Mostra o nascondi colonna Fatturato 2024"
+                  aria-pressed={showRev2024}
                 >
-                  2024
+                  Fatt. 2024
                 </button>
               </div>
             </div>
@@ -405,7 +415,12 @@ export function ClientsSection() {
                 <FilterX size={16} />
                 <span>Resetta</span>
               </button>
-              <button type="button" className="btn btn-success">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => downloadClientsExcel(filtered, resolveWorkspaceLabel(workspaceId))}
+                title="Scarica in Excel i clienti mostrati con i filtri attuali"
+              >
                 <Download size={16} />
                 <span>Esporta</span>
               </button>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Calendar, ChevronDown, ChevronUp, Edit, ExternalLink, FilterX, Mail, PlusCircle, Sparkles, Trash2, User, Wallet } from 'lucide-react';
+import { Calendar, ChevronDown, ChevronUp, Edit, ExternalLink, FilterX, Mail, PlusCircle, Trash2, User, Wallet } from 'lucide-react';
 import { TopHeader } from '@/components/layout/top-header';
 import { ClientSearchSelect } from '@/components/clients/client-search-select';
 import { CreativeStageModal } from '@/components/propositivita/creative-stage-modal';
@@ -590,13 +590,7 @@ export function PropositivitaSection() {
       <TopHeader />
       <div className="content-body">
         <section className="app-section active">
-          <div className="propositivita-summary glass-card">
-            <div>
-              <h3 className="propositivita-section-title"><Sparkles size={20} /> Propositività</h3>
-              <p className="propositivita-section-subtitle">
-                Creatività proposte ai clienti e sconti/extra concessi per Chimera e TinyToast.
-              </p>
-            </div>
+          <div className="propositivita-summary">
             <div className="propositivita-summary-stats">
               <span>{creativeProposals.length} creatività</span>
               <span>{workspaceDiscounts.length} voci sconti/extra</span>

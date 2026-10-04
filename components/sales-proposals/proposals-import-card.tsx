@@ -112,18 +112,23 @@ export function ProposalsImportCard({
   };
 
   return (
-    <div className="glass-card proposals-import-card">
+    <div
+      className="glass-card proposals-import-card is-compact"
+      onDragOver={(event) => event.preventDefault()}
+      onDrop={handleDrop}
+    >
       <div className="proposals-import-head">
         <div>
-          <h3><FileSpreadsheet size={18} /> Importa scarico CSV</h3>
+          <h3><FileSpreadsheet size={18} /> Sincronizzazione da Cerbero</h3>
           <p>
-            Ogni ricarica allinea stato, date Si/No e importi sul file CSV.
-            Le proposte già presenti (Nome + Creato il) vengono aggiornate.
+            Le proposte si aggiornano da sole ogni giorno alle 6:55 e alle 13:55.
+            Per un aggiornamento manuale carica qui lo scarico CSV (anche trascinandolo):
+            le proposte già presenti (Nome + Creato il) vengono aggiornate.
           </p>
         </div>
         <label className="btn btn-secondary proposals-import-btn">
           <CloudUpload size={16} />
-          {isParsing ? 'Analisi...' : 'Seleziona file'}
+          {isParsing ? 'Analisi...' : 'Carica CSV'}
           <input
             type="file"
             accept=".csv,.xlsx,.xls"
@@ -132,13 +137,6 @@ export function ProposalsImportCard({
             disabled={isDisabled || isParsing || isImporting}
           />
         </label>
-      </div>
-      <div
-        className="proposals-import-drop"
-        onDragOver={(event) => event.preventDefault()}
-        onDrop={handleDrop}
-      >
-        Trascina qui il CSV dei preventivi, oppure usa il pulsante.
       </div>
       {preview ? (
         <div className="proposals-import-preview">

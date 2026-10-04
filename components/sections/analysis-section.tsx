@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { BarChart3, ChevronRight, Layers } from 'lucide-react';
+import { ChevronRight, Layers } from 'lucide-react';
 import {
   ANALYSIS_SCOPES,
   CLIENT_TYPE_ROWS,
@@ -224,22 +224,6 @@ export function AnalysisSection() {
       <div className="content-body">
       <section className="app-section active">
         <div className="analysis-dashboard">
-          <OkrYearComparisonPanel />
-          <OkrClientComparisonPanel />
-          <RollingRevenuePanel />
-          <RetentionPanel />
-          <div className="analysis-intro glass-card">
-            <h3><BarChart3 size={20} /> Analisi {analysisYear}</h3>
-            <p>
-              I dati di fatturato e N. Prop derivano dagli OKR importati via Excel.
-              Big Prod e Motion sono unificati in <strong>Prod</strong>.
-            </p>
-            {yearOkrRecords.length === 0 && (
-              <p className="analysis-empty-hint">
-                Nessun OKR caricato per {analysisYear} — importa un file Excel dalla sezione Importa Excel.
-              </p>
-            )}
-          </div>
           <div className="analysis-block analysis-block-total is-open">
             <div className="analysis-block-header">
               <h3><Layers size={20} /> Totale Anno {analysisYear}</h3>
@@ -261,6 +245,14 @@ export function AnalysisSection() {
               </div>
             </div>
             <div className="analysis-block-body">
+              <p className="analysis-block-note">
+                Fatturato e N. Prop derivano dagli OKR importati via Excel. Big Prod e Motion sono unificati in <strong>Prod</strong>.
+              </p>
+              {yearOkrRecords.length === 0 && (
+                <p className="analysis-empty-hint">
+                  Nessun OKR caricato per {analysisYear} — importa un file Excel dalla sezione Importa Excel.
+                </p>
+              )}
               <ScopeContent scopeId="total" year={analysisYear} />
             </div>
           </div>
@@ -291,6 +283,11 @@ export function AnalysisSection() {
               );
             })}
           </div>
+          <h3 className="analysis-section-heading">Approfondimenti</h3>
+          <OkrYearComparisonPanel />
+          <OkrClientComparisonPanel />
+          <RollingRevenuePanel />
+          <RetentionPanel />
         </div>
       </section>
     </div>

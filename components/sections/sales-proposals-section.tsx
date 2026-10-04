@@ -128,7 +128,7 @@ export function SalesProposalsSection() {
           <div className="proposals-toolbar">
             <div>
               <h3>Preventivi commerciali</h3>
-              <p>Analisi delle richieste cliente importate dallo scarico CSV mensile.</p>
+              <p>Analisi delle richieste cliente sincronizzate da Cerbero.</p>
             </div>
             <div className="proposals-toolbar-actions">
               <div className="task-view-toggle" role="group" aria-label="Vista proposte">
@@ -172,8 +172,8 @@ export function SalesProposalsSection() {
           </div>
           {isCurrentYear ? (
             <p className="proposals-year-hint">
-              Anno in corso: i dati possono essere parziali fino all'ultimo scarico
-              {latestBatch ? ` del ${formatProposalDateLabel(latestBatch)}` : ''}.
+              Anno in corso
+              {latestBatch ? ` · proposte aggiornate al ${formatProposalDateLabel(latestBatch)}` : ''}.
             </p>
           ) : null}
           <ProposalsImportCard

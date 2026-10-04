@@ -129,7 +129,6 @@ export const EXCEL_IMPORT_DESC_PREFIX = 'Cliente creato da import Excel';
 
 export const NAV_ITEMS = [
   { href: '/analysis', label: 'Analisi', icon: 'BarChart3' },
-  { href: '/okr', label: 'OKR', icon: 'Target' },
   { href: '/proposte', label: 'Proposte', icon: 'FileText' },
   { href: '/clients', label: 'Lista Clienti', icon: 'Users' },
   { href: '/funnel', label: 'Funnel Commerciale', icon: 'GitBranch' },
@@ -140,7 +139,6 @@ export const NAV_ITEMS = [
 
 export const PAGE_META: Record<string, { title: string; subtitle: string }> = {
   '/analysis': { title: 'Analisi', subtitle: 'OKR, previsioni e breakdown per quarter.' },
-  '/okr': { title: 'OKR', subtitle: 'Framework di valutazione per Head of: checkpoint, obiettivi e key result.' },
   '/proposte': { title: 'Proposte', subtitle: 'Preventivi commerciali: KPI, ticket medio e clienti per categoria.' },
   '/clients': {
     title: 'Gestione Clienti',

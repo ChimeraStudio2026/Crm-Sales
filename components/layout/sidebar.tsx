@@ -15,14 +15,12 @@ import {
   Settings,
   Snowflake,
   Sparkles,
-  Target,
   Users,
   type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { ChimeraWordmark } from '@/components/ui/chimera-wordmark';
 import { NAV_ITEMS } from '@/lib/constants/crm';
-import { isHeadOkrViewerEmail } from '@/lib/crm/head-okr-access';
 import { getNavItemsForAccess } from '@/lib/crm/workspace-access';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { useUiPreferences } from '@/providers/ui-preferences-provider';
@@ -40,7 +38,6 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Snowflake,
   FileSpreadsheet,
   Settings,
-  Target,
 };
 
 // Shown below a divider, like the secondary links in the Caronte sidebar.
@@ -72,11 +69,7 @@ export function Sidebar() {
     });
   }, []);
 
-  const navItems = useMemo(() => (
-    getNavItemsForAccess(access).filter((item) => (
-      item.href !== '/okr' || isHeadOkrViewerEmail(userEmail)
-    ))
-  ), [access, userEmail]);
+  const navItems = useMemo(() => getNavItemsForAccess(access), [access]);
 
   const roleLabel = access.navMode === 'tinytoast' ? 'Tinytoast' : 'Sales Team';
   const primaryNavItems = navItems.filter((item) => !SECONDARY_NAV_HREFS.has(item.href));

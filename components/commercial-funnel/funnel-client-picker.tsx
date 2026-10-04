@@ -137,8 +137,8 @@ export function FunnelClientPicker({
           </div>
           <p className="mail-picker-hint">
             {track === 'warm'
-              ? 'Qui trovi solo clienti caldi (hanno fatturato almeno 1€). I clienti freddi vanno nelle campagne di Clienti freddi.'
-              : 'Qui trovi solo clienti freddi (non hanno ancora fatturato). I clienti caldi vanno nelle campagne di Clienti caldi.'}
+              ? 'Qui trovi solo clienti che hanno già fatturato almeno 1€. I clienti senza fatturato vanno nelle campagne Sales.'
+              : 'Qui trovi solo clienti che non hanno ancora fatturato. I clienti con fatturato vanno nelle campagne Accounting.'}
             {' '}Associa il contatto di riferimento per questa campagna.
           </p>
           <div className="mail-picker-list">

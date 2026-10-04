@@ -297,7 +297,7 @@ export function CommercialFunnelSection() {
               </button>
             ))}
           </div>
-          <FunnelStatsCharts title={`Totali ${FUNNEL_TRACK_LABELS[track].toLowerCase()}`} stats={workspaceStats} />
+          <FunnelStatsCharts title={`Totali ${FUNNEL_TRACK_LABELS[track]}`} stats={workspaceStats} />
           {pageView === 'clients' ? (
             <FunnelClientsView
               entries={visibleEntries}
@@ -388,7 +388,7 @@ export function CommercialFunnelSection() {
                         ? 'Nessuna campagna corrisponde alla ricerca.'
                         : hideClosedCampaigns && closedCampaignCount > 0
                           ? 'Tutte le campagne visibili sono chiuse. Mostrale con «Chiuse nascoste».'
-                          : `Nessuna campagna in ${FUNNEL_TRACK_LABELS[track].toLowerCase()}. Creane una nuova.`}
+                          : `Nessuna campagna in ${FUNNEL_TRACK_LABELS[track]}. Creane una nuova.`}
                     </td>
                   </tr>
                 ) : (

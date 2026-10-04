@@ -4,8 +4,8 @@ import type { MailCampaign } from '@/lib/types/mail-campaigns';
 import { isFunnelTerminalConvertedEntry } from '@/lib/commercial-funnel/index';
 
 export const FUNNEL_TRACK_LABELS: Record<FunnelTrack, string> = {
-  cold: 'Clienti freddi',
-  warm: 'Clienti caldi',
+  cold: 'Sales',
+  warm: 'Accounting',
 };
 
 export const FUNNEL_TRACK_DESCRIPTIONS: Record<FunnelTrack, string> = {

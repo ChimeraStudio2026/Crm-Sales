@@ -148,4 +148,12 @@ export const PAGE_META: Record<string, { title: string; subtitle: string }> = {
   '/propositivita': { title: 'Propositività', subtitle: 'Creatività proposte ai clienti e sconti/extra concessi.' },
   '/import': { title: 'Importazione Dati', subtitle: 'Carica fatturati 2023–2026 da foglio di calcolo.' },
   '/settings': { title: 'Impostazioni', subtitle: 'Manutenzione database e regole.' },
+  '/campaigns': { title: 'Campagne mail', subtitle: 'Sequenze mail, contatti e stato degli invii.' },
 };
+
+/** Meta for a path, falling back to its section (e.g. /funnel/abc → /funnel). */
+export function resolvePageMeta(pathname: string): { title: string; subtitle: string } {
+  if (PAGE_META[pathname]) return PAGE_META[pathname];
+  const section = `/${pathname.split('/')[1] || ''}`;
+  return PAGE_META[section] || PAGE_META['/analysis'];
+}

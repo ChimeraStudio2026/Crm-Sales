@@ -112,7 +112,10 @@ export function ClientCategoryTable({ stats }: ClientCategoryTableProps) {
               <tr key={stat.cliente}>
                 <td><strong>{stat.cliente}</strong></td>
                 {categories.map((categoria) => (
-                  <td key={categoria} className="analysis-num">
+                  <td
+                    key={categoria}
+                    className={`analysis-num${stat.countsByCategory[categoria] ? '' : ' is-zero'}`}
+                  >
                     {stat.countsByCategory[categoria] || 0}
                   </td>
                 ))}

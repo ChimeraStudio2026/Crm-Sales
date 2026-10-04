@@ -38,7 +38,8 @@ export function formatProposalPercent(ratio: number): string {
 }
 
 export function formatProposalDateLabel(value: string): string {
-  const date = new Date(`${value}T00:00:00Z`);
+  // Accepts both "YYYY-MM-DD" and full timestamps ("2026-10-02T06:53:00+00:00").
+  const date = new Date(`${value.slice(0, 10)}T00:00:00Z`);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString('it-IT', {
     day: '2-digit',

@@ -2,7 +2,7 @@
 
 import { PlusCircle } from 'lucide-react';
 import { usePathname } from 'next/navigation';
-import { PAGE_META } from '@/lib/constants/crm';
+import { resolvePageMeta } from '@/lib/constants/crm';
 import { isWorkspaceScopedPath } from '@/lib/constants/workspaces';
 import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
@@ -18,7 +18,7 @@ export function TopHeader({ onQuickAdd }: TopHeaderProps) {
   const pathname = usePathname();
   const { totalRevenue2026 } = useCrm();
   const { access } = useWorkspace();
-  const meta = PAGE_META[pathname] || PAGE_META['/analysis'];
+  const meta = resolvePageMeta(pathname);
   const showWorkspaceSelector = access.canSwitchWorkspace && isWorkspaceScopedPath(pathname);
   const showRevenue = access.navMode === 'full';
 

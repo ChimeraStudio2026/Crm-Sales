@@ -10203,3 +10203,371 @@ th,
     border-color: transparent;
     color: var(--pill-amber-fg);
 }
+
+/* --- Analisi: deep-dive panels --- */
+.analysis-accordion-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.analysis-accordion-meta svg {
+    flex-shrink: 0;
+}
+
+.analysis-dashboard > .analysis-accordion,
+.analysis-dashboard > .analysis-section-heading + * {
+    margin-top: 0;
+}
+
+.analysis-dashboard > .analysis-accordion + .analysis-accordion {
+    margin-top: 12px;
+}
+
+.analysis-kpi-grid.retention-kpi-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.analysis-kpi-value.retention-positive { color: var(--success); }
+.analysis-kpi-value.retention-negative { color: var(--danger); }
+
+.retention-detail-header {
+    margin-top: 20px;
+}
+
+/* Long client lists scroll inside the panel instead of stretching the page */
+.retention-detail-block .analysis-table-wrap {
+    max-height: 520px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+}
+
+.retention-detail-block .analysis-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.rolling-revenue-bar {
+    background: linear-gradient(180deg, #2a2a2a 0%, var(--brand-ink) 100%);
+}
+
+[data-theme="dark"] .rolling-revenue-bar {
+    background: linear-gradient(180deg, #ffffff 0%, var(--brand-paper) 100%);
+}
+
+.rolling-revenue-bar-cell:last-child .rolling-revenue-bar {
+    background: var(--brand-lilac);
+}
+
+.rolling-revenue-source {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.okr-comparison-month-cell.is-included {
+    background: var(--bg-subtle);
+}
+
+.okr-comparison-stat-year,
+.okr-comparison-scrubber-label,
+.okr-daily-change-head {
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.okr-comparison-stat-value {
+    font-family: var(--font-display);
+    letter-spacing: -0.03em;
+}
+
+@media (max-width: 900px) {
+    .analysis-kpi-grid.retention-kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* --- No all-caps labels anywhere: sentence case, one label style --- */
+.workspace-selector-label,
+.workspace-selector-badge,
+.metric-title,
+.badge,
+.form-group label,
+.product-column-title h3,
+.tasks-asana-header,
+.task-subtasks-label,
+.recall-stat-label,
+.relationship-note-label,
+.product-offers-label,
+.form-contact-row-title,
+.analysis-kpi-label,
+.analysis-table th,
+.okr-comparison-scrubber-label,
+.okr-comparison-stat-year,
+.okr-daily-change-month-label,
+.idea-item-type-tag,
+.client-search-group-label,
+.mail-campaign-registry-table th,
+.funnel-picker-contact-label,
+.funnel-client-view-header,
+.funnel-expanded-label,
+.propositivita-report-label,
+.propositivita-filter-field > span,
+.propositivita-reference-label,
+.propositivita-discounts-header,
+.proposals-weekly-select span,
+.proposals-sort-btn,
+.proposals-client-filter span {
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.form-group label,
+.proposals-client-filter span,
+.proposals-weekly-select span,
+.relationship-note-label,
+.product-offers-label,
+.propositivita-reference-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+/* --- Proposte: client × category table --- */
+.proposals-client-table .analysis-table-wrap {
+    max-height: 560px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+}
+
+.proposals-client-table .analysis-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.proposals-client-table .analysis-num.is-zero {
+    color: var(--text-muted);
+    opacity: 0.55;
+}
+
+.proposals-client-filter .form-input {
+    min-height: 40px;
+    padding: 8px 12px;
+}
+
+/* --- Proposte weekly review: full-width lists are easier to read --- */
+.proposals-weekly-lists {
+    grid-template-columns: 1fr;
+}
+
+/* --- Lista Clienti: expanded detail stays within the visible width --- */
+.client-contacts-detail-row > td {
+    padding: 0;
+}
+
+.client-contacts-detail-row .client-detail-panel {
+    position: sticky;
+    left: 0;
+    box-sizing: border-box;
+    width: calc(100vw - var(--sidebar-width) - 104px);
+    max-width: 100%;
+    padding: 16px 20px 18px;
+    background: var(--bg-subtle);
+    border-top: 1px solid var(--border-color);
+}
+
+@media (max-width: 768px) {
+    .client-contacts-detail-row .client-detail-panel {
+        width: calc(100vw - 34px);
+    }
+}
+
+/* --- Funnel: give text columns room so selects are not truncated --- */
+.funnel-col-owner { min-width: 140px; }
+.funnel-owner-select { min-width: 128px; }
+.funnel-col-action { min-width: 170px; }
+.funnel-action-select { min-width: 150px; }
+
+.funnel-action-select.is-positive {
+    border-radius: var(--radius-sm);
+}
+
+.commercial-funnel-table td:first-child:not(.funnel-col-semaforo),
+.commercial-funnel-table th:first-child:not(.funnel-col-semaforo) {
+    min-width: 200px;
+}
+
+.commercial-funnel-table td:nth-child(2) .table-cell-select {
+    min-width: 140px;
+}
+
+.funnel-campaign-detail-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* --- Drawer forms: consistent rhythm and paired fields --- */
+.drawer-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.form-group {
+    gap: 6px;
+    min-width: 0;
+}
+
+.form-input,
+.form-select {
+    min-height: 42px;
+    font-size: 0.95rem;
+}
+
+.form-textarea {
+    font-size: 0.95rem;
+}
+
+@media (max-width: 560px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* --- Propositività: badges as pills, unified form labels --- */
+.propositivita-badge {
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    font-size: 0.76rem;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.propositivita-badge.is-extra { background: var(--pill-blue-bg); color: var(--pill-blue-fg); }
+.propositivita-badge.is-gift { background: var(--pill-amber-bg); color: var(--pill-amber-fg); }
+.propositivita-badge.is-discount { background: var(--pill-red-bg); color: var(--pill-red-fg); }
+
+.propositivita-discount-date {
+    white-space: nowrap;
+}
+
+.form-label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.form-label > .form-input,
+.form-label > .form-select,
+.form-label > .form-textarea,
+.form-label > div {
+    font-weight: 400;
+    color: var(--text-primary);
+}
+
+/* --- Impostazioni: two-column masonry on wide screens --- */
+.settings-grid {
+    columns: 2 440px;
+    column-gap: 20px;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.settings-grid > * {
+    break-inside: avoid;
+    margin-bottom: 20px;
+}
+
+/* Links styled as buttons never underline */
+a.btn,
+a.btn:hover {
+    text-decoration: none;
+}
+
+/* Destructive actions: soft by default, solid only on hover */
+.btn-danger {
+    background: var(--pill-red-bg);
+    color: var(--pill-red-fg);
+    border: 1px solid transparent;
+    box-shadow: none;
+}
+
+.btn-danger:hover {
+    background: var(--danger);
+    color: #ffffff;
+}
+
+/* --- Dark mode polish --- */
+.okr-comparison-month-bar {
+    background: var(--brand-ink);
+}
+
+[data-theme="dark"] .okr-comparison-month-bar {
+    background: rgba(250, 244, 236, 0.82);
+}
+
+.okr-comparison-row:last-child .okr-comparison-month-bar {
+    background: var(--brand-green);
+}
+
+[data-theme="dark"] .client-row-expandable.is-row-expanded td {
+    background: #2a2233;
+}
+
+/* --- Mobile: two KPI cards per row, wide ring card on its own --- */
+@media (max-width: 560px) {
+    .proposals-kpi-grid > *,
+    .proposals-kpi-grid > :nth-child(n + 5),
+    .funnel-stats-grid > *,
+    .funnel-stats-grid > :nth-child(n + 5) {
+        grid-column: span 6;
+    }
+
+    .funnel-stats-grid > .funnel-stat-card-rate {
+        grid-column: span 12;
+    }
+
+    .analysis-kpi-card,
+    .funnel-stat-card,
+    .propositivita-report-card {
+        padding: 14px;
+    }
+
+    .analysis-kpi-value,
+    .funnel-stat-value,
+    .propositivita-report-value {
+        font-size: 1.4rem;
+    }
+
+    .propositivita-panel-head {
+        flex-wrap: wrap;
+    }
+}
+
+.propositivita-panel-head .btn {
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .propositivita-filters-grid,
+    .propositivita-filters-grid--discounts {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}

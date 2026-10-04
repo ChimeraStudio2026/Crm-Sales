@@ -15,6 +15,7 @@ import { FUNNEL_TRACK_LABELS, normalizeFunnelTrack } from '@/lib/commercial-funn
 import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
 import { TopHeader } from '@/components/layout/top-header';
+import { formatShortItalianDate } from '@/lib/crm/utils';
 
 interface FunnelCampaignDetailSectionProps {
   campaignId: string;
@@ -88,8 +89,8 @@ export function FunnelCampaignDetailSection({ campaignId, focusEntryId }: Funnel
                   onChange={(nextStatus) => void updateMailCampaignStatus(campaign.id, nextStatus)}
                 />
               </span>
-              {campaign.startDate && <span>Inizio: <strong>{campaign.startDate}</strong></span>}
-              {campaign.endDate && <span>Fine: <strong>{campaign.endDate}</strong></span>}
+              {campaign.startDate && <span>Inizio: <strong>{formatShortItalianDate(campaign.startDate)}</strong></span>}
+              {campaign.endDate && <span>Fine: <strong>{formatShortItalianDate(campaign.endDate)}</strong></span>}
             </div>
           </div>
           <FunnelStatsCharts title="Totali campagna" stats={stats} />

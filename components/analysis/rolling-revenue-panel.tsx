@@ -123,19 +123,13 @@ export function RollingRevenuePanel() {
       {isOpen && (
         <div className="analysis-accordion-body rolling-revenue-body">
           <p className="rolling-revenue-source">
-            Fonte:{' '}
-            {loadSource === 'supabase' ? (
-              <strong>Supabase · okr_records</strong>
-            ) : (
-              <strong>cache locale gestionale</strong>
-            )}
-            {' '}· <strong>{totalOkrCount} OKR</strong> letti
-            {' '}· usati nel grafico: <strong>{usedOkrCount}</strong> con mese valido
+            Calcolato su <strong>{usedOkrCount}</strong> OKR con mese valido
             {skippedOkrCount > 0 && (
               <>
                 {' '}· esclusi <strong>{skippedOkrCount}</strong> senza mese ({formatCurrency(skippedOkrAmount)})
               </>
             )}
+            {loadSource !== 'supabase' && ' · dati dalla cache locale'}
             .
           </p>
           {loadError && (

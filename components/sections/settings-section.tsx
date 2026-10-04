@@ -37,7 +37,7 @@ export function SettingsSection() {
       <TopHeader />
       <div className="content-body">
         <section className="app-section active">
-          <div style={{ maxWidth: 650, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+          <div className="settings-grid">
             <DesktopLogoSetting />
             <ThemeModeSetting />
             <PwaInstallSetting />

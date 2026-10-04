@@ -809,7 +809,7 @@ export function PropositivitaSection() {
                         </span>
                       </span>
                       <span className="propositivita-discount-date" role="cell">
-                        {discount.date}
+                        {formatCreativeProposalDate(discount.date)}
                       </span>
                       <span className="propositivita-discount-actions" role="cell">
                         <button

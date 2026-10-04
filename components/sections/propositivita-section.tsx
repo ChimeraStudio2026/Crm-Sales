@@ -622,18 +622,15 @@ export function PropositivitaSection() {
           </div>
 
           <div className="propositivita-block">
-            <div className="table-filter-bar">
-              <div className="filter-left">
-                <h4>Creatività propositive</h4>
-              </div>
-              <div className="filter-right">
-                <button type="button" className="btn btn-primary" onClick={openCreateCreativeForm}>
-                  <PlusCircle size={16} />
-                  <span>Nuova creatività</span>
-                </button>
-              </div>
+            <div className="glass-card propositivita-panel">
+            <div className="propositivita-panel-head">
+              <h4>Creatività propositive</h4>
+              <button type="button" className="btn btn-primary" onClick={openCreateCreativeForm}>
+                <PlusCircle size={16} />
+                <span>Nuova creatività</span>
+              </button>
             </div>
-            <div className="propositivita-filters-grid glass-card">
+            <div className="propositivita-filters-grid">
               <label className="propositivita-filter-field">
                 <span>Company</span>
                 <select
@@ -700,6 +697,7 @@ export function PropositivitaSection() {
                 </div>
               )}
             </div>
+            </div>
             {filteredProposals.length === 0 ? (
               <div className="glass-card propositivita-empty">Nessuna creatività trovata.</div>
             ) : (
@@ -725,18 +723,15 @@ export function PropositivitaSection() {
           </div>
 
           <div className="propositivita-block">
-            <div className="table-filter-bar">
-              <div className="filter-left">
-                <h4>Sconti ed extra</h4>
-              </div>
-              <div className="filter-right">
-                <button type="button" className="btn btn-primary" onClick={() => setShowDiscountForm(true)}>
-                  <PlusCircle size={16} />
-                  <span>Registra voce</span>
-                </button>
-              </div>
+            <div className="glass-card propositivita-panel">
+            <div className="propositivita-panel-head">
+              <h4>Sconti ed extra</h4>
+              <button type="button" className="btn btn-primary" onClick={() => setShowDiscountForm(true)}>
+                <PlusCircle size={16} />
+                <span>Registra voce</span>
+              </button>
             </div>
-            <div className="propositivita-filters-grid propositivita-filters-grid--discounts glass-card">
+            <div className="propositivita-filters-grid propositivita-filters-grid--discounts">
               <label className="propositivita-filter-field">
                 <span>Cliente</span>
                 <select
@@ -776,6 +771,7 @@ export function PropositivitaSection() {
                   </button>
                 </div>
               )}
+            </div>
             </div>
             <div className="glass-card propositivita-table-wrap">
               <div className="propositivita-discounts-list">

@@ -9986,3 +9986,220 @@ body {
         grid-template-columns: 1fr;
     }
 }
+
+/* ==========================================================================
+   UI CONSISTENCY
+   One stat-card style across pages, full-row KPI grids, sentence-case table
+   headers, compact filter panels. Kept last on purpose.
+   ========================================================================== */
+
+/* --- Stat cards: same anatomy everywhere (label · value · hint) --- */
+.analysis-kpi-card,
+.funnel-stat-card,
+.propositivita-report-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 0;
+    padding: 18px 18px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.analysis-kpi-label,
+.funnel-stat-label,
+.propositivita-report-label {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1.3;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--text-secondary);
+}
+
+.analysis-kpi-value,
+.funnel-stat-value,
+.propositivita-report-value {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+}
+
+.analysis-kpi-hint,
+.funnel-stat-card small,
+.propositivita-report-card small {
+    margin-top: 0;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    color: var(--text-muted);
+}
+
+.analysis-kpi-hint.proposals-kpi-amount {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* Semantic accent bar on the left edge */
+.funnel-stat-card-converted,
+.propositivita-report-card.is-converted { box-shadow: inset 3px 0 0 var(--brand-green), var(--shadow-sm); }
+.funnel-stat-card-lost,
+.propositivita-report-card.is-rejected { box-shadow: inset 3px 0 0 var(--brand-red), var(--shadow-sm); }
+.funnel-stat-card-quotation { box-shadow: inset 3px 0 0 var(--brand-yellow), var(--shadow-sm); }
+.funnel-stat-card-rate,
+.funnel-stat-card-meeting { box-shadow: inset 3px 0 0 var(--brand-lilac), var(--shadow-sm); }
+.funnel-stat-card-time { box-shadow: inset 3px 0 0 var(--brand-sky), var(--shadow-sm); }
+
+.analysis-kpi-positive,
+.funnel-stat-card-converted .funnel-stat-value,
+.propositivita-report-card.is-converted .propositivita-report-value { color: var(--success); }
+.analysis-kpi-negative,
+.funnel-stat-card-lost .funnel-stat-value,
+.propositivita-report-card.is-rejected .propositivita-report-value { color: var(--danger); }
+
+.proposals-kpi-card--clickable {
+    cursor: pointer;
+    transition: border-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.proposals-kpi-card--clickable:hover {
+    border-color: var(--border-color-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+/* --- KPI grids: 4 on the first row, 3 on the second, no gaps --- */
+.proposals-kpi-grid,
+.funnel-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.proposals-kpi-grid > *,
+.funnel-stats-grid > * {
+    grid-column: span 3;
+}
+
+.proposals-kpi-grid > :nth-child(n + 5),
+.funnel-stats-grid > :nth-child(n + 5) {
+    grid-column: span 4;
+}
+
+.propositivita-report-grid {
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+@media (max-width: 1100px) {
+    .proposals-kpi-grid > *,
+    .proposals-kpi-grid > :nth-child(n + 5),
+    .funnel-stats-grid > *,
+    .funnel-stats-grid > :nth-child(n + 5) {
+        grid-column: span 6;
+    }
+
+    .propositivita-report-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 560px) {
+    .proposals-kpi-grid > *,
+    .proposals-kpi-grid > :nth-child(n + 5),
+    .funnel-stats-grid > *,
+    .funnel-stats-grid > :nth-child(n + 5) {
+        grid-column: span 12;
+    }
+}
+
+/* --- Table headers: sentence case everywhere --- */
+th,
+.analysis-table th {
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.analysis-table th {
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: var(--bg-subtle);
+}
+
+/* --- Propositività: title, action and filters in one panel --- */
+.propositivita-panel {
+    margin-bottom: 16px;
+    padding: 16px 18px 18px;
+}
+
+.propositivita-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.propositivita-panel-head h4 {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    letter-spacing: -0.02em;
+}
+
+.propositivita-panel .propositivita-filters-grid {
+    margin: 0;
+    padding: 0;
+}
+
+.propositivita-filter-field > span {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--text-secondary);
+}
+
+.propositivita-filters-grid .form-select,
+.propositivita-filters-grid .form-input {
+    min-height: 40px;
+    padding: 8px 12px;
+    font-size: 0.9rem;
+}
+
+/* --- Brand touch: the title starburst turns slowly --- */
+.page-title h1::before {
+    animation: chimera-spin 40s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .page-title h1::before { animation: none; }
+}
+
+.propositivita-summary-stats {
+    gap: 8px;
+}
+
+.propositivita-summary-stats > span {
+    padding: 4px 12px;
+    border-radius: var(--radius-pill);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.propositivita-summary-stats > span.is-warning {
+    background: var(--pill-amber-bg);
+    border-color: transparent;
+    color: var(--pill-amber-fg);
+}

@@ -46,7 +46,11 @@ export function PasswordForm({ onSuccess }: PasswordFormProps) {
     }
     setError('');
     setIsSaving(true);
-    const { error: updateError } = await supabase.auth.updateUser({ password });
+    // Clearing the flag in the same call keeps password and "must change" state in sync.
+    const { error: updateError } = await supabase.auth.updateUser({
+      password,
+      data: { must_set_password: false },
+    });
     setIsSaving(false);
     if (updateError) {
       setError(

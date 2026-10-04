@@ -46,6 +46,18 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     redirectUrl.searchParams.set('next', request.nextUrl.pathname);
     return NextResponse.redirect(redirectUrl);
   }
+  // Accounts flagged by an admin must pick a personal password before using the CRM.
+  if (
+    user
+    && user.user_metadata?.must_set_password === true
+    && !isPublicPath(request.nextUrl.pathname)
+    && request.nextUrl.pathname !== '/account'
+  ) {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = '/account';
+    redirectUrl.search = '?reset=1';
+    return NextResponse.redirect(redirectUrl);
+  }
   if (user && request.nextUrl.pathname === '/login') {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = resolveWorkspaceAccess(user.email).homePath;

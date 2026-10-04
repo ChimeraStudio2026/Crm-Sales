@@ -49,6 +49,7 @@ function buildMailCampaignRows(
       status: normalizeMailCampaignStatus(campaign.status),
       start_date: campaign.startDate || null,
       end_date: campaign.endDate || null,
+      funnel_track: campaign.funnelTrack === 'warm' ? 'warm' : 'cold',
       updated_at: new Date().toISOString(),
     };
     if (includeOwnerColumn) row.owner = campaign.owner || '';
@@ -65,6 +66,7 @@ interface MailCampaignRow {
   start_date: string | null;
   end_date: string | null;
   owner: string | null;
+  funnel_track: string | null;
   created_at: string;
 }
 
@@ -109,6 +111,7 @@ function rowToCampaign(row: MailCampaignRow): MailCampaign {
     startDate: row.start_date || '',
     endDate: row.end_date || '',
     owner: resolved.owner,
+    funnelTrack: row.funnel_track === 'warm' ? 'warm' : 'cold',
     createdAt: row.created_at || '',
   };
 }

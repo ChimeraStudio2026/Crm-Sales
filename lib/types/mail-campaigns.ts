@@ -1,3 +1,5 @@
+import type { FunnelTrack } from '@/lib/types/commercial-funnel';
+
 export type MailCampaignStatus = 'Bozza' | 'Attiva' | 'Chiusa';
 
 export type MailCampaignContactStatus = 'In Corso' | 'Convertito' | 'Perso';
@@ -13,6 +15,7 @@ export interface MailCampaign {
   startDate: string;
   endDate: string;
   owner: string;
+  funnelTrack: FunnelTrack;
   createdAt: string;
 }
 

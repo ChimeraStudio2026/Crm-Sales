@@ -9712,3 +9712,145 @@ body {
         right: 0;
     }
 }
+
+/* Funnel separati: clienti freddi / clienti caldi */
+.funnel-track-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.funnel-track-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 14px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md, 12px);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.funnel-track-tab:hover {
+    border-color: var(--border-color-hover);
+}
+
+.funnel-track-tab-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.funnel-track-tab small {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+.funnel-track-tab-count {
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: var(--bg-subtle);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+.funnel-track-tab-cold.is-active {
+    border-color: #0284c7;
+    background: rgba(14, 165, 233, 0.08);
+    box-shadow: inset 4px 0 0 #0284c7;
+}
+
+.funnel-track-tab-warm.is-active {
+    border-color: #ea580c;
+    background: rgba(249, 115, 22, 0.08);
+    box-shadow: inset 4px 0 0 #ea580c;
+}
+
+.funnel-track-badge {
+    display: inline-flex;
+    align-self: center;
+    line-height: 1.4;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.funnel-track-badge-cold {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+.funnel-track-badge-warm {
+    background: #ffedd5;
+    color: #c2410c;
+}
+
+.funnel-track-note {
+    margin: 0 0 16px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    background: var(--bg-subtle);
+}
+
+.funnel-track-note-cold {
+    border-left: 3px solid #0284c7;
+}
+
+.funnel-track-note-warm {
+    border-left: 3px solid #ea580c;
+}
+
+.funnel-out-of-track-badge {
+    display: inline-flex;
+    margin-left: 6px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #fef3c7;
+    color: #92400e;
+    font-size: 0.68rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+[data-theme="dark"] .funnel-track-badge-cold {
+    background: rgba(14, 165, 233, 0.18);
+    color: #7dd3fc;
+}
+
+[data-theme="dark"] .funnel-track-badge-warm {
+    background: rgba(249, 115, 22, 0.18);
+    color: #fdba74;
+}
+
+[data-theme="dark"] .funnel-out-of-track-badge {
+    background: rgba(245, 158, 11, 0.18);
+    color: #fcd34d;
+}
+
+[data-theme="dark"] .funnel-track-tab-cold.is-active {
+    border-color: #38bdf8;
+    box-shadow: inset 4px 0 0 #38bdf8;
+}
+
+[data-theme="dark"] .funnel-track-tab-warm.is-active {
+    border-color: #fb923c;
+    box-shadow: inset 4px 0 0 #fb923c;
+}
+
+@media (max-width: 640px) {
+    .funnel-track-tabs {
+        grid-template-columns: 1fr;
+    }
+}

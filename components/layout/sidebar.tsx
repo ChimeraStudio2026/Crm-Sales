@@ -123,11 +123,18 @@ export function Sidebar() {
           {secondaryNavItems.map(renderNavItem)}
         </ul>
         <div className="sidebar-footer">
-          <div className="user-avatar">{userEmail ? userEmail[0].toUpperCase() : 'A'}</div>
-          <div className="user-info">
-            <span className="user-name">{userEmail || 'Utente'}</span>
-            <span className="user-role">{roleLabel}</span>
-          </div>
+          <Link
+            href="/account"
+            className={`sidebar-account-link${pathname === '/account' ? ' is-active' : ''}`}
+            title="Il mio account e password"
+            onClick={() => setMobileOpen(false)}
+          >
+            <div className="user-avatar">{userEmail ? userEmail[0].toUpperCase() : 'A'}</div>
+            <div className="user-info">
+              <span className="user-name">{userEmail || 'Utente'}</span>
+              <span className="user-role">Il mio account</span>
+            </div>
+          </Link>
           <button type="button" className="sidebar-signout" onClick={() => void handleSignOut()} title="Esci">
             <LogOut size={18} />
           </button>

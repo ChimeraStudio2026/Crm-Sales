@@ -148,6 +148,7 @@ export const PAGE_META: Record<string, { title: string; subtitle: string }> = {
   '/propositivita': { title: 'Propositività', subtitle: 'Creatività proposte ai clienti e sconti/extra concessi.' },
   '/import': { title: 'Importazione Dati', subtitle: 'Carica fatturati 2023–2026 da foglio di calcolo.' },
   '/settings': { title: 'Impostazioni', subtitle: 'Manutenzione database e regole.' },
+  '/account': { title: 'Il mio account', subtitle: 'Profilo e password di accesso al CRM.' },
   '/campaigns': { title: 'Campagne mail', subtitle: 'Sequenze mail, contatti e stato degli invii.' },
 };
 

@@ -25,6 +25,7 @@ const CHIMERA_ONLY_EMAIL_PATTERNS = [
 const TINYTOAST_ALLOWED_PATH_PREFIXES = [
   '/funnel',
   '/clients',
+  '/account',
 ] as const;
 
 const TINYTOAST_NAV_HREFS = new Set<string>([

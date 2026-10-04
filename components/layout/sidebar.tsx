@@ -20,7 +20,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { CrmLogo } from '@/components/ui/crm-logo';
+import { ChimeraWordmark } from '@/components/ui/chimera-wordmark';
 import { NAV_ITEMS } from '@/lib/constants/crm';
 import { isHeadOkrViewerEmail } from '@/lib/crm/head-okr-access';
 import { getNavItemsForAccess } from '@/lib/crm/workspace-access';
@@ -117,16 +117,11 @@ export function Sidebar() {
       <aside className={`sidebar${mobileOpen ? ' mobile-open' : ''}`} id="sidebar">
         <div className="sidebar-logo">
           <div className="logo-container">
-            <div
-              className="logo-icon logo-icon-desktop-scalable"
-              style={{ width: sidebarLogoSize, height: sidebarLogoSize }}
-            >
-              <CrmLogo size={sidebarLogoSize} />
-            </div>
-            <div className="logo-meta">
-              <span className="logo-text">CRM Sales</span>
-              <span className="logo-chip">{roleLabel}</span>
-            </div>
+            <ChimeraWordmark height={sidebarLogoSize} className="sidebar-wordmark" />
+            <span className="logo-chip">
+              <span className="logo-chip-star" aria-hidden />
+              CRM · {roleLabel}
+            </span>
           </div>
         </div>
         <ul className="sidebar-menu">

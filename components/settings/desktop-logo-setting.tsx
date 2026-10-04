@@ -1,7 +1,7 @@
 'use client';
 
 import { Monitor } from 'lucide-react';
-import { CrmLogo } from '@/components/ui/crm-logo';
+import { ChimeraWordmark } from '@/components/ui/chimera-wordmark';
 import {
   MAX_LOGO_DESKTOP_SIZE,
   MIN_LOGO_DESKTOP_SIZE,
@@ -20,13 +20,7 @@ export function DesktopLogoSetting() {
         Regola la dimensione del logo nella sidebar su schermi desktop. La preferenza resta salvata su questo browser.
       </p>
       <div className="settings-logo-preview">
-        <div
-          className="logo-icon settings-logo-preview-icon"
-          style={{ width: logoDesktopSize, height: logoDesktopSize }}
-        >
-          <CrmLogo size={logoDesktopSize} />
-        </div>
-        <span className="logo-text">CRM Sales</span>
+        <ChimeraWordmark height={logoDesktopSize} />
       </div>
       <div className="settings-range-field">
         <label htmlFor="logo-desktop-size">Dimensione logo</label>

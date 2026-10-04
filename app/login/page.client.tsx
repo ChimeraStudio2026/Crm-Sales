@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { CrmLogo } from '@/components/ui/crm-logo';
+import { ChimeraWordmark } from '@/components/ui/chimera-wordmark';
 import { ThemeToggleButton } from '@/components/ui/theme-toggle-button';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 
@@ -39,15 +39,20 @@ export default function LoginPageClient() {
 
   return (
     <div className="login-page">
+      <span className="login-burst login-burst-blue" aria-hidden />
+      <span className="login-burst login-burst-yellow" aria-hidden />
+      <span className="login-burst login-burst-lilac" aria-hidden />
       <div className="login-theme-toggle">
         <ThemeToggleButton showLabel />
       </div>
       <div className="login-card glass-card">
         <div className="login-logo">
-          <div className="logo-icon">
-            <CrmLogo size={48} />
-          </div>
-          <h1>CRM Sales</h1>
+          <ChimeraWordmark height={34} className="login-wordmark" />
+          <span className="chimera-eyebrow">
+            <span className="logo-chip-star" aria-hidden />
+            CRM Sales
+          </span>
+          <h1>Bentornato.</h1>
           <p>Accedi per gestire clienti, OKR e task.</p>
         </div>
         <form onSubmit={handleSubmit} className="login-form">

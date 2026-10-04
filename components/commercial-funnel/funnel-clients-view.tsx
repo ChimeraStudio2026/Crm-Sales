@@ -27,11 +27,11 @@ interface FunnelClientRow {
 }
 
 const STAGE_META: Record<FunnelStage, { label: string; color: string }> = {
-  'In contatto': { label: 'In contatto', color: '#3b82f6' },
-  'Incontro fissato': { label: 'Incontro fissato', color: '#8b5cf6' },
-  'Preventivo richiesto': { label: 'Preventivo richiesto', color: '#f59e0b' },
-  Convertito: { label: 'Convertito', color: '#16a34a' },
-  Perso: { label: 'Perso', color: '#dc2626' },
+  'In contatto': { label: 'In contatto', color: '#58b5e7' },
+  'Incontro fissato': { label: 'Incontro fissato', color: '#cd81fb' },
+  'Preventivo richiesto': { label: 'Preventivo richiesto', color: '#e2c84a' },
+  Convertito: { label: 'Convertito', color: '#6fa460' },
+  Perso: { label: 'Perso', color: '#f64330' },
 };
 
 function FunnelStageBadge({ stage }: { stage: FunnelStage }) {

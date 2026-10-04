@@ -7,7 +7,7 @@ const rootDir = join(dirname(fileURLToPath(import.meta.url)), '..');
 const iconsDir = join(rootDir, 'public', 'icons');
 const logoPath = join(rootDir, 'public', 'logo.png');
 const logoBuffer = readFileSync(logoPath);
-const backgroundColor = '#f4f5f6';
+const backgroundColor = '#faf4ec';
 
 mkdir(iconsDir, { recursive: true }, () => undefined);
 

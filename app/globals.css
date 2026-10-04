@@ -9854,3 +9854,109 @@ body {
         grid-template-columns: 1fr;
     }
 }
+
+/* Scheda cliente: ultima azione */
+.client-last-action {
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px dashed var(--border-color);
+}
+
+.client-last-action-current {
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--bg-subtle);
+}
+
+.client-last-action-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.client-last-action-type {
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: var(--bg-selected);
+    color: var(--text-primary);
+    font-weight: 700;
+}
+
+.client-last-action-detail {
+    color: var(--text-muted);
+}
+
+.client-last-action-meta .btn-contact-delete {
+    margin-left: auto;
+}
+
+.client-last-action-note {
+    margin: 6px 0 0;
+    font-size: 0.86rem;
+    color: var(--text-primary);
+    white-space: pre-wrap;
+}
+
+.client-last-action-note.is-empty,
+.client-last-action-empty {
+    color: var(--text-muted);
+    font-size: 0.84rem;
+}
+
+.client-last-action-empty {
+    margin: 0;
+    padding: 10px 12px;
+    border: 1px dashed #f59e0b;
+    border-radius: 10px;
+}
+
+.client-last-action-form {
+    display: grid;
+    grid-template-columns: minmax(0, 180px) minmax(0, 160px);
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.client-last-action-form textarea {
+    grid-column: 1 / -1;
+}
+
+.client-last-action-form-buttons {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.client-last-action-history {
+    margin-top: 8px;
+}
+
+.client-last-action-history-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.client-last-action-history ul {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0 0 0 10px;
+    border-left: 2px solid var(--border-color);
+    display: grid;
+    gap: 10px;
+}
+
+@media (max-width: 640px) {
+    .client-last-action-form {
+        grid-template-columns: 1fr;
+    }
+}

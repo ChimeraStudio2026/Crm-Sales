@@ -7,11 +7,9 @@ import { getDefaultProductOfferIds, resolveClientProductOffers } from '@/lib/crm
 import { createUniqueId } from '@/lib/crm/utils';
 import { ProductOffersTags } from '@/components/clients/product-offers-tags';
 import { SoldProductsTags } from '@/components/clients/sold-products-tags';
-import { ClientMailCampaignsTab } from '@/components/mail-campaigns/client-mail-campaigns-tab';
+import { ClientLastActionCard } from '@/components/clients/client-last-action-card';
 import { useCrm } from '@/providers/crm-provider';
 import type { Client, ClientContact } from '@/lib/types/crm';
-
-type ClientDetailTab = 'overview' | 'campaigns';
 
 interface ClientDetailPanelProps {
   client: Client;
@@ -35,7 +33,6 @@ export function ClientDetailPanel({
   onUpdateProductOffers,
 }: ClientDetailPanelProps) {
   const { okrRecords } = useCrm();
-  const [activeTab, setActiveTab] = useState<ClientDetailTab>('overview');
   const [contacts, setContacts] = useState<ClientContact[]>(() => (
     client.contacts.length > 0 ? client.contacts : [createEmptyContact()]
   ));
@@ -48,7 +45,6 @@ export function ClientDetailPanel({
 
   useEffect(() => {
     setContacts(client.contacts.length > 0 ? client.contacts : [createEmptyContact()]);
-    setActiveTab('overview');
   }, [client.id]);
 
   const persistContacts = async (nextContacts: ClientContact[]) => {
@@ -88,30 +84,7 @@ export function ClientDetailPanel({
 
   return (
     <div className="client-detail-panel" onClick={(event) => event.stopPropagation()}>
-      <div className="client-detail-tabs" role="tablist" aria-label="Sezioni scheda cliente">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'overview'}
-          className={`client-detail-tab${activeTab === 'overview' ? ' is-active' : ''}`}
-          onClick={() => setActiveTab('overview')}
-        >
-          Panoramica
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeTab === 'campaigns'}
-          className={`client-detail-tab${activeTab === 'campaigns' ? ' is-active' : ''}`}
-          onClick={() => setActiveTab('campaigns')}
-        >
-          Campagne Funnel
-        </button>
-      </div>
-      {activeTab === 'campaigns' ? (
-        <ClientMailCampaignsTab clientId={client.id} />
-      ) : (
-        <>
+      <ClientLastActionCard clientId={client.id} />
       <div className="client-products-row">
         <ProductOffersTags
           client={client}
@@ -206,8 +179,6 @@ export function ClientDetailPanel({
           )}
         </div>
       </div>
-        </>
-      )}
     </div>
   );
 }

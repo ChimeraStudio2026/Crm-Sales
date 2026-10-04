@@ -9728,25 +9728,46 @@ body {
     gap: 4px;
     padding: 14px 16px;
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-md, 12px);
+    border-radius: var(--radius-lg);
     background: var(--bg-card);
+    box-shadow: var(--shadow-sm);
     color: var(--text-secondary);
     text-align: left;
     cursor: pointer;
-    transition: border-color 0.15s ease, background 0.15s ease;
+    transition: border-color var(--transition-fast), background var(--transition-fast);
 }
 
 .funnel-track-tab:hover {
     border-color: var(--border-color-hover);
+    background: var(--bg-card-hover);
+}
+
+.funnel-track-tab.is-active {
+    border-color: var(--primary);
+    background: var(--bg-selected);
+    box-shadow: var(--shadow-glow);
 }
 
 .funnel-track-tab-label {
     display: inline-flex;
     align-items: center;
     gap: 8px;
+    font-family: var(--font-display);
     font-size: 1rem;
     font-weight: 700;
     color: var(--text-primary);
+}
+
+.funnel-track-tab-label::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--pill-blue-fg);
+}
+
+.funnel-track-tab-warm .funnel-track-tab-label::before {
+    background: var(--pill-amber-fg);
 }
 
 .funnel-track-tab small {
@@ -9756,23 +9777,11 @@ body {
 
 .funnel-track-tab-count {
     padding: 1px 8px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: var(--bg-subtle);
     font-size: 0.72rem;
     font-weight: 700;
     color: var(--text-secondary);
-}
-
-.funnel-track-tab-cold.is-active {
-    border-color: #0284c7;
-    background: rgba(14, 165, 233, 0.08);
-    box-shadow: inset 4px 0 0 #0284c7;
-}
-
-.funnel-track-tab-warm.is-active {
-    border-color: #ea580c;
-    background: rgba(249, 115, 22, 0.08);
-    box-shadow: inset 4px 0 0 #ea580c;
 }
 
 .funnel-track-badge {
@@ -9780,73 +9789,48 @@ body {
     align-self: center;
     line-height: 1.4;
     padding: 2px 10px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     font-size: 0.75rem;
     font-weight: 700;
 }
 
 .funnel-track-badge-cold {
-    background: #e0f2fe;
-    color: #0369a1;
+    background: var(--pill-blue-bg);
+    color: var(--pill-blue-fg);
 }
 
 .funnel-track-badge-warm {
-    background: #ffedd5;
-    color: #c2410c;
+    background: var(--pill-amber-bg);
+    color: var(--pill-amber-fg);
 }
 
 .funnel-track-note {
     margin: 0 0 16px;
     padding: 10px 12px;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     font-size: 0.82rem;
     color: var(--text-secondary);
     background: var(--bg-subtle);
 }
 
 .funnel-track-note-cold {
-    border-left: 3px solid #0284c7;
+    border-left: 3px solid var(--pill-blue-fg);
 }
 
 .funnel-track-note-warm {
-    border-left: 3px solid #ea580c;
+    border-left: 3px solid var(--pill-amber-fg);
 }
 
 .funnel-out-of-track-badge {
     display: inline-flex;
     margin-left: 6px;
     padding: 2px 8px;
-    border-radius: 999px;
-    background: #fef3c7;
-    color: #92400e;
+    border-radius: var(--radius-pill);
+    background: var(--pill-red-bg);
+    color: var(--pill-red-fg);
     font-size: 0.68rem;
     font-weight: 700;
     white-space: nowrap;
-}
-
-[data-theme="dark"] .funnel-track-badge-cold {
-    background: rgba(14, 165, 233, 0.18);
-    color: #7dd3fc;
-}
-
-[data-theme="dark"] .funnel-track-badge-warm {
-    background: rgba(249, 115, 22, 0.18);
-    color: #fdba74;
-}
-
-[data-theme="dark"] .funnel-out-of-track-badge {
-    background: rgba(245, 158, 11, 0.18);
-    color: #fcd34d;
-}
-
-[data-theme="dark"] .funnel-track-tab-cold.is-active {
-    border-color: #38bdf8;
-    box-shadow: inset 4px 0 0 #38bdf8;
-}
-
-[data-theme="dark"] .funnel-track-tab-warm.is-active {
-    border-color: #fb923c;
-    box-shadow: inset 4px 0 0 #fb923c;
 }
 
 @media (max-width: 640px) {
@@ -9865,7 +9849,7 @@ body {
 .client-last-action-current {
     padding: 10px 12px;
     border: 1px solid var(--border-color);
-    border-radius: 10px;
+    border-radius: var(--radius-md);
     background: var(--bg-subtle);
 }
 
@@ -9880,9 +9864,9 @@ body {
 
 .client-last-action-type {
     padding: 1px 8px;
-    border-radius: 999px;
-    background: var(--bg-selected);
-    color: var(--text-primary);
+    border-radius: var(--radius-pill);
+    background: var(--pill-lilac-bg);
+    color: var(--pill-lilac-fg);
     font-weight: 700;
 }
 
@@ -9910,8 +9894,10 @@ body {
 .client-last-action-empty {
     margin: 0;
     padding: 10px 12px;
-    border: 1px dashed #f59e0b;
-    border-radius: 10px;
+    border: 1px dashed var(--warning);
+    border-radius: var(--radius-md);
+    background: var(--pill-amber-bg);
+    color: var(--pill-amber-fg);
 }
 
 .client-last-action-form {

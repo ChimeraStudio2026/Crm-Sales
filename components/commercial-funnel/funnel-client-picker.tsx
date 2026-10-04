@@ -8,18 +8,21 @@ import {
   isFunnelClientFullyAdded,
 } from '@/lib/commercial-funnel/contacts';
 import { isClientInColdSection } from '@/lib/crm/utils';
+import { FUNNEL_TRACK_LABELS, resolveClientFunnelTrack } from '@/lib/commercial-funnel/track';
 import { isClientInWorkspace } from '@/lib/crm/workspace-access';
 import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
-import type { FunnelClientRef } from '@/lib/types/commercial-funnel';
+import type { FunnelClientRef, FunnelTrack } from '@/lib/types/commercial-funnel';
 
 interface FunnelClientPickerProps {
+  track: FunnelTrack;
   existingEntryKeys: Set<string>;
   onClose: () => void;
   onAdd: (refs: FunnelClientRef[]) => void;
 }
 
 export function FunnelClientPicker({
+  track,
   existingEntryKeys,
   onClose,
   onAdd,
@@ -34,6 +37,7 @@ export function FunnelClientPicker({
     const query = search.trim().toLowerCase();
     return clients
       .filter((client) => isClientInWorkspace(client, workspaceId))
+      .filter((client) => resolveClientFunnelTrack(client) === track)
       .filter((client) => !isFunnelClientFullyAdded(client, existingEntryKeys))
       .filter((client) => !typeFilter || client.type === typeFilter)
       .filter((client) => {
@@ -47,7 +51,7 @@ export function FunnelClientPicker({
         ].some((value) => value.toLowerCase().includes(query));
       })
       .sort((a, b) => a.name.localeCompare(b.name, 'it'));
-  }, [clients, existingEntryKeys, search, typeFilter, workspaceId]);
+  }, [clients, existingEntryKeys, search, track, typeFilter, workspaceId]);
 
   const selectedClientIds = useMemo(
     () => new Set(Object.keys(selectedContactByClient)),
@@ -105,7 +109,7 @@ export function FunnelClientPicker({
     <>
       <div className="drawer-overlay open" onClick={onClose} />
       <div className="drawer open mail-contact-picker-drawer">
-        <div className="drawer-header"><h3>Aggiungi clienti alla campagna</h3></div>
+        <div className="drawer-header"><h3>Aggiungi clienti · {FUNNEL_TRACK_LABELS[track]}</h3></div>
         <div className="drawer-body">
           <div className="mail-picker-toolbar">
             <div className="search-box">
@@ -132,7 +136,10 @@ export function FunnelClientPicker({
             </button>
           </div>
           <p className="mail-picker-hint">
-            Seleziona il cliente (freddo o dalla lista clienti) e associa il contatto di riferimento per questa campagna.
+            {track === 'warm'
+              ? 'Qui trovi solo clienti caldi (hanno fatturato almeno 1€). I clienti freddi vanno nelle campagne di Clienti freddi.'
+              : 'Qui trovi solo clienti freddi (non hanno ancora fatturato). I clienti caldi vanno nelle campagne di Clienti caldi.'}
+            {' '}Associa il contatto di riferimento per questa campagna.
           </p>
           <div className="mail-picker-list">
             {rows.length === 0 ? (

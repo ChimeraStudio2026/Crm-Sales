@@ -181,6 +181,7 @@ export function createMailCampaignActions(
       startDate: input.startDate || '',
       endDate: input.endDate || '',
       owner: input.owner || '',
+      funnelTrack: input.funnelTrack || existingCampaign?.funnelTrack || 'cold',
       createdAt: input.createdAt || new Date().toISOString(),
     };
     const nextCampaigns = input.id

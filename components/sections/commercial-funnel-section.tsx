@@ -14,9 +14,16 @@ import {
   searchFunnelEntriesByBrandName,
 } from '@/lib/commercial-funnel/campaigns';
 import {
+  readFunnelTrackPreference,
   readHideClosedFunnelCampaignsPreference,
+  writeFunnelTrackPreference,
   writeHideClosedFunnelCampaignsPreference,
 } from '@/lib/commercial-funnel/preferences';
+import {
+  FUNNEL_TRACK_DESCRIPTIONS,
+  FUNNEL_TRACK_LABELS,
+  filterCampaignsByTrack,
+} from '@/lib/commercial-funnel/track';
 import { downloadCommercialFunnelExcel } from '@/lib/commercial-funnel/export';
 import { resolveFunnelSemaforo, resolveFunnelStageDisplay } from '@/lib/commercial-funnel/index';
 import { buildFunnelStatsSummary } from '@/lib/commercial-funnel/stats';
@@ -32,6 +39,8 @@ import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
 import { TopHeader } from '@/components/layout/top-header';
 import type { MailCampaignStatus } from '@/lib/types/mail-campaigns';
+import { FUNNEL_TRACKS } from '@/lib/types/commercial-funnel';
+import type { FunnelTrack } from '@/lib/types/commercial-funnel';
 import type { Owner } from '@/lib/types/crm';
 
 const BRAND_SEARCH_MIN_LENGTH = 2;
@@ -60,24 +69,45 @@ export function CommercialFunnelSection() {
   const [pageView, setPageView] = useState<FunnelPageView>('campaigns');
   const [hideClosedCampaigns, setHideClosedCampaigns] = useState(true);
   const [hideClosedPreferenceReady, setHideClosedPreferenceReady] = useState(false);
+  const [track, setTrack] = useState<FunnelTrack>('cold');
 
   useEffect(() => {
     setHideClosedCampaigns(readHideClosedFunnelCampaignsPreference());
     setHideClosedPreferenceReady(true);
+    setTrack(readFunnelTrackPreference());
   }, []);
+
+  const handleTrackChange = (nextTrack: FunnelTrack): void => {
+    setTrack(nextTrack);
+    writeFunnelTrackPreference(nextTrack);
+  };
 
   useEffect(() => {
     if (!hideClosedPreferenceReady) return;
     writeHideClosedFunnelCampaignsPreference(hideClosedCampaigns);
   }, [hideClosedCampaigns, hideClosedPreferenceReady]);
 
-  const scopedCampaigns = useMemo(
+  const workspaceCampaigns = useMemo(
     () => filterCampaignsByWorkspace(mailCampaigns, workspaceId),
     [mailCampaigns, workspaceId],
   );
+  const campaignCountByTrack = useMemo(
+    () => ({
+      cold: filterCampaignsByTrack(workspaceCampaigns, 'cold').length,
+      warm: filterCampaignsByTrack(workspaceCampaigns, 'warm').length,
+    }),
+    [workspaceCampaigns],
+  );
+  const scopedCampaigns = useMemo(
+    () => filterCampaignsByTrack(workspaceCampaigns, track),
+    [track, workspaceCampaigns],
+  );
   const scopedEntries = useMemo(
-    () => filterFunnelEntriesByWorkspace(commercialFunnelEntries, workspaceId),
-    [commercialFunnelEntries, workspaceId],
+    () => filterEntriesByVisibleCampaigns(
+      filterFunnelEntriesByWorkspace(commercialFunnelEntries, workspaceId),
+      new Set(scopedCampaigns.map((campaign) => campaign.id)),
+    ),
+    [commercialFunnelEntries, scopedCampaigns, workspaceId],
   );
   const closedCampaignCount = useMemo(
     () => scopedCampaigns.filter((campaign) => isClosedCampaign(campaign)).length,
@@ -131,6 +161,7 @@ export function CommercialFunnelSection() {
     event.preventDefault();
     const campaignId = await saveMailCampaign({
       workspaceId,
+      funnelTrack: track,
       name,
       description,
       status,
@@ -186,7 +217,7 @@ export function CommercialFunnelSection() {
       entries: visibleEntries,
       clients,
       mailCampaigns: visibleCampaigns,
-      workspaceLabel: resolveWorkspaceLabel(workspaceId),
+      workspaceLabel: `${resolveWorkspaceLabel(workspaceId)} ${FUNNEL_TRACK_LABELS[track]}`,
     });
   };
 
@@ -248,7 +279,25 @@ export function CommercialFunnelSection() {
               </button>
             </div>
           </div>
-          <FunnelStatsCharts title="Totali funnel" stats={workspaceStats} />
+          <div className="funnel-track-tabs" role="tablist" aria-label="Tipo di funnel">
+            {FUNNEL_TRACKS.map((item) => (
+              <button
+                key={item}
+                type="button"
+                role="tab"
+                aria-selected={track === item}
+                className={`funnel-track-tab funnel-track-tab-${item}${track === item ? ' is-active' : ''}`}
+                onClick={() => handleTrackChange(item)}
+              >
+                <span className="funnel-track-tab-label">
+                  {FUNNEL_TRACK_LABELS[item]}
+                  <span className="funnel-track-tab-count">{campaignCountByTrack[item]}</span>
+                </span>
+                <small>{FUNNEL_TRACK_DESCRIPTIONS[item]}</small>
+              </button>
+            ))}
+          </div>
+          <FunnelStatsCharts title={`Totali ${FUNNEL_TRACK_LABELS[track].toLowerCase()}`} stats={workspaceStats} />
           {pageView === 'clients' ? (
             <FunnelClientsView
               entries={visibleEntries}
@@ -339,7 +388,7 @@ export function CommercialFunnelSection() {
                         ? 'Nessuna campagna corrisponde alla ricerca.'
                         : hideClosedCampaigns && closedCampaignCount > 0
                           ? 'Tutte le campagne visibili sono chiuse. Mostrale con «Chiuse nascoste».'
-                          : 'Nessuna campagna funnel. Creane una nuova.'}
+                          : `Nessuna campagna in ${FUNNEL_TRACK_LABELS[track].toLowerCase()}. Creane una nuova.`}
                     </td>
                   </tr>
                 ) : (
@@ -409,9 +458,15 @@ export function CommercialFunnelSection() {
         <>
           <div className="drawer-overlay open" onClick={() => setShowForm(false)} />
           <div className="drawer open">
-            <div className="drawer-header"><h3>Nuova campagna funnel</h3></div>
+            <div className="drawer-header"><h3>Nuova campagna · {FUNNEL_TRACK_LABELS[track]}</h3></div>
             <form onSubmit={(event) => void handleCreate(event)}>
               <div className="drawer-body">
+                <p className={`funnel-track-note funnel-track-note-${track}`}>
+                  La campagna verrà creata in <strong>{FUNNEL_TRACK_LABELS[track]}</strong>:
+                  potrai aggiungere solo {track === 'warm'
+                    ? 'clienti che hanno fatturato almeno 1€'
+                    : 'clienti che non hanno ancora fatturato'}.
+                </p>
                 <div className="form-group">
                   <label>Nome Campagna *</label>
                   <input className="form-input" value={name} onChange={(e) => setName(e.target.value)} required />

@@ -1,11 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Plus, Trash2, UserPlus, X } from 'lucide-react';
 import { CLIENT_ORIGINS, CLIENT_TYPES, OWNERS } from '@/lib/constants/crm';
 import { getDefaultOwnerForWorkspace } from '@/lib/crm/workspace-clients';
 import { createUniqueId } from '@/lib/crm/utils';
+import { DUPLICATE_REASON_LABELS, findSimilarClients } from '@/lib/crm/client-duplicates';
+import { isClientInWorkspace } from '@/lib/crm/workspace-access';
 import { useCrm } from '@/providers/crm-provider';
+import { useWorkspace } from '@/providers/workspace-provider';
 import type { ClientContact, ClientOrigin, ClientType, Owner } from '@/lib/types/crm';
 
 interface DraftClientRow {
@@ -42,7 +45,12 @@ interface BulkClientsDrawerProps {
 
 /** I clienti nuovi partono sempre Freddi: diventano caldi quando fatturano (sync Cerbero). */
 export function BulkClientsDrawer({ onClose }: BulkClientsDrawerProps) {
-  const { saveClients } = useCrm();
+  const { clients, saveClients } = useCrm();
+  const { workspaceId } = useWorkspace();
+  const workspaceClients = useMemo(
+    () => clients.filter((client) => isClientInWorkspace(client, workspaceId)),
+    [clients, workspaceId],
+  );
   const [rows, setRows] = useState<DraftClientRow[]>([createEmptyDraftRow()]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -155,6 +163,23 @@ export function BulkClientsDrawer({ onClose }: BulkClientsDrawerProps) {
                         onChange={(e) => updateRow(row.id, { name: e.target.value })}
                         placeholder="Nome azienda"
                       />
+                      {row.name.trim().length >= 3 && (() => {
+                        const similar = findSimilarClients(row.name, workspaceClients);
+                        if (similar.length === 0) return null;
+                        return (
+                          <div className="bulk-clients-similar" role="status">
+                            <strong>Esiste già un cliente simile:</strong>
+                            <ul>
+                              {similar.map(({ client, reason }) => (
+                                <li key={client.id}>
+                                  «{client.name.trim()}» · {DUPLICATE_REASON_LABELS[reason].toLowerCase()}
+                                </li>
+                              ))}
+                            </ul>
+                            <span>Se è lo stesso, non crearlo: aggiungi questo nome come ragione sociale nella sua scheda.</span>
+                          </div>
+                        );
+                      })()}
                     </div>
                     <div className="form-group">
                       <label htmlFor={`bulk-type-${row.id}`}>Tipologia</label>

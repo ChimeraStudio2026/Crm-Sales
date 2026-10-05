@@ -9,6 +9,7 @@ import { ProductOffersTags } from '@/components/clients/product-offers-tags';
 import { SoldProductsTags } from '@/components/clients/sold-products-tags';
 import { ClientLastActionCard } from '@/components/clients/client-last-action-card';
 import { ClientProposalsCard } from '@/components/clients/client-proposals-card';
+import { ClientAliasesCard } from '@/components/clients/client-aliases-card';
 import { useCrm } from '@/providers/crm-provider';
 import type { Client, ClientContact } from '@/lib/types/crm';
 
@@ -181,6 +182,7 @@ export function ClientDetailPanel({
           )}
         </div>
       </div>
+      <ClientAliasesCard client={client} />
     </div>
   );
 }

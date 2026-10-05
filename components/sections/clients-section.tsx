@@ -21,6 +21,8 @@ import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
 import { ClientDrawer } from '@/components/drawers/client-drawer';
 import { BulkClientsDrawer } from '@/components/drawers/bulk-clients-drawer';
+import { ClientDuplicatesDrawer } from '@/components/clients/client-duplicates-drawer';
+import { useDuplicateCandidates } from '@/lib/crm/use-duplicate-candidates';
 import { ClientDetailPanel } from '@/components/clients/client-detail-panel';
 import { useCrmTableHorizontalScroll } from '@/components/clients/use-crm-table-horizontal-scroll';
 import { ClientOriginSelect } from '@/components/clients/client-origin-select';
@@ -84,6 +86,7 @@ export function ClientsSection() {
   const [sort, setSort] = useState<SortState>({ column: 'name', direction: 'asc' });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [bulkDrawerOpen, setBulkDrawerOpen] = useState(false);
+  const [duplicatesOpen, setDuplicatesOpen] = useState(false);
   const [editClient, setEditClient] = useState<Client | null>(null);
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
   const [showRev2023, setShowRev2023] = useState(false);
@@ -110,6 +113,12 @@ export function ClientsSection() {
     () => buildClientsTableColumnOrder(showRev2023, showRev2024),
     [showRev2023, showRev2024],
   );
+
+  const workspaceClients = useMemo(
+    () => clients.filter((client) => isClientInWorkspace(client, workspaceId)),
+    [clients, workspaceId],
+  );
+  const duplicates = useDuplicateCandidates(workspaceClients);
 
   const incompleteCount = useMemo(
     () => clients.filter(
@@ -379,6 +388,17 @@ export function ClientsSection() {
                     <span className="clients-filter-chip-count">{incompleteCount}</span>
                   </button>
                 )}
+                {duplicates.candidates.length > 0 && (
+                  <button
+                    type="button"
+                    className="clients-filter-chip clients-duplicates-chip"
+                    onClick={() => setDuplicatesOpen(true)}
+                    title="Clienti con nomi simili o ragioni sociali dello stesso marchio"
+                  >
+                    Possibili duplicati
+                    <span className="clients-filter-chip-count">{duplicates.candidates.length}</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   className={`clients-filter-chip ${showRev2023 ? 'is-active' : ''}`}
@@ -510,6 +530,15 @@ export function ClientsSection() {
           client={editClient}
           isCold={false}
           onClose={() => setDrawerOpen(false)}
+        />
+      )}
+      {duplicatesOpen && (
+        <ClientDuplicatesDrawer
+          candidates={duplicates.candidates}
+          isLoading={duplicates.isLoading}
+          onDismiss={duplicates.dismiss}
+          onMerged={duplicates.reload}
+          onClose={() => setDuplicatesOpen(false)}
         />
       )}
       {bulkDrawerOpen && (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FileText } from 'lucide-react';
 import { resolveCanonicalClientBrandName } from '@/lib/crm/client-brand-aliases';
 import {
@@ -9,6 +9,8 @@ import {
   resolveProposalValue,
 } from '@/lib/sales-proposals/stats';
 import { useSalesProposals } from '@/lib/sales-proposals/use-sales-proposals';
+import { createBrowserSupabaseClient } from '@/lib/supabase/client';
+import { fetchClientAliases } from '@/lib/supabase/client-aliases-database';
 import type { Client } from '@/lib/types/crm';
 import type { SalesProposal } from '@/lib/types/sales-proposals';
 
@@ -56,13 +58,30 @@ interface ClientProposalsCardProps {
 export function ClientProposalsCard({ client }: ClientProposalsCardProps) {
   const { proposals, isLoading, error } = useSalesProposals(client.workspaceId);
   const [showAll, setShowAll] = useState(false);
+  const [aliasNames, setAliasNames] = useState<string[]>([]);
+
+  // Le proposte intestate alle ragioni sociali collegate appartengono a questo cliente.
+  useEffect(() => {
+    setAliasNames([]);
+    const db = createBrowserSupabaseClient();
+    if (!db) return;
+    let cancelled = false;
+    fetchClientAliases(db, client.id)
+      .then((aliases) => {
+        if (!cancelled) setAliasNames(aliases.map((alias) => alias.aliasName));
+      })
+      .catch((aliasError) => console.error('Client aliases load failed:', aliasError));
+    return () => {
+      cancelled = true;
+    };
+  }, [client.id]);
 
   const clientProposals = useMemo(() => {
-    const clientKey = normalizeClientKey(client.name);
+    const clientKeys = new Set([client.name, ...aliasNames].map(normalizeClientKey));
     return proposals
-      .filter((proposal) => proposal.cliente && normalizeClientKey(proposal.cliente) === clientKey)
+      .filter((proposal) => proposal.cliente && clientKeys.has(normalizeClientKey(proposal.cliente)))
       .sort((left, right) => right.creatoIl.localeCompare(left.creatoIl));
-  }, [client.name, proposals]);
+  }, [aliasNames, client.name, proposals]);
 
   const latest = clientProposals[0];
   const groups = useMemo(() => {

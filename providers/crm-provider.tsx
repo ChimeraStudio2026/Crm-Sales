@@ -113,6 +113,7 @@ import {
   persistOkrRecords,
   testSupabaseConnection,
 } from '@/lib/supabase/database';
+import { mergeClientsRecord } from '@/lib/supabase/client-aliases-database';
 
 export type ToastType = 'success' | 'danger' | 'warning' | 'info';
 
@@ -153,6 +154,8 @@ interface CrmContextValue {
   saveClient: (client: Partial<Client> & { name: string }, options?: { isCold?: boolean; isEdit?: boolean; id?: string; workspaceId?: string }) => Promise<void>;
   saveClients: (clients: Array<Partial<Client> & { name: string }>, options?: { isCold?: boolean }) => Promise<void>;
   deleteClient: (clientId: string) => Promise<void>;
+  /** Unisce source in target: target riceve tutto e il nome di source come ragione sociale. */
+  mergeClients: (sourceId: string, targetId: string) => Promise<void>;
   updateClientField: (clientId: string, field: keyof Client, value: unknown) => Promise<void>;
   updateClientContacts: (clientId: string, contacts: ClientContact[]) => Promise<void>;
   updateClientAction: (clientId: string, action: string) => Promise<void>;
@@ -820,6 +823,22 @@ export function CrmProvider({ children }: CrmProviderProps) {
     showToast('Cliente rimosso dal database.', 'info');
   }, [db, mutateClients, showToast]);
 
+  const mergeClients = useCallback(async (sourceId: string, targetId: string) => {
+    if (!db) {
+      throw new Error('Supabase non configurato');
+    }
+    try {
+      const result = await mergeClientsRecord(db, sourceId, targetId);
+      await deleteClientRecord(db, sourceId);
+      // Lo stato locale dei clienti è ormai vecchio: si ricarica dal database, senza riscriverlo.
+      await reloadRemoteCrmState();
+      showToast(`"${result.unito}" unito in "${result.principale}".`, 'success');
+    } catch (error) {
+      showToast(`Unione non riuscita: ${error instanceof Error ? error.message : 'errore'}`, 'danger');
+      throw error;
+    }
+  }, [db, reloadRemoteCrmState, showToast]);
+
   const updateClientField = useCallback(async (
     clientId: string,
     field: keyof Client,
@@ -1380,6 +1399,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
     saveClient,
     saveClients,
     deleteClient,
+    mergeClients,
     updateClientField,
     updateClientContacts,
     updateClientAction,

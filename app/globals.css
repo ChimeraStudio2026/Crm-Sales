@@ -10959,7 +10959,7 @@ a.btn:hover {
 .client-proposal-groups {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 12px;
+    gap: 12px 24px;
 }
 
 .client-proposal-group-head {
@@ -10981,11 +10981,22 @@ a.btn:hover {
     font-size: 0.85rem;
     font-weight: 600;
     color: var(--text-primary);
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 
 .client-proposal-meta {
     font-size: 0.75rem;
     color: var(--text-muted);
+    white-space: normal;
+}
+
+/* La scheda cliente vive dentro una riga di tabella con white-space: nowrap. */
+.client-proposals,
+.client-proposal-group,
+.client-proposal-line {
+    min-width: 0;
+    white-space: normal;
 }
 
 /* Nuovo cliente */

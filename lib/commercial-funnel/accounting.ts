@@ -1,13 +1,13 @@
 import { resolveClientFunnelTrack } from '@/lib/commercial-funnel/track';
-import { DEFAULT_RED_AFTER_DAYS } from '@/lib/types/client-actions';
+import { ACCOUNTING_ACTION_TYPE, DEFAULT_RED_AFTER_DAYS } from '@/lib/types/client-actions';
 import type { ClientAction } from '@/lib/types/client-actions';
 import type { Client } from '@/lib/types/crm';
 
-export type AccountingSemaforo = 'green' | 'red' | 'none';
+export type AccountingSemaforo = 'green' | 'red';
 
 export interface AccountingRow {
   client: Client;
-  lastAction: ClientAction | null;
+  lastAction: ClientAction;
   actions: ClientAction[];
   semaforo: AccountingSemaforo;
   dueDate: string;
@@ -50,6 +50,10 @@ function compareActionsDesc(left: ClientAction, right: ClientAction): number {
   return `${right.actionDate}|${right.createdAt}`.localeCompare(`${left.actionDate}|${left.createdAt}`);
 }
 
+/**
+ * Accounting parte vuoto: compaiono solo i clienti su cui qualcuno ha registrato
+ * almeno un'azione Accounting (le note della scheda cliente non contano).
+ */
 export function buildAccountingRows(
   clients: Client[],
   actions: ClientAction[],
@@ -57,19 +61,17 @@ export function buildAccountingRows(
 ): AccountingRow[] {
   const actionsByClient = new Map<string, ClientAction[]>();
   actions.forEach((action) => {
+    if (action.actionType !== ACCOUNTING_ACTION_TYPE) return;
     const list = actionsByClient.get(action.clientId) || [];
     list.push(action);
     actionsByClient.set(action.clientId, list);
   });
-  const rank: Record<AccountingSemaforo, number> = { red: 0, green: 1, none: 2 };
+  const rank: Record<AccountingSemaforo, number> = { red: 0, green: 1 };
   return clients
-    .filter(isAccountingClient)
+    .filter((client) => actionsByClient.has(client.id))
     .map((client) => {
       const clientActions = (actionsByClient.get(client.id) || []).sort(compareActionsDesc);
-      const lastAction = clientActions[0] || null;
-      if (!lastAction) {
-        return { client, lastAction, actions: clientActions, semaforo: 'none' as const, dueDate: '', daysToDue: null };
-      }
+      const lastAction = clientActions[0];
       return { client, lastAction, actions: clientActions, ...resolveAccountingDue(lastAction, today) };
     })
     .sort((left, right) => {

@@ -23,7 +23,7 @@ import type { Client } from '@/lib/types/crm';
 import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
 
-type AccountingFilter = 'all' | 'red' | 'none';
+type AccountingFilter = 'all' | 'red';
 
 function resolveContactLabel(client: Client, contactId: string): string {
   const contact = client.contacts.find((item) => item.id === contactId);
@@ -34,7 +34,6 @@ function resolveContactLabel(client: Client, contactId: string): string {
 const SEMAFORO_TITLES: Record<AccountingRow['semaforo'], string> = {
   green: 'Nei tempi',
   red: 'In ritardo: serve una nuova azione',
-  none: 'Nessuna azione registrata',
 };
 
 interface NewActionDrawerProps {
@@ -213,7 +212,6 @@ export function AccountingView() {
     [accountingClients, actions],
   );
   const redCount = rows.filter((row) => row.semaforo === 'red').length;
-  const noneCount = rows.filter((row) => row.semaforo === 'none').length;
   const visibleRows = useMemo(() => {
     const query = search.trim().toLowerCase();
     return rows
@@ -279,14 +277,6 @@ export function AccountingView() {
               In ritardo
               <span className="clients-filter-chip-count">{redCount}</span>
             </button>
-            <button
-              type="button"
-              className={`clients-filter-chip${filter === 'none' ? ' is-active' : ''}`}
-              onClick={() => setFilter('none')}
-            >
-              Senza azioni
-              <span className="clients-filter-chip-count">{noneCount}</span>
-            </button>
           </div>
         </div>
         <div className="filter-right">
@@ -321,7 +311,7 @@ export function AccountingView() {
               <tr>
                 <td colSpan={7} className="mail-campaigns-empty">
                   {rows.length === 0
-                    ? 'Nessun cliente caldo in questo workspace.'
+                    ? 'Nessun cliente in Accounting. Usa «Nuova azione» per aggiungere il primo cliente su cui lavorare.'
                     : 'Nessun cliente con questi filtri.'}
                 </td>
               </tr>
@@ -333,7 +323,7 @@ export function AccountingView() {
                     <tr className={`accounting-row is-${row.semaforo}`}>
                       <td className="funnel-col-semaforo">
                         <span
-                          className={`funnel-semaforo funnel-semaforo-${row.semaforo === 'none' ? 'none' : row.semaforo}`}
+                          className={`funnel-semaforo funnel-semaforo-${row.semaforo}`}
                           title={SEMAFORO_TITLES[row.semaforo]}
                           aria-label={SEMAFORO_TITLES[row.semaforo]}
                         />
@@ -343,23 +333,20 @@ export function AccountingView() {
                           type="button"
                           className="funnel-client-toggle"
                           onClick={() => setExpandedClientId(isExpanded ? '' : row.client.id)}
-                          disabled={row.actions.length === 0}
                         >
                           <ChevronRight size={14} className={`row-expand-icon${isExpanded ? ' is-expanded' : ''}`} />
                           <strong>{row.client.name}</strong>
                         </button>
                       </td>
-                      <td>{row.lastAction ? resolveContactLabel(row.client, row.lastAction.contactId) : '—'}</td>
+                      <td>{resolveContactLabel(row.client, row.lastAction.contactId)}</td>
                       <td className="accounting-note-cell">
-                        {row.lastAction ? (row.lastAction.note || row.lastAction.actionType) : 'Nessuna azione: registrane una'}
+                        {row.lastAction.note || row.lastAction.actionType}
                       </td>
-                      <td>{row.lastAction ? formatActionDateDisplay(row.lastAction.actionDate) : '—'}</td>
+                      <td>{formatActionDateDisplay(row.lastAction.actionDate)}</td>
                       <td>
-                        {row.lastAction ? (
-                          <span className={`accounting-due is-${row.semaforo}`}>
-                            {formatDaysToDue(row.daysToDue)}
-                          </span>
-                        ) : '—'}
+                        <span className={`accounting-due is-${row.semaforo}`}>
+                          {formatDaysToDue(row.daysToDue)}
+                        </span>
                       </td>
                       <td>
                         <button

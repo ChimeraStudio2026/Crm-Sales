@@ -34,8 +34,6 @@ import { CampaignStatusSelect } from '@/components/mail-campaigns/campaign-statu
 import { CampaignTableActions } from '@/components/mail-campaigns/campaign-table-actions';
 import { FunnelStatsCharts } from '@/components/commercial-funnel/funnel-stats-charts';
 import { AccountingView } from '@/components/commercial-funnel/accounting-view';
-import { isAccountingClient } from '@/lib/commercial-funnel/accounting';
-import { isClientInWorkspace } from '@/lib/crm/workspace-access';
 import { FunnelClientsView } from '@/components/commercial-funnel/funnel-clients-view';
 import { OWNERS } from '@/lib/constants/crm';
 import { useCrm } from '@/providers/crm-provider';
@@ -93,10 +91,6 @@ export function CommercialFunnelSection() {
   const workspaceCampaigns = useMemo(
     () => filterCampaignsByWorkspace(mailCampaigns, workspaceId),
     [mailCampaigns, workspaceId],
-  );
-  const accountingClientCount = useMemo(
-    () => clients.filter((client) => isClientInWorkspace(client, workspaceId) && isAccountingClient(client)).length,
-    [clients, workspaceId],
   );
   const campaignCountByTrack = useMemo(
     () => ({
@@ -248,9 +242,9 @@ export function CommercialFunnelSection() {
               >
                 <span className="funnel-track-tab-label">
                   {FUNNEL_TRACK_LABELS[item]}
-                  <span className="funnel-track-tab-count">
-                    {item === 'warm' ? accountingClientCount : campaignCountByTrack[item]}
-                  </span>
+                  {item === 'cold' && (
+                    <span className="funnel-track-tab-count">{campaignCountByTrack[item]}</span>
+                  )}
                 </span>
                 <small>{FUNNEL_TRACK_DESCRIPTIONS[item]}</small>
               </button>

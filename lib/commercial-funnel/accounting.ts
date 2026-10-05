@@ -1,14 +1,27 @@
 import { resolveClientFunnelTrack } from '@/lib/commercial-funnel/track';
-import { ACCOUNTING_ACTION_TYPE, DEFAULT_RED_AFTER_DAYS } from '@/lib/types/client-actions';
-import type { ClientAction } from '@/lib/types/client-actions';
+import {
+  ACCOUNTING_ACTION_TYPE,
+  ACCOUNTING_CLOSE_ACTION_TYPE,
+  DEFAULT_RED_AFTER_DAYS,
+} from '@/lib/types/client-actions';
+import type { AccountingOutcome, ClientAction } from '@/lib/types/client-actions';
 import type { Client } from '@/lib/types/crm';
 
 export type AccountingSemaforo = 'green' | 'red';
 
+export type AccountingStatus = 'open' | AccountingOutcome;
+
 export interface AccountingRow {
   client: Client;
+  status: AccountingStatus;
+  /** Ultima azione del ciclo (aperto o appena chiuso). */
   lastAction: ClientAction;
+  /** Azioni del ciclo, dalla più recente (esclusa la chiusura). */
   actions: ClientAction[];
+  /** Azione di chiusura con l'esito, se il ciclo è chiuso. */
+  closure: ClientAction | null;
+  /** Cicli già chiusi prima di quello mostrato. */
+  previousCycles: number;
   semaforo: AccountingSemaforo;
   dueDate: string;
   /** Giorni alla scadenza (negativi se già scaduta). */
@@ -50,9 +63,46 @@ function compareActionsDesc(left: ClientAction, right: ClientAction): number {
   return `${right.actionDate}|${right.createdAt}`.localeCompare(`${left.actionDate}|${left.createdAt}`);
 }
 
+function compareByRegistration(left: ClientAction, right: ClientAction): number {
+  return left.createdAt.localeCompare(right.createdAt);
+}
+
+export function isAccountingClosure(action: ClientAction): boolean {
+  return action.actionType === ACCOUNTING_CLOSE_ACTION_TYPE && Boolean(action.outcome);
+}
+
+function isAccountingRecord(action: ClientAction): boolean {
+  return action.actionType === ACCOUNTING_ACTION_TYPE || isAccountingClosure(action);
+}
+
+interface AccountingCycle {
+  actions: ClientAction[];
+  closure: ClientAction | null;
+}
+
+/**
+ * Divide le azioni di un cliente in cicli: ogni chiusura (won/lost) chiude tutto ciò che è
+ * stato registrato prima; un'azione registrata dopo apre un nuovo ciclo.
+ */
+function splitIntoCycles(actions: ClientAction[]): AccountingCycle[] {
+  const cycles: AccountingCycle[] = [];
+  let current: ClientAction[] = [];
+  [...actions].sort(compareByRegistration).forEach((action) => {
+    if (isAccountingClosure(action)) {
+      cycles.push({ actions: current, closure: action });
+      current = [];
+      return;
+    }
+    current.push(action);
+  });
+  if (current.length > 0) cycles.push({ actions: current, closure: null });
+  return cycles.filter((cycle) => cycle.actions.length > 0 || cycle.closure);
+}
+
 /**
  * Accounting parte vuoto: compaiono solo i clienti su cui qualcuno ha registrato
  * almeno un'azione Accounting (le note della scheda cliente non contano).
+ * Ogni riga mostra il ciclo in corso, oppure l'ultimo ciclo chiuso con il suo esito.
  */
 export function buildAccountingRows(
   clients: Client[],
@@ -61,26 +111,44 @@ export function buildAccountingRows(
 ): AccountingRow[] {
   const actionsByClient = new Map<string, ClientAction[]>();
   actions.forEach((action) => {
-    if (action.actionType !== ACCOUNTING_ACTION_TYPE) return;
+    if (!isAccountingRecord(action)) return;
     const list = actionsByClient.get(action.clientId) || [];
     list.push(action);
     actionsByClient.set(action.clientId, list);
   });
-  const rank: Record<AccountingSemaforo, number> = { red: 0, green: 1 };
-  return clients
-    .filter((client) => actionsByClient.has(client.id))
-    .map((client) => {
-      const clientActions = (actionsByClient.get(client.id) || []).sort(compareActionsDesc);
-      const lastAction = clientActions[0];
-      return { client, lastAction, actions: clientActions, ...resolveAccountingDue(lastAction, today) };
-    })
-    .sort((left, right) => {
-      if (rank[left.semaforo] !== rank[right.semaforo]) return rank[left.semaforo] - rank[right.semaforo];
-      if (left.daysToDue !== null && right.daysToDue !== null && left.daysToDue !== right.daysToDue) {
-        return left.daysToDue - right.daysToDue;
-      }
-      return left.client.name.localeCompare(right.client.name, 'it');
-    });
+  const rows: AccountingRow[] = [];
+  clients.forEach((client) => {
+    const cycles = splitIntoCycles(actionsByClient.get(client.id) || []);
+    const cycle = cycles[cycles.length - 1];
+    if (!cycle) return;
+    const cycleActions = [...cycle.actions].sort(compareActionsDesc);
+    const lastAction = cycleActions[0] || cycle.closure;
+    if (!lastAction) return;
+    const base = {
+      client,
+      lastAction,
+      actions: cycleActions,
+      closure: cycle.closure,
+      previousCycles: cycles.length - 1,
+    };
+    if (cycle.closure?.outcome) {
+      rows.push({ ...base, status: cycle.closure.outcome, semaforo: 'green', dueDate: '', daysToDue: null });
+      return;
+    }
+    rows.push({ ...base, status: 'open', ...resolveAccountingDue(lastAction, today) });
+  });
+  const statusRank: Record<AccountingStatus, number> = { open: 0, won: 1, lost: 2 };
+  return rows.sort((left, right) => {
+    if (statusRank[left.status] !== statusRank[right.status]) {
+      return statusRank[left.status] - statusRank[right.status];
+    }
+    if (left.status === 'open' && left.semaforo !== right.semaforo) return left.semaforo === 'red' ? -1 : 1;
+    if (left.daysToDue !== null && right.daysToDue !== null && left.daysToDue !== right.daysToDue) {
+      return left.daysToDue - right.daysToDue;
+    }
+    if (left.closure && right.closure) return compareActionsDesc(left.closure, right.closure);
+    return left.client.name.localeCompare(right.client.name, 'it');
+  });
 }
 
 export function formatDaysToDue(daysToDue: number | null): string {

@@ -1,29 +1,32 @@
 'use client';
 
 import { Fragment, useEffect, useMemo, useState } from 'react';
-import { ChevronRight, Plus, Search, X } from 'lucide-react';
+import { CheckCircle2, ChevronRight, Plus, Search, X } from 'lucide-react';
 import { ClientSearchSelect } from '@/components/clients/client-search-select';
 import {
   buildAccountingRows,
   formatDaysToDue,
   isAccountingClient,
 } from '@/lib/commercial-funnel/accounting';
-import type { AccountingRow } from '@/lib/commercial-funnel/accounting';
+import type { AccountingRow, AccountingStatus } from '@/lib/commercial-funnel/accounting';
 import { isClientInWorkspace } from '@/lib/crm/workspace-access';
 import { createUniqueId, formatActionDateDisplay, getTodayString } from '@/lib/crm/utils';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { fetchAllClientActions, insertClientAction } from '@/lib/supabase/client-actions-database';
 import {
   ACCOUNTING_ACTION_TYPE,
+  ACCOUNTING_CLOSE_ACTION_TYPE,
   DEFAULT_RED_AFTER_DAYS,
   RED_AFTER_DAYS_OPTIONS,
 } from '@/lib/types/client-actions';
-import type { ClientAction } from '@/lib/types/client-actions';
+import type { AccountingOutcome, ClientAction } from '@/lib/types/client-actions';
 import type { Client } from '@/lib/types/crm';
 import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
 
-type AccountingFilter = 'all' | 'red';
+type AccountingFilter = 'open' | 'red' | 'won' | 'lost';
+
+const OUTCOME_LABELS: Record<AccountingOutcome, string> = { won: 'Won', lost: 'Lost' };
 
 function resolveContactLabel(client: Client, contactId: string): string {
   const contact = client.contacts.find((item) => item.id === contactId);
@@ -171,13 +174,117 @@ function NewActionDrawer({ clients, initialClientId, onClose, onSave }: NewActio
   );
 }
 
+interface CloseCycleDrawerProps {
+  row: AccountingRow;
+  onClose: () => void;
+  onSave: (input: { outcome: AccountingOutcome; note: string; actionDate: string }) => Promise<void>;
+}
+
+function CloseCycleDrawer({ row, onClose, onSave }: CloseCycleDrawerProps) {
+  const [outcome, setOutcome] = useState<AccountingOutcome>('won');
+  const [note, setNote] = useState('');
+  const [actionDate, setActionDate] = useState(getTodayString());
+  const [isSaving, setIsSaving] = useState(false);
+  // Come da flussi commerciali: un Lost va sempre motivato, per ripartire da lì al richiamo.
+  const isNoteRequired = outcome === 'lost';
+  const canSave = !isSaving && (!isNoteRequired || Boolean(note.trim()));
+
+  const handleSubmit = async (event: React.FormEvent): Promise<void> => {
+    event.preventDefault();
+    if (!canSave) return;
+    setIsSaving(true);
+    try {
+      await onSave({ outcome, note: note.trim(), actionDate });
+      onClose();
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="drawer-overlay open" onClick={onClose} aria-hidden />
+      <div className="drawer open">
+        <div className="drawer-header">
+          <h3>Chiudi azioni · {row.client.name}</h3>
+          <div className="drawer-close" onClick={onClose} role="button" tabIndex={0}>
+            <X size={20} />
+          </div>
+        </div>
+        <form onSubmit={(event) => void handleSubmit(event)}>
+          <div className="drawer-body">
+            <p className="funnel-track-note">
+              Chiudi le {row.actions.length} {row.actions.length === 1 ? 'azione' : 'azioni'} di questo ciclo con il loro esito.
+              Il cliente esce dalla lista attiva; con una nuova azione si apre un nuovo ciclo.
+            </p>
+            <div className="form-group">
+              <label>Esito *</label>
+              <div className="accounting-outcome-choice" role="radiogroup" aria-label="Esito">
+                {(['won', 'lost'] as const).map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={outcome === value}
+                    className={`accounting-outcome-option is-${value}${outcome === value ? ' is-active' : ''}`}
+                    onClick={() => setOutcome(value)}
+                  >
+                    {value === 'won' ? 'Won · ha portato a un progetto' : 'Lost · non è andata'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="form-group">
+              <label htmlFor="accounting-close-note">{isNoteRequired ? 'Motivo *' : 'Nota'}</label>
+              <textarea
+                id="accounting-close-note"
+                className="form-textarea"
+                rows={3}
+                placeholder={isNoteRequired
+                  ? 'Perché non è andata? Servirà per il richiamo.'
+                  : 'Cosa è stato chiuso (progetto, preventivo, importo...)'}
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                required={isNoteRequired}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="accounting-close-date">Data chiusura</label>
+              <input
+                id="accounting-close-date"
+                type="date"
+                className="form-input"
+                value={actionDate}
+                onChange={(event) => setActionDate(event.target.value)}
+                required
+              />
+            </div>
+          </div>
+          <div className="drawer-footer">
+            <button type="button" className="btn btn-secondary" onClick={onClose}>Annulla</button>
+            <button type="submit" className="btn btn-primary" disabled={!canSave}>
+              {isSaving ? 'Salvataggio…' : `Chiudi come ${OUTCOME_LABELS[outcome]}`}
+            </button>
+          </div>
+        </form>
+      </div>
+    </>
+  );
+}
+
+function StatusBadge({ status }: { status: AccountingStatus }) {
+  if (status === 'open') return null;
+  return <span className={`accounting-outcome-badge is-${status}`}>{OUTCOME_LABELS[status]}</span>;
+}
+
 export function AccountingView() {
   const { clients, currentOwner, showToast } = useCrm();
   const { workspaceId } = useWorkspace();
   const db = useMemo(() => createBrowserSupabaseClient(), []);
   const [actions, setActions] = useState<ClientAction[]>([]);
   const [isLoading, setIsLoading] = useState(Boolean(db));
-  const [filter, setFilter] = useState<AccountingFilter>('all');
+  const [filter, setFilter] = useState<AccountingFilter>('open');
+  const [closingRow, setClosingRow] = useState<AccountingRow | null>(null);
   const [search, setSearch] = useState('');
   const [expandedClientId, setExpandedClientId] = useState('');
   const [drawerClientId, setDrawerClientId] = useState<string | null>(null);
@@ -211,11 +318,19 @@ export function AccountingView() {
     () => buildAccountingRows(accountingClients, actions, getTodayString()),
     [accountingClients, actions],
   );
-  const redCount = rows.filter((row) => row.semaforo === 'red').length;
+  const counts = useMemo(() => ({
+    open: rows.filter((row) => row.status === 'open').length,
+    red: rows.filter((row) => row.status === 'open' && row.semaforo === 'red').length,
+    won: rows.filter((row) => row.status === 'won').length,
+    lost: rows.filter((row) => row.status === 'lost').length,
+  }), [rows]);
   const visibleRows = useMemo(() => {
     const query = search.trim().toLowerCase();
     return rows
-      .filter((row) => filter === 'all' || row.semaforo === filter)
+      .filter((row) => {
+        if (filter === 'red') return row.status === 'open' && row.semaforo === 'red';
+        return row.status === filter;
+      })
       .filter((row) => !query || row.client.name.toLowerCase().includes(query));
   }, [filter, rows, search]);
 
@@ -238,11 +353,38 @@ export function AccountingView() {
         createdAt: '',
         contactId: input.contactId,
         redAfterDays: input.redAfterDays,
+        outcome: null,
       });
       setActions((prev) => [saved, ...prev]);
       showToast('Azione registrata anche sulla scheda cliente.', 'success');
     } catch (error) {
       showToast(`Errore salvataggio azione: ${error instanceof Error ? error.message : 'errore'}`, 'danger');
+      throw error;
+    }
+  };
+
+  const handleCloseCycle = async (
+    row: AccountingRow,
+    input: { outcome: AccountingOutcome; note: string; actionDate: string },
+  ): Promise<void> => {
+    if (!db) return;
+    try {
+      const saved = await insertClientAction(db, {
+        id: createUniqueId('client-action'),
+        clientId: row.client.id,
+        actionType: ACCOUNTING_CLOSE_ACTION_TYPE,
+        actionDate: input.actionDate,
+        note: input.note,
+        author: currentOwner || '',
+        createdAt: '',
+        contactId: row.lastAction.contactId,
+        redAfterDays: null,
+        outcome: input.outcome,
+      });
+      setActions((prev) => [saved, ...prev]);
+      showToast(`${row.client.name} chiuso come ${OUTCOME_LABELS[input.outcome]}.`, 'success');
+    } catch (error) {
+      showToast(`Errore chiusura: ${error instanceof Error ? error.message : 'errore'}`, 'danger');
       throw error;
     }
   };
@@ -260,23 +402,23 @@ export function AccountingView() {
               onChange={(event) => setSearch(event.target.value)}
             />
           </div>
-          <div className="proposals-list-chips" role="group" aria-label="Filtra per semaforo">
-            <button
-              type="button"
-              className={`clients-filter-chip${filter === 'all' ? ' is-active' : ''}`}
-              onClick={() => setFilter('all')}
-            >
-              Tutti
-              <span className="clients-filter-chip-count">{rows.length}</span>
-            </button>
-            <button
-              type="button"
-              className={`clients-filter-chip${filter === 'red' ? ' is-active' : ''}`}
-              onClick={() => setFilter('red')}
-            >
-              In ritardo
-              <span className="clients-filter-chip-count">{redCount}</span>
-            </button>
+          <div className="proposals-list-chips" role="group" aria-label="Filtra Accounting">
+            {([
+              ['open', 'Aperti'],
+              ['red', 'In ritardo'],
+              ['won', 'Won'],
+              ['lost', 'Lost'],
+            ] as const).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                className={`clients-filter-chip${filter === value ? ' is-active' : ''}`}
+                onClick={() => setFilter(value)}
+              >
+                {label}
+                <span className="clients-filter-chip-count">{counts[value]}</span>
+              </button>
+            ))}
           </div>
         </div>
         <div className="filter-right">
@@ -300,7 +442,7 @@ export function AccountingView() {
               <th>Contatto</th>
               <th>Ultima azione</th>
               <th>Data</th>
-              <th>Scadenza</th>
+              <th>{filter === 'won' || filter === 'lost' ? 'Chiuso' : 'Scadenza'}</th>
               <th> </th>
             </tr>
           </thead>
@@ -312,7 +454,9 @@ export function AccountingView() {
                 <td colSpan={7} className="mail-campaigns-empty">
                   {rows.length === 0
                     ? 'Nessun cliente in Accounting. Usa «Nuova azione» per aggiungere il primo cliente su cui lavorare.'
-                    : 'Nessun cliente con questi filtri.'}
+                    : filter === 'open'
+                      ? 'Nessun ciclo aperto: tutti i clienti sono chiusi come Won o Lost.'
+                      : 'Nessun cliente con questi filtri.'}
                 </td>
               </tr>
             ) : (
@@ -320,13 +464,17 @@ export function AccountingView() {
                 const isExpanded = expandedClientId === row.client.id;
                 return (
                   <Fragment key={row.client.id}>
-                    <tr className={`accounting-row is-${row.semaforo}`}>
+                    <tr className={`accounting-row is-${row.status === 'open' ? row.semaforo : row.status}`}>
                       <td className="funnel-col-semaforo">
-                        <span
-                          className={`funnel-semaforo funnel-semaforo-${row.semaforo}`}
-                          title={SEMAFORO_TITLES[row.semaforo]}
-                          aria-label={SEMAFORO_TITLES[row.semaforo]}
-                        />
+                        {row.status === 'open' ? (
+                          <span
+                            className={`funnel-semaforo funnel-semaforo-${row.semaforo}`}
+                            title={SEMAFORO_TITLES[row.semaforo]}
+                            aria-label={SEMAFORO_TITLES[row.semaforo]}
+                          />
+                        ) : (
+                          <StatusBadge status={row.status} />
+                        )}
                       </td>
                       <td>
                         <button
@@ -340,19 +488,39 @@ export function AccountingView() {
                       </td>
                       <td>{resolveContactLabel(row.client, row.lastAction.contactId)}</td>
                       <td className="accounting-note-cell">
-                        {row.lastAction.note || row.lastAction.actionType}
+                        {row.closure?.note
+                          ? row.closure.note
+                          : row.lastAction.note || row.lastAction.actionType}
                       </td>
                       <td>{formatActionDateDisplay(row.lastAction.actionDate)}</td>
                       <td>
-                        <span className={`accounting-due is-${row.semaforo}`}>
-                          {formatDaysToDue(row.daysToDue)}
-                        </span>
+                        {row.closure ? (
+                          <span className={`accounting-due is-${row.status}`}>
+                            {formatActionDateDisplay(row.closure.actionDate)}
+                          </span>
+                        ) : (
+                          <span className={`accounting-due is-${row.semaforo}`}>
+                            {formatDaysToDue(row.daysToDue)}
+                          </span>
+                        )}
                       </td>
-                      <td>
+                      <td className="accounting-row-actions">
+                        {row.status === 'open' && (
+                          <button
+                            type="button"
+                            className="btn-table-action"
+                            title="Chiudi con esito Won o Lost"
+                            onClick={() => setClosingRow(row)}
+                            disabled={!db}
+                          >
+                            <CheckCircle2 size={14} />
+                            <span>Chiudi</span>
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="btn-table-action"
-                          title="Nuova azione su questo cliente"
+                          title={row.status === 'open' ? 'Nuova azione su questo cliente' : 'Riapri con una nuova azione'}
                           onClick={() => setDrawerClientId(row.client.id)}
                           disabled={!db}
                         >
@@ -364,6 +532,14 @@ export function AccountingView() {
                       <tr className="accounting-history-row">
                         <td colSpan={7}>
                           <ul className="accounting-history">
+                            {row.closure && (
+                              <li className={`accounting-history-closure is-${row.status}`}>
+                                <StatusBadge status={row.status} />
+                                <span>{formatActionDateDisplay(row.closure.actionDate)}</span>
+                                {row.closure.author && <span className="client-last-action-detail">{row.closure.author}</span>}
+                                <p>{row.closure.note || 'Ciclo chiuso.'}</p>
+                              </li>
+                            )}
                             {row.actions.map((action) => (
                               <li key={action.id}>
                                 <span className="client-last-action-type">{action.actionType}</span>
@@ -377,6 +553,12 @@ export function AccountingView() {
                               </li>
                             ))}
                           </ul>
+                          {row.previousCycles > 0 && (
+                            <p className="accounting-previous-cycles">
+                              {row.previousCycles} {row.previousCycles === 1 ? 'ciclo precedente chiuso' : 'cicli precedenti chiusi'} su questo cliente
+                              (li trovi nella scheda cliente).
+                            </p>
+                          )}
                         </td>
                       </tr>
                     )}
@@ -387,6 +569,13 @@ export function AccountingView() {
           </tbody>
         </table>
       </div>
+      {closingRow && (
+        <CloseCycleDrawer
+          row={closingRow}
+          onClose={() => setClosingRow(null)}
+          onSave={(input) => handleCloseCycle(closingRow, input)}
+        />
+      )}
       {drawerClientId !== null && (
         <NewActionDrawer
           clients={accountingClients}

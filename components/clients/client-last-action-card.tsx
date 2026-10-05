@@ -89,6 +89,7 @@ export function ClientLastActionCard({ clientId }: ClientLastActionCardProps) {
         createdAt: '',
         contactId: '',
         redAfterDays: null,
+        outcome: null,
       });
       setClientActions((prev) => [saved, ...prev]);
       resetForm();

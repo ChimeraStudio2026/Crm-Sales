@@ -11116,3 +11116,97 @@ a.btn:hover {
         grid-template-columns: 1fr;
     }
 }
+
+/* Accounting: chiusura dei cicli con esito */
+.accounting-outcome-badge {
+    display: inline-flex;
+    padding: 2px 9px;
+    border-radius: var(--radius-pill);
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.accounting-outcome-badge.is-won {
+    background: var(--pill-green-bg);
+    color: var(--pill-green-fg);
+}
+
+.accounting-outcome-badge.is-lost {
+    background: var(--pill-red-bg);
+    color: var(--pill-red-fg);
+}
+
+.accounting-due.is-won {
+    color: var(--pill-green-fg);
+}
+
+.accounting-due.is-lost {
+    color: var(--pill-red-fg);
+}
+
+.accounting-row.is-won td,
+.accounting-row.is-lost td {
+    color: var(--text-secondary);
+}
+
+.accounting-row-actions {
+    white-space: nowrap;
+}
+
+.accounting-row-actions .btn-table-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.accounting-row-actions .btn-table-action + .btn-table-action {
+    margin-left: 4px;
+}
+
+.accounting-outcome-choice {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.accounting-outcome-option {
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.accounting-outcome-option.is-won.is-active {
+    border-color: var(--pill-green-fg);
+    background: var(--pill-green-bg);
+    color: var(--pill-green-fg);
+}
+
+.accounting-outcome-option.is-lost.is-active {
+    border-color: var(--pill-red-fg);
+    background: var(--pill-red-bg);
+    color: var(--pill-red-fg);
+}
+
+.accounting-history-closure {
+    padding-bottom: 8px;
+    border-bottom: 1px dashed var(--border-color);
+}
+
+.accounting-previous-cycles {
+    margin: 8px 0 0;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+@media (max-width: 640px) {
+    .accounting-outcome-choice {
+        grid-template-columns: 1fr;
+    }
+}

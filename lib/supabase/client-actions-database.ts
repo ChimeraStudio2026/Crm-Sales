@@ -11,6 +11,7 @@ interface ClientActionRow {
   created_at: string;
   contact_id: string | null;
   red_after_days: number | null;
+  outcome: string | null;
 }
 
 function rowToClientAction(row: ClientActionRow): ClientAction {
@@ -24,6 +25,7 @@ function rowToClientAction(row: ClientActionRow): ClientAction {
     createdAt: row.created_at || '',
     contactId: row.contact_id || '',
     redAfterDays: row.red_after_days ?? null,
+    outcome: row.outcome === 'won' || row.outcome === 'lost' ? row.outcome : null,
   };
 }
 
@@ -67,6 +69,7 @@ export async function insertClientAction(
       author: action.author,
       contact_id: action.contactId,
       red_after_days: action.redAfterDays,
+      outcome: action.outcome,
     })
     .select('*')
     .single();

@@ -18,7 +18,7 @@ export function buildClientActivity(
     return {
       key: `client-${action.id}`,
       source: 'client',
-      actionType: action.actionType,
+      actionType: action.outcome ? `Chiusura · ${action.outcome === 'won' ? 'Won' : 'Lost'}` : action.actionType,
       date: action.actionDate,
       note: action.note,
       detail: contactName ? `${author} · con ${contactName}` : author,

@@ -35,7 +35,8 @@ export function ClientDrawer({ client, isCold, workspaceId, onClose }: ClientDra
   const [type, setType] = useState(CLIENT_TYPES[0]);
   const [owner, setOwner] = useState<Owner>(() => getDefaultOwnerForWorkspace(resolvedWorkspaceId));
   const [clientOrigin, setClientOrigin] = useState<Client['clientOrigin']>('');
-  const [relationship, setRelationship] = useState<Client['relationship']>('Nuovo Cliente');
+  // Un cliente nuovo parte sempre Freddo: diventa caldo quando fattura (sync Cerbero).
+  const [relationship, setRelationship] = useState<Client['relationship']>('Freddo');
   const [rev2023, setRev2023] = useState(0);
   const [rev2024, setRev2024] = useState(0);
   const [rev2025, setRev2025] = useState(0);
@@ -64,11 +65,15 @@ export function ClientDrawer({ client, isCold, workspaceId, onClose }: ClientDra
       return;
     }
     setOwner(getDefaultOwnerForWorkspace(resolvedWorkspaceId));
+    setRelationship('Freddo');
   }, [availableOwners, client, resolvedWorkspaceId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    const filledContacts = contacts.filter((contact) => (
+      contact.name.trim() || contact.email.trim() || contact.phone.trim() || contact.role.trim()
+    ));
     try {
       await saveClient(
         {
@@ -77,16 +82,16 @@ export function ClientDrawer({ client, isCold, workspaceId, onClose }: ClientDra
           type,
           owner,
           clientOrigin,
-          relationship,
+          relationship: client ? relationship : 'Freddo',
           rev2023,
           rev2024,
           rev2025,
           rev2026,
           description,
-          contacts,
-          manualRelationship: client?.manualRelationship ?? false,
+          contacts: filledContacts,
+          manualRelationship: client?.manualRelationship ?? true,
         },
-        { isEdit: !!client, id: client?.id, isCold, workspaceId },
+        { isEdit: !!client, id: client?.id, isCold: client ? isCold : true, workspaceId },
       );
       onClose();
     } finally {
@@ -134,6 +139,8 @@ export function ClientDrawer({ client, isCold, workspaceId, onClose }: ClientDra
                 {availableOrigins.map((origin) => <option key={origin} value={origin}>{origin}</option>)}
               </select>
             </div>
+            {client ? (
+              <>
             <div className="form-group">
               <label htmlFor="form-relationship">Stato Rapporto</label>
               <select id="form-relationship" className="form-select" value={relationship} onChange={(e) => setRelationship(e.target.value as Client['relationship'])}>
@@ -156,8 +163,14 @@ export function ClientDrawer({ client, isCold, workspaceId, onClose }: ClientDra
               <label htmlFor="form-rev-2026">Fatturato 2026 (€)</label>
               <input id="form-rev-2026" type="number" className="form-input" value={rev2026} min={0} step={0.01} onChange={(e) => setRev2026(parseFloat(e.target.value) || 0)} />
             </div>
+              </>
+            ) : (
+              <p className="client-drawer-cold-note">
+                Il cliente viene creato come <strong>Freddo</strong>: passa tra i caldi quando fattura almeno 1€.
+              </p>
+            )}
             <div className="form-group">
-              <label>Contatti</label>
+              <label>{client ? 'Contatti' : 'Contatti (uno o più)'}</label>
               {contacts.map((contact, index) => (
                 <div key={contact.id} className="form-contact-row-inline">
                   <input className="form-input" placeholder="Nome" value={contact.name} onChange={(e) => {

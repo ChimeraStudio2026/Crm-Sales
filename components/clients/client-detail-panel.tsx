@@ -8,6 +8,7 @@ import { createUniqueId } from '@/lib/crm/utils';
 import { ProductOffersTags } from '@/components/clients/product-offers-tags';
 import { SoldProductsTags } from '@/components/clients/sold-products-tags';
 import { ClientLastActionCard } from '@/components/clients/client-last-action-card';
+import { ClientProposalsCard } from '@/components/clients/client-proposals-card';
 import { useCrm } from '@/providers/crm-provider';
 import type { Client, ClientContact } from '@/lib/types/crm';
 
@@ -85,6 +86,7 @@ export function ClientDetailPanel({
   return (
     <div className="client-detail-panel" onClick={(event) => event.stopPropagation()}>
       <ClientLastActionCard clientId={client.id} />
+      <ClientProposalsCard client={client} />
       <div className="client-products-row">
         <ProductOffersTags
           client={client}

@@ -19,7 +19,7 @@ import {
   buildFunnelEntryKey,
   resolveFunnelContactLabel,
 } from '@/lib/commercial-funnel/contacts';
-import { filterCampaignsByWorkspace } from '@/lib/commercial-funnel/campaigns';
+import { filterCampaignsByWorkspace, isClosedCampaign } from '@/lib/commercial-funnel/campaigns';
 import {
   FUNNEL_TRACK_LABELS,
   filterCampaignsByTrack,
@@ -216,7 +216,7 @@ export function FunnelClientsTable({
         ? filterCampaignsByWorkspace(mailCampaigns, currentCampaign.workspaceId)
         : mailCampaigns;
       return filterCampaignsByTrack(workspaceCampaigns, campaignTrack)
-        .filter((campaign) => campaign.id !== campaignId)
+        .filter((campaign) => campaign.id !== campaignId && !isClosedCampaign(campaign))
         .sort((a, b) => a.name.localeCompare(b.name, 'it'));
     },
     [campaignId, campaignTrack, currentCampaign, mailCampaigns],

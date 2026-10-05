@@ -139,7 +139,7 @@ export const NAV_ITEMS = [
 
 export const PAGE_META: Record<string, { title: string; subtitle: string }> = {
   '/analysis': { title: 'Analisi', subtitle: 'OKR, previsioni e breakdown per quarter.' },
-  '/proposte': { title: 'Proposte', subtitle: 'Preventivi commerciali: KPI, ticket medio e clienti per categoria.' },
+  '/proposte': { title: 'Proposte', subtitle: 'Preventivi commerciali: KPI, ticket medio e tutte le proposte come su Cerbero.' },
   '/clients': {
     title: 'Gestione Clienti',
     subtitle: 'Clienti attivi e prospect freddi nella stessa lista. Usa Rapporto «Freddo» per i contatti cold.',

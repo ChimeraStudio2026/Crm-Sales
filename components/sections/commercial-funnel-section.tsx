@@ -33,6 +33,9 @@ import { CampaignNameCell } from '@/components/mail-campaigns/campaign-name-cell
 import { CampaignStatusSelect } from '@/components/mail-campaigns/campaign-status-select';
 import { CampaignTableActions } from '@/components/mail-campaigns/campaign-table-actions';
 import { FunnelStatsCharts } from '@/components/commercial-funnel/funnel-stats-charts';
+import { AccountingView } from '@/components/commercial-funnel/accounting-view';
+import { isAccountingClient } from '@/lib/commercial-funnel/accounting';
+import { isClientInWorkspace } from '@/lib/crm/workspace-access';
 import { FunnelClientsView } from '@/components/commercial-funnel/funnel-clients-view';
 import { OWNERS } from '@/lib/constants/crm';
 import { useCrm } from '@/providers/crm-provider';
@@ -90,6 +93,10 @@ export function CommercialFunnelSection() {
   const workspaceCampaigns = useMemo(
     () => filterCampaignsByWorkspace(mailCampaigns, workspaceId),
     [mailCampaigns, workspaceId],
+  );
+  const accountingClientCount = useMemo(
+    () => clients.filter((client) => isClientInWorkspace(client, workspaceId) && isAccountingClient(client)).length,
+    [clients, workspaceId],
   );
   const campaignCountByTrack = useMemo(
     () => ({
@@ -229,6 +236,30 @@ export function CommercialFunnelSection() {
       <TopHeader />
       <div className="content-body">
         <section className="app-section active">
+          <div className="funnel-track-tabs" role="tablist" aria-label="Tipo di funnel">
+            {FUNNEL_TRACKS.map((item) => (
+              <button
+                key={item}
+                type="button"
+                role="tab"
+                aria-selected={track === item}
+                className={`funnel-track-tab funnel-track-tab-${item}${track === item ? ' is-active' : ''}`}
+                onClick={() => handleTrackChange(item)}
+              >
+                <span className="funnel-track-tab-label">
+                  {FUNNEL_TRACK_LABELS[item]}
+                  <span className="funnel-track-tab-count">
+                    {item === 'warm' ? accountingClientCount : campaignCountByTrack[item]}
+                  </span>
+                </span>
+                <small>{FUNNEL_TRACK_DESCRIPTIONS[item]}</small>
+              </button>
+            ))}
+          </div>
+          {track === 'warm' ? (
+            <AccountingView />
+          ) : (
+          <>
           <div className="table-filter-bar">
             <div className="filter-left funnel-filter-left">
               <div className="search-box funnel-brand-search-box">
@@ -278,24 +309,6 @@ export function CommercialFunnelSection() {
                 <span>Nuova campagna</span>
               </button>
             </div>
-          </div>
-          <div className="funnel-track-tabs" role="tablist" aria-label="Tipo di funnel">
-            {FUNNEL_TRACKS.map((item) => (
-              <button
-                key={item}
-                type="button"
-                role="tab"
-                aria-selected={track === item}
-                className={`funnel-track-tab funnel-track-tab-${item}${track === item ? ' is-active' : ''}`}
-                onClick={() => handleTrackChange(item)}
-              >
-                <span className="funnel-track-tab-label">
-                  {FUNNEL_TRACK_LABELS[item]}
-                  <span className="funnel-track-tab-count">{campaignCountByTrack[item]}</span>
-                </span>
-                <small>{FUNNEL_TRACK_DESCRIPTIONS[item]}</small>
-              </button>
-            ))}
           </div>
           <FunnelStatsCharts title={`Totali ${FUNNEL_TRACK_LABELS[track]}`} stats={workspaceStats} />
           {pageView === 'clients' ? (
@@ -451,6 +464,8 @@ export function CommercialFunnelSection() {
             </table>
           </div>
             </>
+          )}
+          </>
           )}
         </section>
       </div>

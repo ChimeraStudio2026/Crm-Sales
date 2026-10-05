@@ -135,9 +135,3 @@ export interface CategoryTicketStat {
   averageTicket: number;
 }
 
-export interface ClientProposalStat {
-  cliente: string;
-  acceptedCount: number;
-  acceptedTotal: number;
-  countsByCategory: Record<string, number>;
-}

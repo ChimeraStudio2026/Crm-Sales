@@ -9,6 +9,8 @@ interface ClientActionRow {
   note: string;
   author: string;
   created_at: string;
+  contact_id: string | null;
+  red_after_days: number | null;
 }
 
 function rowToClientAction(row: ClientActionRow): ClientAction {
@@ -20,6 +22,8 @@ function rowToClientAction(row: ClientActionRow): ClientAction {
     note: row.note || '',
     author: row.author || '',
     createdAt: row.created_at || '',
+    contactId: row.contact_id || '',
+    redAfterDays: row.red_after_days ?? null,
   };
 }
 
@@ -31,6 +35,17 @@ export async function fetchClientActions(
     .from('client_actions')
     .select('*')
     .eq('client_id', clientId)
+    .order('action_date', { ascending: false })
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data || []).map((row) => rowToClientAction(row as ClientActionRow));
+}
+
+/** Tutte le azioni dei clienti, dalla più recente: alimentano la vista Accounting. */
+export async function fetchAllClientActions(db: SupabaseClient): Promise<ClientAction[]> {
+  const { data, error } = await db
+    .from('client_actions')
+    .select('*')
     .order('action_date', { ascending: false })
     .order('created_at', { ascending: false });
   if (error) throw error;
@@ -50,6 +65,8 @@ export async function insertClientAction(
       action_date: action.actionDate,
       note: action.note,
       author: action.author,
+      contact_id: action.contactId,
+      red_after_days: action.redAfterDays,
     })
     .select('*')
     .single();

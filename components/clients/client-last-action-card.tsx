@@ -22,7 +22,7 @@ interface ClientLastActionCardProps {
 }
 
 export function ClientLastActionCard({ clientId }: ClientLastActionCardProps) {
-  const { commercialFunnelEntries, mailCampaigns, currentOwner, showToast } = useCrm();
+  const { clients, commercialFunnelEntries, mailCampaigns, currentOwner, showToast } = useCrm();
   const db = useMemo(() => createBrowserSupabaseClient(), []);
   const [clientActions, setClientActions] = useState<ClientAction[]>([]);
   const [isLoading, setIsLoading] = useState(Boolean(db));
@@ -60,8 +60,9 @@ export function ClientLastActionCard({ clientId }: ClientLastActionCardProps) {
       clientActions,
       getFunnelEntriesForClient(commercialFunnelEntries, clientId),
       mailCampaigns,
+      clients.find((client) => client.id === clientId)?.contacts || [],
     ),
-    [clientActions, clientId, commercialFunnelEntries, mailCampaigns],
+    [clientActions, clientId, clients, commercialFunnelEntries, mailCampaigns],
   );
   const lastAction = activity[0];
   const history = activity.slice(1, HISTORY_PREVIEW_LIMIT + 1);
@@ -86,6 +87,8 @@ export function ClientLastActionCard({ clientId }: ClientLastActionCardProps) {
         note: note.trim(),
         author: currentOwner || '',
         createdAt: '',
+        contactId: '',
+        redAfterDays: null,
       });
       setClientActions((prev) => [saved, ...prev]);
       resetForm();

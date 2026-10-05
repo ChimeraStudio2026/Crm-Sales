@@ -5,7 +5,6 @@ import {
   PROPOSAL_STATUS_REJECTED,
   PROPOSAL_YEAR_OPTIONS_BASE,
   type CategoryTicketStat,
-  type ClientProposalStat,
   type ProposalDetailGroup,
   type ProposalDetailFilter,
   type ProposalKpiSummary,
@@ -523,30 +522,6 @@ export function buildCategoryTicketStats(proposals: SalesProposal[]): CategoryTi
     });
 }
 
-export function buildClientProposalStats(proposals: SalesProposal[]): ClientProposalStat[] {
-  const accepted = proposals.filter(isAcceptedProposal);
-  const grouped = new Map<string, ClientProposalStat>();
-  accepted.forEach((proposal) => {
-    const cliente = resolveClientLabel(proposal.cliente);
-    const categoria = resolveCategoryLabel(proposal.categoria);
-    const current = grouped.get(cliente) || {
-      cliente,
-      acceptedCount: 0,
-      acceptedTotal: 0,
-      countsByCategory: {},
-    };
-    current.acceptedCount += 1;
-    const value = resolveProposalValue(proposal);
-    if (value !== null) current.acceptedTotal += value;
-    current.countsByCategory[categoria] = (current.countsByCategory[categoria] || 0) + 1;
-    grouped.set(cliente, current);
-  });
-  return Array.from(grouped.values()).sort((left, right) => {
-    if (right.acceptedCount !== left.acceptedCount) return right.acceptedCount - left.acceptedCount;
-    return left.cliente.localeCompare(right.cliente, 'it');
-  });
-}
-
 export function buildRejectedClientStats(proposals: SalesProposal[]): RejectedClientStat[] {
   const rejected = proposals.filter(isRejectedProposal);
   const grouped = new Map<string, RejectedClientStat>();
@@ -567,12 +542,4 @@ export function buildRejectedClientStats(proposals: SalesProposal[]): RejectedCl
     if (right.rejectedTotal !== left.rejectedTotal) return right.rejectedTotal - left.rejectedTotal;
     return left.cliente.localeCompare(right.cliente, 'it', { sensitivity: 'base' });
   });
-}
-
-export function collectClientTableCategories(stats: ClientProposalStat[]): string[] {
-  const categories = new Set<string>();
-  stats.forEach((stat) => {
-    Object.keys(stat.countsByCategory).forEach((categoria) => categories.add(categoria));
-  });
-  return sortProposalCategories(Array.from(categories));
 }

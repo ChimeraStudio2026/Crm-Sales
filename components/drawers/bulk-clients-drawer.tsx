@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Trash2, X } from 'lucide-react';
+import { Plus, Trash2, UserPlus, X } from 'lucide-react';
 import { CLIENT_ORIGINS, CLIENT_TYPES, OWNERS } from '@/lib/constants/crm';
 import { getDefaultOwnerForWorkspace } from '@/lib/crm/workspace-clients';
 import { createUniqueId } from '@/lib/crm/utils';
 import { useCrm } from '@/providers/crm-provider';
-import type { Client, ClientOrigin, ClientType, Owner } from '@/lib/types/crm';
+import type { ClientContact, ClientOrigin, ClientType, Owner } from '@/lib/types/crm';
 
 interface DraftClientRow {
   id: string;
@@ -14,6 +14,15 @@ interface DraftClientRow {
   type: ClientType;
   owner: Owner;
   clientOrigin: ClientOrigin | '';
+  contacts: ClientContact[];
+}
+
+function createEmptyContact(): ClientContact {
+  return { id: createUniqueId('contact'), name: '', email: '', phone: '', role: '' };
+}
+
+function isFilledContact(contact: ClientContact): boolean {
+  return Boolean(contact.name.trim() || contact.email.trim() || contact.phone.trim() || contact.role.trim());
 }
 
 function createEmptyDraftRow(): DraftClientRow {
@@ -23,15 +32,16 @@ function createEmptyDraftRow(): DraftClientRow {
     type: CLIENT_TYPES[0],
     owner: getDefaultOwnerForWorkspace(),
     clientOrigin: '',
+    contacts: [createEmptyContact()],
   };
 }
 
 interface BulkClientsDrawerProps {
-  isCold: boolean;
   onClose: () => void;
 }
 
-export function BulkClientsDrawer({ isCold, onClose }: BulkClientsDrawerProps) {
+/** I clienti nuovi partono sempre Freddi: diventano caldi quando fatturano (sync Cerbero). */
+export function BulkClientsDrawer({ onClose }: BulkClientsDrawerProps) {
   const { saveClients } = useCrm();
   const [rows, setRows] = useState<DraftClientRow[]>([createEmptyDraftRow()]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -42,6 +52,28 @@ export function BulkClientsDrawer({ isCold, onClose }: BulkClientsDrawerProps) {
 
   const addRow = (): void => {
     setRows((prev) => [...prev, createEmptyDraftRow()]);
+  };
+
+  const updateContact = (rowId: string, contactId: string, patch: Partial<ClientContact>): void => {
+    setRows((prev) => prev.map((row) => (
+      row.id === rowId
+        ? { ...row, contacts: row.contacts.map((contact) => (contact.id === contactId ? { ...contact, ...patch } : contact)) }
+        : row
+    )));
+  };
+
+  const addContact = (rowId: string): void => {
+    setRows((prev) => prev.map((row) => (
+      row.id === rowId ? { ...row, contacts: [...row.contacts, createEmptyContact()] } : row
+    )));
+  };
+
+  const removeContact = (rowId: string, contactId: string): void => {
+    setRows((prev) => prev.map((row) => (
+      row.id === rowId && row.contacts.length > 1
+        ? { ...row, contacts: row.contacts.filter((contact) => contact.id !== contactId) }
+        : row
+    )));
   };
 
   const removeRow = (rowId: string): void => {
@@ -60,8 +92,18 @@ export function BulkClientsDrawer({ isCold, onClose }: BulkClientsDrawerProps) {
           type: row.type,
           owner: row.owner,
           clientOrigin: row.clientOrigin,
+          relationship: 'Freddo',
+          contacts: row.contacts
+            .filter(isFilledContact)
+            .map((contact) => ({
+              ...contact,
+              name: contact.name.trim(),
+              email: contact.email.trim(),
+              phone: contact.phone.trim(),
+              role: contact.role.trim(),
+            })),
         })),
-        { isCold },
+        { isCold: true },
       );
       onClose();
     } finally {
@@ -85,6 +127,7 @@ export function BulkClientsDrawer({ isCold, onClose }: BulkClientsDrawerProps) {
           <div className="drawer-body">
             <p className="bulk-clients-hint">
               Compila una o più righe. Usa + per aggiungere altri clienti prima di salvare.
+              I clienti nuovi vengono creati come <strong>Freddi</strong>: passano tra i caldi quando fatturano almeno 1€.
             </p>
             <div className="bulk-clients-rows">
               {rows.map((row, index) => (
@@ -153,6 +196,57 @@ export function BulkClientsDrawer({ isCold, onClose }: BulkClientsDrawerProps) {
                         ))}
                       </select>
                     </div>
+                  </div>
+                  <div className="bulk-clients-contacts">
+                    <span className="bulk-clients-contacts-title">Contatti</span>
+                    {row.contacts.map((contact, contactIndex) => (
+                      <div key={contact.id} className="bulk-clients-contact">
+                        <input
+                          className="form-input"
+                          placeholder="Nome"
+                          aria-label={`Nome contatto ${contactIndex + 1}`}
+                          value={contact.name}
+                          onChange={(e) => updateContact(row.id, contact.id, { name: e.target.value })}
+                        />
+                        <input
+                          className="form-input"
+                          type="email"
+                          placeholder="Mail"
+                          aria-label={`Mail contatto ${contactIndex + 1}`}
+                          value={contact.email}
+                          onChange={(e) => updateContact(row.id, contact.id, { email: e.target.value })}
+                        />
+                        <input
+                          className="form-input"
+                          type="tel"
+                          placeholder="Telefono"
+                          aria-label={`Telefono contatto ${contactIndex + 1}`}
+                          value={contact.phone}
+                          onChange={(e) => updateContact(row.id, contact.id, { phone: e.target.value })}
+                        />
+                        <input
+                          className="form-input"
+                          placeholder="Posizione"
+                          aria-label={`Posizione contatto ${contactIndex + 1}`}
+                          value={contact.role}
+                          onChange={(e) => updateContact(row.id, contact.id, { role: e.target.value })}
+                        />
+                        {row.contacts.length > 1 && (
+                          <button
+                            type="button"
+                            className="btn-contact-delete"
+                            title="Rimuovi contatto"
+                            onClick={() => removeContact(row.id, contact.id)}
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => addContact(row.id)}>
+                      <UserPlus size={14} />
+                      <span>Aggiungi contatto</span>
+                    </button>
                   </div>
                 </div>
               ))}

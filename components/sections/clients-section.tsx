@@ -514,7 +514,6 @@ export function ClientsSection() {
       )}
       {bulkDrawerOpen && (
         <BulkClientsDrawer
-          isCold={false}
           onClose={() => setBulkDrawerOpen(false)}
         />
       )}

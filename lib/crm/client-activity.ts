@@ -1,4 +1,5 @@
 import type { ClientAction, ClientActivityItem } from '@/lib/types/client-actions';
+import type { ClientContact } from '@/lib/types/crm';
 import type { CommercialFunnelEntry } from '@/lib/types/commercial-funnel';
 import type { MailCampaign } from '@/lib/types/mail-campaigns';
 
@@ -7,17 +8,23 @@ export function buildClientActivity(
   clientActions: ClientAction[],
   funnelEntries: CommercialFunnelEntry[],
   campaigns: MailCampaign[],
+  contacts: ClientContact[] = [],
 ): ClientActivityItem[] {
   const campaignNameById = new Map(campaigns.map((campaign) => [campaign.id, campaign.name.trim()]));
-  const manualItems: ClientActivityItem[] = clientActions.map((action) => ({
-    key: `client-${action.id}`,
-    source: 'client',
-    actionType: action.actionType,
-    date: action.actionDate,
-    note: action.note,
-    detail: action.author ? `Registrata da ${action.author}` : 'Registrata nella scheda cliente',
-    sortStamp: `${action.actionDate}|${action.createdAt}`,
-  }));
+  const contactNameById = new Map(contacts.map((contact) => [contact.id, contact.name.trim() || contact.email.trim()]));
+  const manualItems: ClientActivityItem[] = clientActions.map((action) => {
+    const contactName = action.contactId ? contactNameById.get(action.contactId) : '';
+    const author = action.author ? `Registrata da ${action.author}` : 'Registrata nella scheda cliente';
+    return {
+      key: `client-${action.id}`,
+      source: 'client',
+      actionType: action.actionType,
+      date: action.actionDate,
+      note: action.note,
+      detail: contactName ? `${author} · con ${contactName}` : author,
+      sortStamp: `${action.actionDate}|${action.createdAt}`,
+    };
+  });
   const funnelItems: ClientActivityItem[] = funnelEntries.flatMap((entry) => (
     entry.actions
       .map((action, index) => ({ action, index }))

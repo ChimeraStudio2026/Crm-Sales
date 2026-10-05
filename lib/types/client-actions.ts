@@ -18,7 +18,16 @@ export interface ClientAction {
   note: string;
   author: string;
   createdAt: string;
+  contactId: string;
+  /** Giorni senza una nuova azione dopo cui il semaforo Accounting diventa rosso. */
+  redAfterDays: number | null;
 }
+
+export const ACCOUNTING_ACTION_TYPE = 'Accounting';
+
+export const RED_AFTER_DAYS_OPTIONS = [3, 7, 30] as const;
+
+export const DEFAULT_RED_AFTER_DAYS = 7;
 
 /** Azione mostrata nella scheda cliente: dal registro cliente o da una campagna del funnel. */
 export interface ClientActivityItem {

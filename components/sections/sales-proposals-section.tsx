@@ -4,16 +4,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { BarChart3 } from 'lucide-react';
 import { TopHeader } from '@/components/layout/top-header';
 import { CategoryTicketChart } from '@/components/sales-proposals/category-ticket-chart';
-import { ClientCategoryTable } from '@/components/sales-proposals/client-category-table';
 import { ProposalsDetailView } from '@/components/sales-proposals/proposals-detail-view';
 import { ProposalsKpiCard } from '@/components/sales-proposals/proposals-kpi-card';
 import { ProposalsImportCard } from '@/components/sales-proposals/proposals-import-card';
+import { ProposalsList } from '@/components/sales-proposals/proposals-list';
 import { ProposalsWeeklyReview } from '@/components/sales-proposals/proposals-weekly-review';
 import { createBrowserSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { fetchSalesProposals } from '@/lib/supabase/sales-proposals-database';
 import {
   buildCategoryTicketStats,
-  buildClientProposalStats,
   buildProposalCategoryGroups,
   buildProposalKpis,
   buildProposalRejectionReasonGroups,
@@ -93,10 +92,6 @@ export function SalesProposalsSection() {
   );
   const kpis = useMemo(() => buildProposalKpis(yearProposals), [yearProposals]);
   const categoryStats = useMemo(() => buildCategoryTicketStats(yearProposals), [yearProposals]);
-  const clientStats = useMemo(
-    () => buildClientProposalStats(yearProposals),
-    [yearProposals],
-  );
   const latestBatch = useMemo(() => resolveLatestImportBatch(yearProposals), [yearProposals]);
   const isCurrentYear = selectedYear === currentYear;
   const detailProposals = useMemo(() => {
@@ -269,16 +264,12 @@ export function SalesProposalsSection() {
                     </div>
                     <CategoryTicketChart stats={categoryStats} />
                   </div>
-                  <div className="glass-card proposals-panel">
-                    <div className="proposals-panel-head">
-                      <h3>Cliente × categoria</h3>
-                      <p>
-                        Ogni riga è un cliente con proposte accettate.
-                        Le colonne categoria mostrano il conteggio per tipologia.
-                      </p>
-                    </div>
-                    <ClientCategoryTable stats={clientStats} />
-                  </div>
+                  <ProposalsList
+                    key={selectedYear}
+                    proposals={proposals}
+                    yearOptions={yearOptions}
+                    defaultYear={selectedYear}
+                  />
                 </>
               )}
             </>

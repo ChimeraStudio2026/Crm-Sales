@@ -121,7 +121,7 @@ export type ClientType =
 
 export type Owner = 'Virginia Velcich' | 'Jeck Scardy' | 'Martina Gavazzi' | 'Martino';
 
-export type ClientOrigin = 'Jeck' | 'Inbound' | 'Instagram' | 'Community' | 'Outbound' | 'Martino';
+export type ClientOrigin = 'Jeck' | 'Inbound' | 'Instagram' | 'Community' | 'Outbound' | 'Word Of Mouth' | 'Martino';
 
 export type Relationship =
   | 'Freddo'

@@ -61,6 +61,7 @@ export const CLIENT_ORIGINS: ClientOrigin[] = [
   'Instagram',
   'Community',
   'Outbound',
+  'Word Of Mouth',
 ];
 
 export const CLIENT_ORIGIN_CHIP_CLASSES: Record<ClientOrigin, string> = {
@@ -69,6 +70,7 @@ export const CLIENT_ORIGIN_CHIP_CLASSES: Record<ClientOrigin, string> = {
   Instagram: 'cell-origin-instagram',
   Community: 'cell-origin-community',
   Outbound: 'cell-origin-outbound',
+  'Word Of Mouth': 'cell-origin-word-of-mouth',
   Martino: 'cell-origin-martino',
 };
 

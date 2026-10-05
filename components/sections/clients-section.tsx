@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { ChevronRight, Download, Edit, FilterX, Info, Search, Sparkles, Trash2 } from 'lucide-react';
+import { ChevronRight, Download, Edit, FilterX, Info, Layers, Search, Sparkles, Trash2 } from 'lucide-react';
 import {
   CLIENT_TYPES,
   CRM_TABLE_COLUMN_DEFS,
@@ -119,6 +119,17 @@ export function ClientsSection() {
     [clients, workspaceId],
   );
   const duplicates = useDuplicateCandidates(workspaceClients);
+  const clientNameById = useMemo(
+    () => new Map(clients.map((client) => [client.id, client.name.trim()])),
+    [clients],
+  );
+  const groupSizeById = useMemo(() => {
+    const sizes = new Map<string, number>();
+    clients.forEach((client) => {
+      if (client.parentClientId) sizes.set(client.parentClientId, (sizes.get(client.parentClientId) || 0) + 1);
+    });
+    return sizes;
+  }, [clients]);
 
   const incompleteCount = useMemo(
     () => clients.filter(
@@ -176,7 +187,19 @@ export function ClientsSection() {
       if (valA > valB) return sort.direction === 'asc' ? 1 : -1;
       return 0;
     });
-    return list;
+    // Le ragioni sociali di un gruppo seguono subito il loro cliente principale.
+    const listedIds = new Set(list.map((client) => client.id));
+    const childrenByParent = new Map<string, Client[]>();
+    list.forEach((client) => {
+      if (!client.parentClientId || !listedIds.has(client.parentClientId)) return;
+      const siblings = childrenByParent.get(client.parentClientId) || [];
+      siblings.push(client);
+      childrenByParent.set(client.parentClientId, siblings);
+    });
+    return list.flatMap((client) => {
+      if (client.parentClientId && listedIds.has(client.parentClientId)) return [];
+      return [client, ...(childrenByParent.get(client.id) || [])];
+    });
   }, [clients, filterIncomplete, filterOwner, filterRelationship, filterType, hideEliminati, search, sort, workspaceId]);
 
   const totalInList = useMemo(
@@ -229,6 +252,17 @@ export function ClientsSection() {
                 className={`row-expand-icon ${expandedClients.has(client.id) ? 'is-expanded' : ''}`}
               />
               <strong>{client.name}</strong>
+              {client.parentClientId ? (
+                <span className="client-group-badge" title="Ragione sociale di un gruppo">
+                  <Layers size={11} />
+                  {clientNameById.get(client.parentClientId) || 'Gruppo'}
+                </span>
+              ) : (groupSizeById.get(client.id) || 0) > 0 && (
+                <span className="client-group-badge" title="Cliente principale di un gruppo">
+                  <Layers size={11} />
+                  +{groupSizeById.get(client.id)} ragioni sociali
+                </span>
+              )}
               {isDraft && (
                 <span className="client-draft-badge" title="Completa nome, tipologia, owner, origine e almeno un contatto con email. L'azione è opzionale.">
                   <span className="client-draft-dot" aria-hidden="true" />
@@ -483,6 +517,7 @@ export function ClientsSection() {
                               client.relationship === 'Eliminato' ? 'client-row-eliminato' : '',
                               client.relationship === 'Freddo' ? 'client-row-freddo' : '',
                               isExpanded ? 'is-row-expanded' : '',
+                              client.parentClientId ? 'client-row-group-child' : '',
                             ].filter(Boolean).join(' ')}
                             onClick={(event) => {
                               if (isInteractiveTableTarget(event.target)) return;

@@ -93,6 +93,7 @@ import {
   fetchAllAnalysisForecasts,
   fetchClientTasks,
   fetchClients,
+  updateClientParent,
   assertClientsHistoricalRevenueSchema,
   fetchIdeas,
   fetchAllOkrRecords,
@@ -156,6 +157,7 @@ interface CrmContextValue {
   deleteClient: (clientId: string) => Promise<void>;
   /** Unisce source in target: target riceve tutto e il nome di source come ragione sociale. */
   mergeClients: (sourceId: string, targetId: string) => Promise<void>;
+  setClientParent: (clientId: string, parentClientId: string | null) => Promise<void>;
   updateClientField: (clientId: string, field: keyof Client, value: unknown) => Promise<void>;
   updateClientContacts: (clientId: string, contacts: ClientContact[]) => Promise<void>;
   updateClientAction: (clientId: string, action: string) => Promise<void>;
@@ -839,6 +841,24 @@ export function CrmProvider({ children }: CrmProviderProps) {
     }
   }, [db, reloadRemoteCrmState, showToast]);
 
+  const setClientParent = useCallback(async (clientId: string, parentClientId: string | null) => {
+    if (!db) {
+      throw new Error('Supabase non configurato');
+    }
+    try {
+      await updateClientParent(db, clientId, parentClientId);
+      setClients((prev) => prev.map((c) => (
+        c.id === clientId ? { ...c, parentClientId: parentClientId || undefined } : c
+      )));
+    } catch (error) {
+      const message = error && typeof error === 'object' && 'message' in error
+        ? String((error as { message: unknown }).message)
+        : 'errore';
+      showToast(`Ragione sociale non collegata: ${message}`, 'danger');
+      throw error;
+    }
+  }, [db, showToast]);
+
   const updateClientField = useCallback(async (
     clientId: string,
     field: keyof Client,
@@ -1400,6 +1420,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
     saveClients,
     deleteClient,
     mergeClients,
+    setClientParent,
     updateClientField,
     updateClientContacts,
     updateClientAction,

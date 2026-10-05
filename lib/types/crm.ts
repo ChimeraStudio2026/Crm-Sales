@@ -49,6 +49,8 @@ export interface Client {
   actionLog?: ClientActionLogEntry[];
   needsProfileCompletion: boolean;
   isColdClient: boolean;
+  /** Cliente principale del gruppo, se questo cliente è una sua ragione sociale (es. Campari). */
+  parentClientId?: string;
 }
 
 export interface Idea {

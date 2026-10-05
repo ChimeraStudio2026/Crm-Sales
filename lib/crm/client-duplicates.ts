@@ -27,7 +27,7 @@ export const DUPLICATE_REASON_LABELS: Record<DuplicateReason, string> = {
   'same-name': 'Stesso nome, forma giuridica diversa',
   contained: 'Un nome contiene l’altro',
   similar: 'Nomi molto simili (possibile errore di battitura)',
-  'same-brand': 'Stesso marchio, ragione sociale diversa?',
+  'same-brand': 'Stesso marchio: ragioni sociali dello stesso gruppo?',
 };
 
 export interface DuplicateCandidate {
@@ -127,6 +127,13 @@ export function buildDuplicatePairKey(firstId: string, secondId: string): string
 }
 
 /** Coppie di clienti dello stesso workspace che potrebbero essere lo stesso cliente. */
+/** Ragioni sociali già raggruppate sotto lo stesso cliente principale: non sono duplicati. */
+export function areClientsInSameGroup(first: Client, second: Client): boolean {
+  const firstRoot = first.parentClientId || first.id;
+  const secondRoot = second.parentClientId || second.id;
+  return firstRoot === secondRoot;
+}
+
 export function findDuplicateCandidates(
   clients: Client[],
   aliases: ClientAliasRef[],
@@ -140,6 +147,7 @@ export function findDuplicateCandidates(
 
   const push = (first: Client, second: Client, reason: DuplicateReason, score: number): void => {
     if (first.id === second.id || first.workspaceId !== second.workspaceId) return;
+    if (areClientsInSameGroup(first, second)) return;
     const pairKey = buildDuplicatePairKey(first.id, second.id);
     if (seen.has(pairKey) || dismissedPairKeys.has(pairKey)) return;
     seen.add(pairKey);

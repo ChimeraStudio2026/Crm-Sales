@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { GitMerge, X } from 'lucide-react';
+import { GitMerge, Layers, X } from 'lucide-react';
 import {
   DUPLICATE_REASON_LABELS,
   suggestPrimaryClient,
@@ -24,7 +24,7 @@ function ClientSummary({ client, isPrimary, onChoose }: { client: Client; isPrim
       className={`duplicate-client-option${isPrimary ? ' is-primary' : ''}`}
       onClick={onChoose}
     >
-      <span className="duplicate-client-badge">{isPrimary ? 'Resta (principale)' : 'Viene unito'}</span>
+      <span className="duplicate-client-badge">{isPrimary ? 'Principale (resta)' : 'L’altro'}</span>
       <strong>{client.name.trim()}</strong>
       <span className="duplicate-client-meta">
         {client.type} · {client.owner} · {client.relationship}
@@ -39,10 +39,12 @@ function ClientSummary({ client, isPrimary, onChoose }: { client: Client; isPrim
 function DuplicateCard({
   candidate,
   onMerge,
+  onGroup,
   onDismiss,
 }: {
   candidate: DuplicateCandidate;
   onMerge: (sourceId: string, targetId: string) => Promise<void>;
+  onGroup: (childId: string, parentId: string) => Promise<void>;
   onDismiss: (pairKey: string) => Promise<void>;
 }) {
   const [primaryId, setPrimaryId] = useState(() => suggestPrimaryClient(candidate.first, candidate.second).id);
@@ -52,14 +54,23 @@ function DuplicateCard({
 
   const handleMerge = async (): Promise<void> => {
     const confirmed = window.confirm(
-      `Unire "${secondary.name.trim()}" in "${primary.name.trim()}"?\n\n`
-      + 'Contatti, azioni, campagne, task, proposte creative, OKR e fatturato passano al cliente principale. '
-      + `"${secondary.name.trim()}" diventa una sua ragione sociale e viene eliminato.`,
+      `"${secondary.name.trim()}" è lo stesso cliente scritto male?\n\n`
+      + `Contatti, azioni, campagne, task, proposte creative, OKR e fatturato passano a "${primary.name.trim()}" `
+      + `e "${secondary.name.trim()}" viene eliminato.`,
     );
     if (!confirmed) return;
     setIsWorking(true);
     try {
       await onMerge(secondary.id, primary.id);
+    } finally {
+      setIsWorking(false);
+    }
+  };
+
+  const handleGroup = async (): Promise<void> => {
+    setIsWorking(true);
+    try {
+      await onGroup(secondary.id, primary.parentClientId || primary.id);
     } finally {
       setIsWorking(false);
     }
@@ -91,11 +102,27 @@ function DuplicateCard({
       </div>
       <div className="duplicate-actions">
         <button type="button" className="btn btn-secondary btn-sm" onClick={() => void handleDismiss()} disabled={isWorking}>
-          Non sono lo stesso cliente
+          Clienti diversi
         </button>
-        <button type="button" className="btn btn-primary btn-sm" onClick={() => void handleMerge()} disabled={isWorking}>
+        <button
+          type="button"
+          className="btn btn-secondary btn-sm"
+          onClick={() => void handleGroup()}
+          disabled={isWorking}
+          title="Restano due ragioni sociali distinte, raggruppate sotto il principale"
+        >
+          <Layers size={14} />
+          <span>Ragione sociale del gruppo</span>
+        </button>
+        <button
+          type="button"
+          className="btn btn-primary btn-sm"
+          onClick={() => void handleMerge()}
+          disabled={isWorking}
+          title="Errore di nome: tutto passa al principale e l'altro viene eliminato"
+        >
           <GitMerge size={14} />
-          <span>Unisci in «{primary.name.trim()}»</span>
+          <span>Stesso cliente: elimina «{secondary.name.trim()}»</span>
         </button>
       </div>
     </div>
@@ -117,11 +144,22 @@ export function ClientDuplicatesDrawer({
   onMerged,
   onClose,
 }: ClientDuplicatesDrawerProps) {
-  const { mergeClients } = useCrm();
+  const { clients, mergeClients, setClientParent, showToast } = useCrm();
 
   const handleMerge = async (sourceId: string, targetId: string): Promise<void> => {
     await mergeClients(sourceId, targetId);
     await onMerged();
+  };
+
+  const handleGroup = async (childId: string, parentId: string): Promise<void> => {
+    const child = clients.find((item) => item.id === childId);
+    const parent = clients.find((item) => item.id === parentId);
+    if (clients.some((item) => item.parentClientId === childId)) {
+      showToast(`"${child?.name.trim()}" ha già ragioni sociali sotto: scegli lui come principale.`, 'warning');
+      return;
+    }
+    await setClientParent(childId, parentId);
+    showToast(`"${child?.name.trim()}" è ora una ragione sociale di "${parent?.name.trim()}".`, 'success');
   };
 
   return (
@@ -136,9 +174,10 @@ export function ClientDuplicatesDrawer({
         </div>
         <div className="drawer-body">
           <p className="funnel-track-note">
-            Clienti con nomi simili o ragioni sociali dello stesso marchio. Scegli quale resta come principale:
-            l&apos;altro gli passa tutto e il suo nome diventa una ragione sociale collegata, così anche le
-            prossime sincronizzazioni da Cerbero finiscono sul principale.
+            Clienti con nomi simili. Scegli quale è il principale, poi: <strong>Stesso cliente</strong> se
+            l&apos;altro è un errore di nome (gli passa tutto e viene eliminato); <strong>Ragione sociale del
+            gruppo</strong> se sono società diverse dello stesso cliente, come Campari (restano entrambe, raggruppate
+            sotto il principale).
           </p>
           {isLoading ? (
             <p className="contacts-panel-empty">Ricerca duplicati…</p>
@@ -151,6 +190,7 @@ export function ClientDuplicatesDrawer({
                   key={candidate.pairKey}
                   candidate={candidate}
                   onMerge={handleMerge}
+                  onGroup={handleGroup}
                   onDismiss={onDismiss}
                 />
               ))}

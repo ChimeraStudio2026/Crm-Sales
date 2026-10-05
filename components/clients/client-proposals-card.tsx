@@ -12,6 +12,7 @@ import { useSalesProposals } from '@/lib/sales-proposals/use-sales-proposals';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { fetchClientAliases } from '@/lib/supabase/client-aliases-database';
 import type { Client } from '@/lib/types/crm';
+import { useCrm } from '@/providers/crm-provider';
 import type { SalesProposal } from '@/lib/types/sales-proposals';
 
 /** Ordine degli stati come su Cerbero: prima le aperte, poi gli esiti. */
@@ -35,12 +36,13 @@ function resolveStatusClassName(stato: string): string {
   return 'is-started';
 }
 
-function ProposalLine({ proposal }: { proposal: SalesProposal }) {
+function ProposalLine({ proposal, showClient }: { proposal: SalesProposal; showClient: boolean }) {
   const value = resolveProposalValue(proposal);
   return (
     <li className="client-proposal-line">
       <span className="client-proposal-name">{proposal.nome}</span>
       <span className="client-proposal-meta">
+        {showClient && proposal.cliente ? `${proposal.cliente.trim()} · ` : ''}
         {proposal.categoria || '—'}
         {' · '}
         {value === null ? 'nessun prezzo' : formatProposalCurrency(value)}
@@ -56,17 +58,25 @@ interface ClientProposalsCardProps {
 }
 
 export function ClientProposalsCard({ client }: ClientProposalsCardProps) {
+  const { clients } = useCrm();
   const { proposals, isLoading, error } = useSalesProposals(client.workspaceId);
   const [showAll, setShowAll] = useState(false);
   const [aliasNames, setAliasNames] = useState<string[]>([]);
 
-  // Le proposte intestate alle ragioni sociali collegate appartengono a questo cliente.
+  // Il cliente principale di un gruppo vede anche le proposte delle sue ragioni sociali.
+  const groupClients = useMemo(
+    () => [client, ...clients.filter((item) => item.parentClientId === client.id)],
+    [client, clients],
+  );
+  const groupIdsKey = groupClients.map((item) => item.id).join('|');
+
+  // Le proposte intestate ad alias (ragioni sociali solo-nome o nomi uniti) appartengono al gruppo.
   useEffect(() => {
     setAliasNames([]);
     const db = createBrowserSupabaseClient();
     if (!db) return;
     let cancelled = false;
-    fetchClientAliases(db, client.id)
+    fetchClientAliases(db, groupIdsKey.split('|'))
       .then((aliases) => {
         if (!cancelled) setAliasNames(aliases.map((alias) => alias.aliasName));
       })
@@ -74,14 +84,16 @@ export function ClientProposalsCard({ client }: ClientProposalsCardProps) {
     return () => {
       cancelled = true;
     };
-  }, [client.id]);
+  }, [groupIdsKey]);
+
+  const isGroup = groupClients.length > 1 || aliasNames.length > 0;
 
   const clientProposals = useMemo(() => {
-    const clientKeys = new Set([client.name, ...aliasNames].map(normalizeClientKey));
+    const clientKeys = new Set([...groupClients.map((item) => item.name), ...aliasNames].map(normalizeClientKey));
     return proposals
       .filter((proposal) => proposal.cliente && clientKeys.has(normalizeClientKey(proposal.cliente)))
       .sort((left, right) => right.creatoIl.localeCompare(left.creatoIl));
-  }, [aliasNames, client.name, proposals]);
+  }, [aliasNames, groupClients, proposals]);
 
   const latest = clientProposals[0];
   const groups = useMemo(() => {
@@ -121,7 +133,7 @@ export function ClientProposalsCard({ client }: ClientProposalsCardProps) {
               <span>Ultima proposta uscita</span>
               <span className={`proposal-status-pill ${resolveStatusClassName(latest.stato)}`}>{latest.stato}</span>
             </div>
-            <ProposalLine proposal={latest} />
+            <ProposalLine proposal={latest} showClient={isGroup} />
           </div>
           <div className="client-proposal-groups">
             {groups.map((group) => {
@@ -136,7 +148,7 @@ export function ClientProposalsCard({ client }: ClientProposalsCardProps) {
                   </div>
                   <ul>
                     {visibleItems.map((proposal) => (
-                      <ProposalLine key={proposal.id} proposal={proposal} />
+                      <ProposalLine key={proposal.id} proposal={proposal} showClient={isGroup} />
                     ))}
                   </ul>
                 </div>

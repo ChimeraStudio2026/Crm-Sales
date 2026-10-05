@@ -47,6 +47,7 @@ interface ClientRow {
   product_offers: string[] | null;
   needs_profile_completion: boolean;
   is_cold_client: boolean;
+  parent_client_id?: string | null;
 }
 
 function normalizeContactsArray(
@@ -186,7 +187,21 @@ function rowToClient(row: ClientRow): Client {
     productOffers: resolveClientProductOffers(clientType, row.product_offers),
     needsProfileCompletion: row.needs_profile_completion || false,
     isColdClient: row.is_cold_client === true,
+    parentClientId: row.parent_client_id || undefined,
   };
+}
+
+/**
+ * Mette un cliente sotto un cliente principale come sua ragione sociale (null per staccarlo).
+ * parent_client_id non passa dal salvataggio generale dei clienti: si cambia solo da qui.
+ */
+export async function updateClientParent(
+  db: SupabaseClient,
+  clientId: string,
+  parentClientId: string | null,
+): Promise<void> {
+  const { error } = await db.from('clients').update({ parent_client_id: parentClientId }).eq('id', clientId);
+  if (error) throw error;
 }
 
 async function removeOrphanRows(

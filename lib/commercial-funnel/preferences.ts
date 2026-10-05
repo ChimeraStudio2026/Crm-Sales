@@ -31,3 +31,46 @@ export function writeFunnelTrackPreference(track: FunnelTrack): void {
     // Preferenza non salvabile (storage bloccato): si riparte da "freddi".
   }
 }
+
+export type FunnelClientSortMode = 'alpha' | 'custom';
+
+export const FUNNEL_CLIENT_SORT_MODE_STORAGE_KEY = 'crm-funnel-client-sort-mode';
+export const FUNNEL_CLIENT_ORDER_STORAGE_KEY = 'crm-funnel-client-order';
+
+export function readFunnelClientSortMode(): FunnelClientSortMode {
+  if (typeof window === 'undefined') return 'alpha';
+  try {
+    return window.localStorage.getItem(FUNNEL_CLIENT_SORT_MODE_STORAGE_KEY) === 'custom' ? 'custom' : 'alpha';
+  } catch {
+    return 'alpha';
+  }
+}
+
+export function writeFunnelClientSortMode(mode: FunnelClientSortMode): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(FUNNEL_CLIENT_SORT_MODE_STORAGE_KEY, mode);
+  } catch {
+    // Preferenza non salvabile: resta valida solo per questa visita.
+  }
+}
+
+/** Entry ids in the order chosen by the user (one list shared by every funnel view). */
+export function readFunnelClientOrder(): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const parsed: unknown = JSON.parse(window.localStorage.getItem(FUNNEL_CLIENT_ORDER_STORAGE_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+export function writeFunnelClientOrder(entryIds: string[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(FUNNEL_CLIENT_ORDER_STORAGE_KEY, JSON.stringify(entryIds));
+  } catch {
+    // Ordine non salvabile: resta valido solo per questa visita.
+  }
+}

@@ -32,45 +32,38 @@ export function writeFunnelTrackPreference(track: FunnelTrack): void {
   }
 }
 
-export type FunnelClientSortMode = 'alpha' | 'custom';
+export type FunnelClientSortKey = 'client' | 'campaign' | 'stage' | 'owner' | 'semaforo' | 'lastAction';
+export type FunnelClientSortDirection = 'asc' | 'desc';
 
-export const FUNNEL_CLIENT_SORT_MODE_STORAGE_KEY = 'crm-funnel-client-sort-mode';
-export const FUNNEL_CLIENT_ORDER_STORAGE_KEY = 'crm-funnel-client-order';
+export interface FunnelClientSort {
+  key: FunnelClientSortKey;
+  direction: FunnelClientSortDirection;
+}
 
-export function readFunnelClientSortMode(): FunnelClientSortMode {
-  if (typeof window === 'undefined') return 'alpha';
+export const DEFAULT_FUNNEL_CLIENT_SORT: FunnelClientSort = { key: 'client', direction: 'asc' };
+
+export const FUNNEL_CLIENT_SORT_STORAGE_KEY = 'crm-funnel-client-sort';
+
+const FUNNEL_CLIENT_SORT_KEYS: readonly FunnelClientSortKey[] = ['client', 'campaign', 'stage', 'owner', 'semaforo', 'lastAction'];
+
+export function readFunnelClientSort(): FunnelClientSort {
+  if (typeof window === 'undefined') return DEFAULT_FUNNEL_CLIENT_SORT;
   try {
-    return window.localStorage.getItem(FUNNEL_CLIENT_SORT_MODE_STORAGE_KEY) === 'custom' ? 'custom' : 'alpha';
+    const parsed: unknown = JSON.parse(window.localStorage.getItem(FUNNEL_CLIENT_SORT_STORAGE_KEY) || 'null');
+    if (!parsed || typeof parsed !== 'object') return DEFAULT_FUNNEL_CLIENT_SORT;
+    const { key, direction } = parsed as Partial<FunnelClientSort>;
+    if (!key || !FUNNEL_CLIENT_SORT_KEYS.includes(key)) return DEFAULT_FUNNEL_CLIENT_SORT;
+    return { key, direction: direction === 'desc' ? 'desc' : 'asc' };
   } catch {
-    return 'alpha';
+    return DEFAULT_FUNNEL_CLIENT_SORT;
   }
 }
 
-export function writeFunnelClientSortMode(mode: FunnelClientSortMode): void {
+export function writeFunnelClientSort(sort: FunnelClientSort): void {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.setItem(FUNNEL_CLIENT_SORT_MODE_STORAGE_KEY, mode);
+    window.localStorage.setItem(FUNNEL_CLIENT_SORT_STORAGE_KEY, JSON.stringify(sort));
   } catch {
-    // Preferenza non salvabile: resta valida solo per questa visita.
-  }
-}
-
-/** Entry ids in the order chosen by the user (one list shared by every funnel view). */
-export function readFunnelClientOrder(): string[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const parsed: unknown = JSON.parse(window.localStorage.getItem(FUNNEL_CLIENT_ORDER_STORAGE_KEY) || '[]');
-    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : [];
-  } catch {
-    return [];
-  }
-}
-
-export function writeFunnelClientOrder(entryIds: string[]): void {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(FUNNEL_CLIENT_ORDER_STORAGE_KEY, JSON.stringify(entryIds));
-  } catch {
-    // Ordine non salvabile: resta valido solo per questa visita.
+    // Ordinamento non salvabile: resta valido solo per questa visita.
   }
 }

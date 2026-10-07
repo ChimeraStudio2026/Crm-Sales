@@ -2,15 +2,15 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowDown, ArrowUp, ChevronRight, GripVertical, Search } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight, Search } from 'lucide-react';
 import { resolveFunnelContactLabel } from '@/lib/commercial-funnel/contacts';
 import { resolveFunnelSemaforo, resolveFunnelStageDisplay } from '@/lib/commercial-funnel/index';
 import {
-  readFunnelClientOrder,
-  readFunnelClientSortMode,
-  writeFunnelClientOrder,
-  writeFunnelClientSortMode,
-  type FunnelClientSortMode,
+  DEFAULT_FUNNEL_CLIENT_SORT,
+  readFunnelClientSort,
+  writeFunnelClientSort,
+  type FunnelClientSort,
+  type FunnelClientSortKey,
 } from '@/lib/commercial-funnel/preferences';
 import { formatActionDateDisplay } from '@/lib/crm/utils';
 import { FUNNEL_STAGES, type CommercialFunnelEntry, type FunnelStage } from '@/lib/types/commercial-funnel';
@@ -41,6 +41,27 @@ const STAGE_META: Record<FunnelStage, { label: string; color: string }> = {
   Perso: { label: 'Perso', color: '#f64330' },
 };
 
+/** Colonne che partono dal più recente/rilevante al primo clic. */
+const DESC_FIRST_KEYS = new Set<FunnelClientSortKey>(['lastAction']);
+
+function compareRows(left: FunnelClientRow, right: FunnelClientRow, key: FunnelClientSortKey): number {
+  switch (key) {
+    case 'campaign':
+      return (left.campaign?.name || '').localeCompare(right.campaign?.name || '', 'it');
+    case 'stage':
+      return FUNNEL_STAGES.indexOf(left.entry.stage) - FUNNEL_STAGES.indexOf(right.entry.stage);
+    case 'owner':
+      return entryOwnerLabel(left).localeCompare(entryOwnerLabel(right), 'it');
+    case 'semaforo':
+      // In crescente prima i rossi (fuori tempo).
+      return (left.semaforo === 'red' ? 0 : 1) - (right.semaforo === 'red' ? 0 : 1);
+    case 'lastAction':
+      return (left.stageDisplay.date || '').localeCompare(right.stageDisplay.date || '');
+    default:
+      return (left.client?.name || '').localeCompare(right.client?.name || '', 'it');
+  }
+}
+
 function FunnelStageBadge({ stage }: { stage: FunnelStage }) {
   const meta = STAGE_META[stage];
   return (
@@ -62,15 +83,11 @@ export function FunnelClientsView({
   const [search, setSearch] = useState('');
   const [selectedStage, setSelectedStage] = useState<FunnelStage | null>(null);
   const [expandedEntries, setExpandedEntries] = useState<Set<string>>(new Set());
-  const [sortMode, setSortMode] = useState<FunnelClientSortMode>('alpha');
-  const [customOrder, setCustomOrder] = useState<string[]>([]);
-  const [draggedEntryId, setDraggedEntryId] = useState<string | null>(null);
-  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  const [sort, setSort] = useState<FunnelClientSort>(DEFAULT_FUNNEL_CLIENT_SORT);
 
-  // Preferences live in localStorage, so read them after mount to keep SSR markup stable.
+  // La preferenza vive in localStorage: si legge dopo il mount per non cambiare il markup SSR.
   useEffect(() => {
-    setSortMode(readFunnelClientSortMode());
-    setCustomOrder(readFunnelClientOrder());
+    setSort(readFunnelClientSort());
   }, []);
 
   const clientById = useMemo(
@@ -82,34 +99,28 @@ export function FunnelClientsView({
     [mailCampaigns],
   );
 
-  const rows = useMemo((): FunnelClientRow[] => entries
-    .map((entry) => {
-      const client = clientById.get(entry.clientId);
-      return {
-        entry,
-        client,
-        campaign: campaignById.get(entry.campaignId),
-        stageDisplay: resolveFunnelStageDisplay(entry),
-        semaforo: resolveFunnelSemaforo(entry.actions),
-        contactLabel: resolveFunnelContactLabel(client, entry.contactId),
-      };
-    })
-    .sort((left, right) => {
-      const nameA = left.client?.name || '';
-      const nameB = right.client?.name || '';
-      return nameA.localeCompare(nameB, 'it');
-    }), [entries, clientById, campaignById]);
+  const rows = useMemo((): FunnelClientRow[] => entries.map((entry) => {
+    const client = clientById.get(entry.clientId);
+    return {
+      entry,
+      client,
+      campaign: campaignById.get(entry.campaignId),
+      stageDisplay: resolveFunnelStageDisplay(entry),
+      semaforo: resolveFunnelSemaforo(entry.actions),
+      contactLabel: resolveFunnelContactLabel(client, entry.contactId),
+    };
+  }), [entries, clientById, campaignById]);
 
-  // Custom order: saved positions first, then entries not placed yet (new ones) in A–Z order.
   const orderedRows = useMemo((): FunnelClientRow[] => {
-    if (sortMode !== 'custom') return rows;
-    const position = new Map(customOrder.map((id, index) => [id, index]));
+    const direction = sort.direction === 'desc' ? -1 : 1;
     return [...rows].sort((left, right) => {
-      const posA = position.get(left.entry.id) ?? Number.MAX_SAFE_INTEGER;
-      const posB = position.get(right.entry.id) ?? Number.MAX_SAFE_INTEGER;
-      return posA - posB;
+      // Senza data di ultima azione si finisce sempre in fondo.
+      if (sort.key === 'lastAction' && !left.stageDisplay.date !== !right.stageDisplay.date) {
+        return left.stageDisplay.date ? -1 : 1;
+      }
+      return compareRows(left, right, sort.key) * direction || compareRows(left, right, 'client');
     });
-  }, [rows, sortMode, customOrder]);
+  }, [rows, sort]);
 
   const filteredRows = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -125,37 +136,29 @@ export function FunnelClientsView({
     });
   }, [orderedRows, search, selectedStage]);
 
-  const changeSortMode = (mode: FunnelClientSortMode): void => {
-    setSortMode(mode);
-    writeFunnelClientSortMode(mode);
+  const changeSort = (key: FunnelClientSortKey): void => {
+    const next: FunnelClientSort = sort.key === key
+      ? { key, direction: sort.direction === 'asc' ? 'desc' : 'asc' }
+      : { key, direction: DESC_FIRST_KEYS.has(key) ? 'desc' : 'asc' };
+    setSort(next);
+    writeFunnelClientSort(next);
   };
 
-  const saveOrder = (nextIds: string[]): void => {
-    // Keep ids of entries not shown here (other campaigns/filters) so their place is not lost.
-    const shown = new Set(nextIds);
-    const hidden = customOrder.filter((id) => !shown.has(id));
-    const merged = [...nextIds, ...hidden];
-    setCustomOrder(merged);
-    writeFunnelClientOrder(merged);
-  };
-
-  /** Moves `entryId` to the slot of `targetId` within the full (unfiltered) ordered list. */
-  const moveEntry = (entryId: string, targetId: string): void => {
-    if (entryId === targetId) return;
-    const ids = orderedRows.map((row) => row.entry.id);
-    const from = ids.indexOf(entryId);
-    const to = ids.indexOf(targetId);
-    if (from < 0 || to < 0) return;
-    ids.splice(from, 1);
-    ids.splice(to, 0, entryId);
-    saveOrder(ids);
-  };
-
-  const moveEntryBy = (entryId: string, delta: -1 | 1): void => {
-    const visibleIds = filteredRows.map((row) => row.entry.id);
-    const index = visibleIds.indexOf(entryId);
-    const target = visibleIds[index + delta];
-    if (target) moveEntry(entryId, target);
+  const renderSortHead = (key: FunnelClientSortKey, label: string): React.ReactNode => {
+    const isActive = sort.key === key;
+    const Icon = !isActive ? ArrowUpDown : sort.direction === 'asc' ? ArrowUp : ArrowDown;
+    return (
+      <button
+        type="button"
+        className={`funnel-client-view-sort-head${isActive ? ' is-active' : ''}`}
+        onClick={() => changeSort(key)}
+        aria-sort={isActive ? (sort.direction === 'asc' ? 'ascending' : 'descending') : undefined}
+        title={`Ordina per ${label.toLowerCase()}`}
+      >
+        <span>{label}</span>
+        <Icon size={12} className="funnel-client-view-sort-icon" />
+      </button>
+    );
   };
 
   const toggleStageFilter = (stage: FunnelStage): void => {
@@ -208,77 +211,14 @@ export function FunnelClientsView({
     );
   };
 
-  const renderListRow = (row: FunnelClientRow, index: number): React.ReactNode => {
+  const renderListRow = (row: FunnelClientRow): React.ReactNode => {
     const isExpanded = expandedEntries.has(row.entry.id);
     const clientName = row.client?.name || 'Cliente non trovato';
-    const isCustom = sortMode === 'custom';
-    const entryId = row.entry.id;
-    const rowClassName = [
-      'funnel-client-view-row',
-      isExpanded ? 'is-expanded' : '',
-      isCustom ? 'is-sortable' : '',
-      draggedEntryId === entryId ? 'is-dragging' : '',
-      dropTargetId === entryId && draggedEntryId !== entryId ? 'is-drop-target' : '',
-    ].filter(Boolean).join(' ');
     return (
       <div
-        key={entryId}
-        className={rowClassName}
-        onDragOver={isCustom ? (event) => {
-          if (!draggedEntryId) return;
-          event.preventDefault();
-          setDropTargetId(entryId);
-        } : undefined}
-        onDrop={isCustom ? (event) => {
-          event.preventDefault();
-          if (draggedEntryId) moveEntry(draggedEntryId, entryId);
-          setDraggedEntryId(null);
-          setDropTargetId(null);
-        } : undefined}
+        key={row.entry.id}
+        className={`funnel-client-view-row${isExpanded ? ' is-expanded' : ''}`}
       >
-        {isCustom && (
-          <span className="funnel-client-view-reorder">
-            <span
-              className="funnel-client-view-drag-handle"
-              draggable
-              role="button"
-              tabIndex={-1}
-              aria-label={`Trascina ${clientName}`}
-              title="Trascina per riordinare"
-              onDragStart={(event) => {
-                event.dataTransfer.effectAllowed = 'move';
-                event.dataTransfer.setData('text/plain', entryId);
-                setDraggedEntryId(entryId);
-              }}
-              onDragEnd={() => {
-                setDraggedEntryId(null);
-                setDropTargetId(null);
-              }}
-            >
-              <GripVertical size={16} />
-            </span>
-            <button
-              type="button"
-              className="funnel-client-view-move-btn"
-              onClick={() => moveEntryBy(entryId, -1)}
-              disabled={index === 0}
-              aria-label={`Sposta ${clientName} su`}
-              title="Sposta su"
-            >
-              <ArrowUp size={14} />
-            </button>
-            <button
-              type="button"
-              className="funnel-client-view-move-btn"
-              onClick={() => moveEntryBy(entryId, 1)}
-              disabled={index === filteredRows.length - 1}
-              aria-label={`Sposta ${clientName} giù`}
-              title="Sposta giù"
-            >
-              <ArrowDown size={14} />
-            </button>
-          </span>
-        )}
         <button
           type="button"
           className="funnel-client-view-name"
@@ -347,25 +287,6 @@ export function FunnelClientsView({
             </button>
           )}
         </div>
-        <div className="funnel-client-view-sort" role="group" aria-label="Ordinamento clienti">
-          <span className="tasks-filter-label">Ordine:</span>
-          <button
-            type="button"
-            className={`funnel-client-view-sort-btn${sortMode === 'alpha' ? ' is-active' : ''}`}
-            aria-pressed={sortMode === 'alpha'}
-            onClick={() => changeSortMode('alpha')}
-          >
-            A–Z
-          </button>
-          <button
-            type="button"
-            className={`funnel-client-view-sort-btn${sortMode === 'custom' ? ' is-active' : ''}`}
-            aria-pressed={sortMode === 'custom'}
-            onClick={() => changeSortMode('custom')}
-          >
-            Personalizzato
-          </button>
-        </div>
         <span className="funnel-client-view-count">{filteredRows.length} clienti</span>
       </div>
       {filteredRows.length === 0 ? (
@@ -374,23 +295,17 @@ export function FunnelClientsView({
         </p>
       ) : (
         <div
-          className={`funnel-client-view-list glass-card${showCampaignColumn ? ' has-campaign-column' : ''}${sortMode === 'custom' ? ' is-custom-order' : ''}`}
+          className={`funnel-client-view-list glass-card${showCampaignColumn ? ' has-campaign-column' : ''}`}
         >
-          {sortMode === 'custom' && (
-            <p className="funnel-client-view-sort-hint">
-              Trascina i clienti dalla maniglia o usa le frecce: l&apos;ordine resta salvato su questo dispositivo.
-            </p>
-          )}
           <div className="funnel-client-view-header">
-            {sortMode === 'custom' && <span aria-hidden />}
-            <span>Cliente</span>
-            {showCampaignColumn && <span>Campagna</span>}
-            <span>Stage</span>
-            <span>Owner</span>
-            <span>Semaforo</span>
-            <span>Ultima azione</span>
+            {renderSortHead('client', 'Cliente')}
+            {showCampaignColumn && renderSortHead('campaign', 'Campagna')}
+            {renderSortHead('stage', 'Stage')}
+            {renderSortHead('owner', 'Owner')}
+            {renderSortHead('semaforo', 'Semaforo')}
+            {renderSortHead('lastAction', 'Ultima azione')}
           </div>
-          {filteredRows.map((row, index) => renderListRow(row, index))}
+          {filteredRows.map((row) => renderListRow(row))}
         </div>
       )}
     </div>

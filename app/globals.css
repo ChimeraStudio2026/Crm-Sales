@@ -6681,6 +6681,39 @@ body:has(.login-page) {
     font-weight: 400;
 }
 
+.funnel-new-action-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+}
+
+.funnel-new-action-title {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+}
+
+.funnel-new-action-fields {
+    display: grid;
+    grid-template-columns: minmax(160px, 220px) minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+}
+
+.funnel-new-action-fields:has(> :nth-child(4)) {
+    grid-template-columns: minmax(160px, 220px) minmax(0, 1fr) minmax(0, 1fr) auto;
+}
+
+@media (max-width: 760px) {
+    .funnel-new-action-fields,
+    .funnel-new-action-fields:has(> :nth-child(4)) {
+        grid-template-columns: 1fr;
+    }
+}
+
 .funnel-owner-filter {
     display: flex;
     flex-wrap: wrap;

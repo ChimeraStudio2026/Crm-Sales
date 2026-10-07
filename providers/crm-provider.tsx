@@ -221,6 +221,7 @@ interface CrmContextValue {
   updateFunnelEntryOwner: (entryId: string, owner: string) => Promise<void>;
   updateFunnelEntryContact: (entryId: string, contactId: string) => Promise<void>;
   updateFunnelActionNote: (entryId: string, slotIndex: number, note: string) => Promise<void>;
+  addFunnelAction: (entryId: string, actionType: FunnelActionType, note: string, lostReason?: string) => Promise<void>;
   addTaskToFunnelAction: (entryId: string, slotIndex: number, taskId: string) => Promise<void>;
   removeFunnelEntry: (entryId: string) => Promise<void>;
   moveFunnelEntryToCampaign: (entryId: string, targetCampaignId: string) => Promise<void>;
@@ -1474,6 +1475,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
     updateFunnelEntryOwner: commercialFunnelActions.updateFunnelEntryOwner,
     updateFunnelEntryContact: commercialFunnelActions.updateFunnelEntryContact,
     updateFunnelActionNote: commercialFunnelActions.updateFunnelActionNote,
+    addFunnelAction: commercialFunnelActions.addFunnelAction,
     addTaskToFunnelAction: commercialFunnelActions.addTaskToFunnelAction,
     removeFunnelEntry: commercialFunnelActions.removeFunnelEntry,
     moveFunnelEntryToCampaign: commercialFunnelActions.moveFunnelEntryToCampaign,

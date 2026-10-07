@@ -2,10 +2,12 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   buildPersistedFunnelEntry,
+  compactFunnelActions,
   createEmptyFunnelActionSlot,
   ensureActionSlot,
   finalizeFunnelActions,
   isFunnelActionLocked,
+  isFunnelTerminalConvertedEntry,
 } from '@/lib/commercial-funnel/index';
 import { buildFunnelEntryKey } from '@/lib/commercial-funnel/contacts';
 import { DEFAULT_WORKSPACE_ID } from '@/lib/constants/workspaces';
@@ -158,6 +160,57 @@ export function createCommercialFunnelActions(
       if (isLeavingPerso && actionType) {
         deps.showToast('Cliente riattivato nel funnel.', 'success');
       }
+    });
+  };
+
+  /**
+   * Aggiunge in coda una nuova azione con la sua nota in un solo salvataggio.
+   * Su un cliente perso, la nuova azione prende il posto di "Perso" (riattivazione);
+   * "Perso" richiede il motivo.
+   */
+  const addFunnelAction = async (
+    entryId: string,
+    actionType: FunnelActionType,
+    note: string,
+    lostReason = '',
+  ): Promise<void> => {
+    if (actionType === 'Perso' && !lostReason.trim()) {
+      deps.showToast('Inserisci il motivo della perdita.', 'warning');
+      return;
+    }
+    await runMutation(async () => {
+      const state = getEntries();
+      const entry = state.find((item) => item.id === entryId);
+      if (!entry) return;
+      if (isFunnelTerminalConvertedEntry(entry)) {
+        deps.showToast('Il cliente è già convertito: non si possono aggiungere azioni.', 'warning');
+        return;
+      }
+      const filled = compactFunnelActions(entry.actions);
+      const persoIndex = filled.findIndex((action) => action.type === 'Perso');
+      const isReactivation = persoIndex >= 0 && actionType !== 'Perso';
+      if (persoIndex >= 0 && actionType === 'Perso') {
+        deps.showToast('Il cliente è già segnato come perso.', 'info');
+        return;
+      }
+      const slotIndex = isReactivation ? persoIndex : filled.length;
+      const nextActions = ensureActionSlot(filled, slotIndex);
+      nextActions[slotIndex] = {
+        ...createEmptyFunnelActionSlot(),
+        type: actionType,
+        date: new Date().toISOString().slice(0, 10),
+        note: note.trim(),
+      };
+      const nextEntry = persistableEntry({
+        ...entry,
+        actions: finalizeFunnelActions(nextActions, actionType !== 'Perso'),
+        lostReason: actionType === 'Perso' ? lostReason.trim() : isReactivation ? '' : entry.lostReason,
+      });
+      await applyEntries(
+        state.map((item) => (item.id === entryId ? nextEntry : item)),
+        [nextEntry],
+      );
+      deps.showToast(isReactivation ? 'Cliente riattivato con la nuova azione.' : 'Azione aggiunta.', 'success');
     });
   };
 
@@ -356,6 +409,7 @@ export function createCommercialFunnelActions(
   return {
     addClientsToFunnel,
     updateFunnelAction,
+    addFunnelAction,
     updateFunnelLostReason,
     markFunnelEntryLost,
     updateFunnelEntryOwner,

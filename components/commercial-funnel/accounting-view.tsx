@@ -9,7 +9,9 @@ import {
   isAccountingClient,
 } from '@/lib/commercial-funnel/accounting';
 import type { AccountingRow, AccountingStatus } from '@/lib/commercial-funnel/accounting';
+import { normalizeOwner } from '@/lib/crm/owners';
 import { isClientInWorkspace } from '@/lib/crm/workspace-access';
+import { getOwnersForWorkspace } from '@/lib/crm/workspace-clients';
 import { createUniqueId, formatActionDateDisplay, getTodayString } from '@/lib/crm/utils';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { fetchAllClientActions, insertClientAction } from '@/lib/supabase/client-actions-database';
@@ -26,6 +28,32 @@ import { useWorkspace } from '@/providers/workspace-provider';
 
 type AccountingFilter = 'open' | 'red' | 'won' | 'lost';
 
+const ACCOUNTING_OWNER_FILTER_STORAGE_KEY = 'crm-accounting-owner-filter';
+
+function readOwnerFilter(): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const parsed: unknown = JSON.parse(window.localStorage.getItem(ACCOUNTING_OWNER_FILTER_STORAGE_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed.filter((owner): owner is string => typeof owner === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeOwnerFilter(owners: string[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(ACCOUNTING_OWNER_FILTER_STORAGE_KEY, JSON.stringify(owners));
+  } catch {
+    // Filtro non salvabile: resta valido solo per questa visita.
+  }
+}
+
+/** Owner della riga: chi ha registrato l'ultima azione del ciclo. */
+function resolveRowOwner(row: AccountingRow): string {
+  return normalizeOwner(row.actions[0]?.author) || normalizeOwner(row.closure?.author) || '';
+}
+
 const OUTCOME_LABELS: Record<AccountingOutcome, string> = { won: 'Won', lost: 'Lost' };
 
 function resolveContactLabel(client: Client, contactId: string): string {
@@ -39,15 +67,27 @@ const SEMAFORO_TITLES: Record<AccountingRow['semaforo'], string> = {
   red: 'In ritardo: serve una nuova azione',
 };
 
+interface NewActionInput {
+  clientId: string;
+  contactId: string;
+  note: string;
+  actionDate: string;
+  redAfterDays: number;
+  owner: string;
+}
+
 interface NewActionDrawerProps {
   clients: Client[];
   initialClientId: string;
+  owners: readonly string[];
+  defaultOwner: string;
   onClose: () => void;
-  onSave: (input: { clientId: string; contactId: string; note: string; actionDate: string; redAfterDays: number }) => Promise<void>;
+  onSave: (input: NewActionInput) => Promise<void>;
 }
 
-function NewActionDrawer({ clients, initialClientId, onClose, onSave }: NewActionDrawerProps) {
+function NewActionDrawer({ clients, initialClientId, owners, defaultOwner, onClose, onSave }: NewActionDrawerProps) {
   const [clientId, setClientId] = useState(initialClientId);
+  const [owner, setOwner] = useState(defaultOwner);
   const [contactId, setContactId] = useState('');
   const [note, setNote] = useState('');
   const [actionDate, setActionDate] = useState(getTodayString());
@@ -67,7 +107,7 @@ function NewActionDrawer({ clients, initialClientId, onClose, onSave }: NewActio
     if (!clientId || !note.trim()) return;
     setIsSaving(true);
     try {
-      await onSave({ clientId, contactId, note: note.trim(), actionDate, redAfterDays });
+      await onSave({ clientId, contactId, note: note.trim(), actionDate, redAfterDays, owner });
       onClose();
     } finally {
       setIsSaving(false);
@@ -116,6 +156,20 @@ function NewActionDrawer({ clients, initialClientId, onClose, onSave }: NewActio
                     </option>
                   ))
                 )}
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="accounting-owner">Owner</label>
+              <select
+                id="accounting-owner"
+                className="form-select"
+                value={owner}
+                onChange={(event) => setOwner(event.target.value)}
+              >
+                <option value="">—</option>
+                {owners.map((item) => (
+                  <option key={item} value={item}>{item}</option>
+                ))}
               </select>
             </div>
             <div className="form-group">
@@ -288,6 +342,21 @@ export function AccountingView() {
   const [search, setSearch] = useState('');
   const [expandedClientId, setExpandedClientId] = useState('');
   const [drawerClientId, setDrawerClientId] = useState<string | null>(null);
+  const [ownerFilter, setOwnerFilter] = useState<string[]>([]);
+  const owners = useMemo(() => getOwnersForWorkspace(workspaceId), [workspaceId]);
+  const activeOwnerFilter = useMemo(
+    () => new Set(ownerFilter.filter((item) => (owners as readonly string[]).includes(item))),
+    [ownerFilter, owners],
+  );
+
+  useEffect(() => {
+    setOwnerFilter(readOwnerFilter());
+  }, []);
+
+  const changeOwnerFilter = (next: string[]): void => {
+    setOwnerFilter(next);
+    writeOwnerFilter(next);
+  };
 
   useEffect(() => {
     if (!db) return;
@@ -315,8 +384,9 @@ export function AccountingView() {
     [clients, workspaceId],
   );
   const rows = useMemo(
-    () => buildAccountingRows(accountingClients, actions, getTodayString()),
-    [accountingClients, actions],
+    () => buildAccountingRows(accountingClients, actions, getTodayString())
+      .filter((row) => activeOwnerFilter.size === 0 || activeOwnerFilter.has(resolveRowOwner(row))),
+    [accountingClients, actions, activeOwnerFilter],
   );
   const counts = useMemo(() => ({
     open: rows.filter((row) => row.status === 'open').length,
@@ -334,13 +404,7 @@ export function AccountingView() {
       .filter((row) => !query || row.client.name.toLowerCase().includes(query));
   }, [filter, rows, search]);
 
-  const handleSave = async (input: {
-    clientId: string;
-    contactId: string;
-    note: string;
-    actionDate: string;
-    redAfterDays: number;
-  }): Promise<void> => {
+  const handleSave = async (input: NewActionInput): Promise<void> => {
     if (!db) return;
     try {
       const saved = await insertClientAction(db, {
@@ -349,7 +413,7 @@ export function AccountingView() {
         actionType: ACCOUNTING_ACTION_TYPE,
         actionDate: input.actionDate,
         note: input.note,
-        author: currentOwner || '',
+        author: input.owner,
         createdAt: '',
         contactId: input.contactId,
         redAfterDays: input.redAfterDays,
@@ -422,6 +486,30 @@ export function AccountingView() {
           </div>
         </div>
         <div className="filter-right">
+          <div className="proposals-list-chips" role="group" aria-label="Filtra per owner">
+            <button
+              type="button"
+              className={`clients-filter-chip${activeOwnerFilter.size === 0 ? ' is-active' : ''}`}
+              aria-pressed={activeOwnerFilter.size === 0}
+              onClick={() => changeOwnerFilter([])}
+            >
+              Tutti
+            </button>
+            {owners.map((item) => (
+              <button
+                key={item}
+                type="button"
+                className={`clients-filter-chip${activeOwnerFilter.has(item) ? ' is-active' : ''}`}
+                aria-pressed={activeOwnerFilter.has(item)}
+                title={`Solo i clienti seguiti da ${item}`}
+                onClick={() => changeOwnerFilter(activeOwnerFilter.has(item)
+                  ? ownerFilter.filter((value) => value !== item)
+                  : [...ownerFilter, item])}
+              >
+                Solo {item.split(' ')[0]}
+              </button>
+            ))}
+          </div>
           <button
             type="button"
             className="btn btn-primary"
@@ -440,6 +528,7 @@ export function AccountingView() {
               <th className="funnel-col-semaforo">Semaforo</th>
               <th>Cliente</th>
               <th>Contatto</th>
+              <th>Owner</th>
               <th>Ultima azione</th>
               <th>Data</th>
               <th>{filter === 'won' || filter === 'lost' ? 'Chiuso' : 'Scadenza'}</th>
@@ -448,10 +537,10 @@ export function AccountingView() {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={7} className="mail-campaigns-empty">Caricamento azioni…</td></tr>
+              <tr><td colSpan={8} className="mail-campaigns-empty">Caricamento azioni…</td></tr>
             ) : visibleRows.length === 0 ? (
               <tr>
-                <td colSpan={7} className="mail-campaigns-empty">
+                <td colSpan={8} className="mail-campaigns-empty">
                   {rows.length === 0
                     ? 'Nessun cliente in Accounting. Usa «Nuova azione» per aggiungere il primo cliente su cui lavorare.'
                     : filter === 'open'
@@ -487,6 +576,7 @@ export function AccountingView() {
                         </button>
                       </td>
                       <td>{resolveContactLabel(row.client, row.lastAction.contactId)}</td>
+                      <td>{resolveRowOwner(row) || '—'}</td>
                       <td className="accounting-note-cell">
                         {row.closure?.note
                           ? row.closure.note
@@ -530,7 +620,7 @@ export function AccountingView() {
                     </tr>
                     {isExpanded && (
                       <tr className="accounting-history-row">
-                        <td colSpan={7}>
+                        <td colSpan={8}>
                           <ul className="accounting-history">
                             {row.closure && (
                               <li className={`accounting-history-closure is-${row.status}`}>
@@ -580,6 +670,8 @@ export function AccountingView() {
         <NewActionDrawer
           clients={accountingClients}
           initialClientId={drawerClientId}
+          owners={owners}
+          defaultOwner={currentOwner || ''}
           onClose={() => setDrawerClientId(null)}
           onSave={handleSave}
         />

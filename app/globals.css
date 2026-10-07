@@ -6659,6 +6659,34 @@ body:has(.login-page) {
     flex-direction: column;
     gap: 10px;
     padding-top: 10px;
+    min-width: 0;
+}
+
+.funnel-client-view-expanded .commercial-funnel-table-wrap {
+    margin: 0;
+    box-shadow: none;
+}
+
+.funnel-client-view-name-text {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+    text-align: left;
+}
+
+.funnel-client-view-name-text small {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 400;
+}
+
+.funnel-owner-filter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 12px;
 }
 
 .funnel-client-view-expanded-meta {

@@ -47,6 +47,8 @@ interface FunnelClientsTableProps {
   entries: CommercialFunnelEntry[];
   showAddButton?: boolean;
   focusEntryId?: string;
+  /** Apre subito il dettaglio (note delle azioni) di tutte le righe, es. nella vista Clienti. */
+  expandAll?: boolean;
 }
 
 function resolveDisplayOwner(entry: CommercialFunnelEntry, client?: Client): string {
@@ -62,6 +64,7 @@ export function FunnelClientsTable({
   entries,
   showAddButton = true,
   focusEntryId,
+  expandAll = false,
 }: FunnelClientsTableProps) {
   const {
     clients,
@@ -77,7 +80,7 @@ export function FunnelClientsTable({
   } = useCrm();
   const [showPicker, setShowPicker] = useState(false);
   const [expandedEntries, setExpandedEntries] = useState<Set<string>>(
-    () => new Set(focusEntryId ? [focusEntryId] : []),
+    () => new Set(expandAll ? entries.map((entry) => entry.id) : focusEntryId ? [focusEntryId] : []),
   );
   const [highlightedEntryId, setHighlightedEntryId] = useState(focusEntryId || '');
   const [persoModal, setPersoModal] = useState<PersoModalState | null>(null);

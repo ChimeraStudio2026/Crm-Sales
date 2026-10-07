@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight, Search } from 'lucide-react';
+import { FunnelClientsTable } from '@/components/commercial-funnel/funnel-clients-table';
 import { resolveFunnelContactLabel } from '@/lib/commercial-funnel/contacts';
 import { resolveFunnelSemaforo, resolveFunnelStageDisplay } from '@/lib/commercial-funnel/index';
 import {
@@ -174,42 +175,23 @@ export function FunnelClientsView({
     });
   };
 
-  const renderExpandedBody = (row: FunnelClientRow): React.ReactNode => {
-    const { entry, client } = row;
-    const filledActions = entry.actions.filter((action) => action.type);
-    return (
-      <div className="funnel-client-view-expanded">
-        <div className="funnel-client-view-expanded-meta">
-          <span>Owner: {entry.owner || client?.owner || '—'}</span>
-          <span>Contatto: {row.contactLabel}</span>
-          {entry.clientSource === 'main' && <span>Lista principale</span>}
-        </div>
-        {entry.lostReason && (
-          <p className="funnel-client-view-lost-reason">
-            <strong>Motivo perdita:</strong> {entry.lostReason}
-          </p>
-        )}
-        {filledActions.length > 0 ? (
-          <ul className="funnel-client-view-actions">
-            {filledActions.map((action, index) => (
-              <li key={`${entry.id}-action-${index}`}>
-                <strong>{action.type}</strong>
-                {action.date ? ` · ${formatActionDateDisplay(action.date)}` : ''}
-                {action.note ? ` · ${action.note}` : ''}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="funnel-client-view-empty">Nessuna azione registrata.</p>
-        )}
-        {row.campaign && (
-          <Link href={`/funnel/${row.campaign.id}`} className="funnel-client-view-link">
-            Apri campagna
-          </Link>
-        )}
-      </div>
-    );
-  };
+  // Dal dettaglio si modifica tutto come nella campagna: azioni, note, owner, contatto,
+  // perdita/riattivazione, spostamento e rimozione.
+  const renderExpandedBody = (row: FunnelClientRow): React.ReactNode => (
+    <div className="funnel-client-view-expanded">
+      <FunnelClientsTable
+        campaignId={row.entry.campaignId}
+        entries={[row.entry]}
+        showAddButton={false}
+        expandAll
+      />
+      {row.campaign && (
+        <Link href={`/funnel/${row.campaign.id}`} className="funnel-client-view-link">
+          Apri campagna
+        </Link>
+      )}
+    </div>
+  );
 
   const renderListRow = (row: FunnelClientRow): React.ReactNode => {
     const isExpanded = expandedEntries.has(row.entry.id);
@@ -225,7 +207,10 @@ export function FunnelClientsView({
           onClick={() => toggleExpanded(row.entry.id)}
         >
           <ChevronRight size={16} className={isExpanded ? 'is-expanded' : ''} />
-          <span>{clientName}</span>
+          <span className="funnel-client-view-name-text">
+            <span>{clientName}</span>
+            <small>{row.contactLabel}</small>
+          </span>
         </button>
         {showCampaignColumn && (
           <span className="funnel-client-view-campaign">{row.campaign?.name || '—'}</span>

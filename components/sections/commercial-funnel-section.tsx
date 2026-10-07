@@ -14,11 +14,15 @@ import {
   searchFunnelEntriesByBrandName,
 } from '@/lib/commercial-funnel/campaigns';
 import {
+  readFunnelOwnerFilter,
   readFunnelTrackPreference,
   readHideClosedFunnelCampaignsPreference,
+  writeFunnelOwnerFilter,
   writeFunnelTrackPreference,
   writeHideClosedFunnelCampaignsPreference,
 } from '@/lib/commercial-funnel/preferences';
+import { normalizeOwner } from '@/lib/crm/owners';
+import { getOwnersForWorkspace } from '@/lib/crm/workspace-clients';
 import {
   FUNNEL_TRACK_DESCRIPTIONS,
   FUNNEL_TRACK_LABELS,
@@ -71,12 +75,25 @@ export function CommercialFunnelSection() {
   const [hideClosedCampaigns, setHideClosedCampaigns] = useState(true);
   const [hideClosedPreferenceReady, setHideClosedPreferenceReady] = useState(false);
   const [track, setTrack] = useState<FunnelTrack>('cold');
+  const [ownerFilter, setOwnerFilter] = useState<string[]>([]);
 
   useEffect(() => {
     setHideClosedCampaigns(readHideClosedFunnelCampaignsPreference());
     setHideClosedPreferenceReady(true);
     setTrack(readFunnelTrackPreference());
+    setOwnerFilter(readFunnelOwnerFilter());
   }, []);
+
+  const changeOwnerFilter = (next: string[]): void => {
+    setOwnerFilter(next);
+    writeFunnelOwnerFilter(next);
+  };
+
+  const toggleOwnerFilter = (ownerName: string): void => {
+    changeOwnerFilter(ownerFilter.includes(ownerName)
+      ? ownerFilter.filter((item) => item !== ownerName)
+      : [...ownerFilter, ownerName]);
+  };
 
   const handleTrackChange = (nextTrack: FunnelTrack): void => {
     setTrack(nextTrack);
@@ -126,17 +143,45 @@ export function CommercialFunnelSection() {
     () => filterEntriesByVisibleCampaigns(scopedEntries, visibleCampaignIds),
     [scopedEntries, visibleCampaignIds],
   );
-  const workspaceStats = useMemo(
-    () => buildFunnelStatsSummary(visibleEntries),
-    [visibleEntries],
+  // Toggle owner: le campagne si filtrano per owner della campagna, i clienti per owner del contatto.
+  const workspaceOwners = useMemo(() => getOwnersForWorkspace(workspaceId), [workspaceId]);
+  const activeOwnerFilter = useMemo(
+    () => new Set(ownerFilter.filter((item) => workspaceOwners.includes(item as Owner))),
+    [ownerFilter, workspaceOwners],
+  );
+  const clientOwnerById = useMemo(
+    () => new Map(clients.map((client) => [client.id, client.owner])),
+    [clients],
+  );
+  const ownerCampaigns = useMemo(
+    () => (activeOwnerFilter.size === 0
+      ? visibleCampaigns
+      : visibleCampaigns.filter((campaign) => activeOwnerFilter.has(normalizeOwner(campaign.owner) || ''))),
+    [activeOwnerFilter, visibleCampaigns],
+  );
+  const ownerEntries = useMemo(
+    () => (activeOwnerFilter.size === 0
+      ? visibleEntries
+      : visibleEntries.filter((entry) => {
+        const entryOwner = normalizeOwner(entry.owner) || normalizeOwner(clientOwnerById.get(entry.clientId));
+        return activeOwnerFilter.has(entryOwner || '');
+      })),
+    [activeOwnerFilter, clientOwnerById, visibleEntries],
   );
 
+  // I totali seguono la vista: contatti dell'owner (Clienti) o contatti delle sue campagne (Campagne).
+  const workspaceStats = useMemo(() => {
+    if (pageView === 'clients' || activeOwnerFilter.size === 0) return buildFunnelStatsSummary(ownerEntries);
+    const ownerCampaignIds = new Set(ownerCampaigns.map((campaign) => campaign.id));
+    return buildFunnelStatsSummary(visibleEntries.filter((entry) => ownerCampaignIds.has(entry.campaignId)));
+  }, [activeOwnerFilter, ownerCampaigns, ownerEntries, pageView, visibleEntries]);
+
   const rows = useMemo(
-    () => visibleCampaigns.map((campaign) => buildFunnelCampaignDashboardRow(
+    () => ownerCampaigns.map((campaign) => buildFunnelCampaignDashboardRow(
       campaign,
       visibleEntries,
     )),
-    [visibleCampaigns, visibleEntries],
+    [ownerCampaigns, visibleEntries],
   );
 
   const brandSearchResults = useMemo(
@@ -144,10 +189,10 @@ export function CommercialFunnelSection() {
       brandSearch,
       visibleEntries,
       clients,
-      visibleCampaigns,
+      ownerCampaigns,
       workspaceId,
     ),
-    [brandSearch, clients, visibleEntries, visibleCampaigns, workspaceId],
+    [brandSearch, clients, visibleEntries, ownerCampaigns, workspaceId],
   );
 
   const filteredRows = useMemo(() => {
@@ -304,10 +349,35 @@ export function CommercialFunnelSection() {
               </button>
             </div>
           </div>
+          <div className="funnel-owner-filter" role="group" aria-label="Filtra per owner">
+            <span className="tasks-filter-label">Owner:</span>
+            <button
+              type="button"
+              className={`clients-filter-chip${activeOwnerFilter.size === 0 ? ' is-active' : ''}`}
+              aria-pressed={activeOwnerFilter.size === 0}
+              onClick={() => changeOwnerFilter([])}
+            >
+              Tutti
+            </button>
+            {workspaceOwners.map((ownerName) => (
+              <button
+                key={ownerName}
+                type="button"
+                className={`clients-filter-chip${activeOwnerFilter.has(ownerName) ? ' is-active' : ''}`}
+                aria-pressed={activeOwnerFilter.has(ownerName)}
+                title={pageView === 'clients'
+                  ? `Solo i contatti di ${ownerName}`
+                  : `Solo le campagne di ${ownerName}`}
+                onClick={() => toggleOwnerFilter(ownerName)}
+              >
+                Solo {ownerName.split(' ')[0]}
+              </button>
+            ))}
+          </div>
           <FunnelStatsCharts title={`Totali ${FUNNEL_TRACK_LABELS[track]}`} stats={workspaceStats} />
           {pageView === 'clients' ? (
             <FunnelClientsView
-              entries={visibleEntries}
+              entries={ownerEntries}
               clients={clients}
               mailCampaigns={visibleCampaigns}
               showCampaignColumn

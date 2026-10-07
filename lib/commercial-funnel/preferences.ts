@@ -67,3 +67,25 @@ export function writeFunnelClientSort(sort: FunnelClientSort): void {
     // Ordinamento non salvabile: resta valido solo per questa visita.
   }
 }
+
+export const FUNNEL_OWNER_FILTER_STORAGE_KEY = 'crm-funnel-owner-filter';
+
+/** Owner selezionati nei toggle del funnel (vuoto = tutti). */
+export function readFunnelOwnerFilter(): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const parsed: unknown = JSON.parse(window.localStorage.getItem(FUNNEL_OWNER_FILTER_STORAGE_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed.filter((owner): owner is string => typeof owner === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+export function writeFunnelOwnerFilter(owners: string[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(FUNNEL_OWNER_FILTER_STORAGE_KEY, JSON.stringify(owners));
+  } catch {
+    // Filtro non salvabile: resta valido solo per questa visita.
+  }
+}

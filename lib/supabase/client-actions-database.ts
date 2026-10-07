@@ -81,3 +81,14 @@ export async function deleteClientAction(db: SupabaseClient, actionId: string): 
   const { error } = await db.from('client_actions').delete().eq('id', actionId);
   if (error) throw error;
 }
+
+/** Cambia l'owner (autore) di un gruppo di azioni, es. tutte quelle di un ciclo Accounting. */
+export async function updateClientActionsAuthor(
+  db: SupabaseClient,
+  actionIds: string[],
+  author: string,
+): Promise<void> {
+  if (actionIds.length === 0) return;
+  const { error } = await db.from('client_actions').update({ author }).in('id', actionIds);
+  if (error) throw error;
+}

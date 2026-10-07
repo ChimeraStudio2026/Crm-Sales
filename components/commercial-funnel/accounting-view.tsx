@@ -14,7 +14,11 @@ import { isClientInWorkspace } from '@/lib/crm/workspace-access';
 import { getOwnersForWorkspace } from '@/lib/crm/workspace-clients';
 import { createUniqueId, formatActionDateDisplay, getTodayString } from '@/lib/crm/utils';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
-import { fetchAllClientActions, insertClientAction } from '@/lib/supabase/client-actions-database';
+import {
+  fetchAllClientActions,
+  insertClientAction,
+  updateClientActionsAuthor,
+} from '@/lib/supabase/client-actions-database';
 import {
   ACCOUNTING_ACTION_TYPE,
   ACCOUNTING_CLOSE_ACTION_TYPE,
@@ -427,6 +431,21 @@ export function AccountingView() {
     }
   };
 
+  // L'owner vale per tutto il ciclo in corso: si aggiornano tutte le sue azioni.
+  const handleOwnerChange = async (row: AccountingRow, owner: string): Promise<void> => {
+    if (!db) return;
+    const actionIds = row.actions.map((action) => action.id);
+    if (row.closure) actionIds.push(row.closure.id);
+    try {
+      await updateClientActionsAuthor(db, actionIds, owner);
+      const changed = new Set(actionIds);
+      setActions((prev) => prev.map((action) => (changed.has(action.id) ? { ...action, author: owner } : action)));
+      showToast(owner ? `${row.client.name} ora è seguito da ${owner}.` : `Owner rimosso da ${row.client.name}.`, 'success');
+    } catch (error) {
+      showToast(`Errore cambio owner: ${error instanceof Error ? error.message : 'errore'}`, 'danger');
+    }
+  };
+
   const handleCloseCycle = async (
     row: AccountingRow,
     input: { outcome: AccountingOutcome; note: string; actionDate: string },
@@ -576,7 +595,20 @@ export function AccountingView() {
                         </button>
                       </td>
                       <td>{resolveContactLabel(row.client, row.lastAction.contactId)}</td>
-                      <td>{resolveRowOwner(row) || '—'}</td>
+                      <td>
+                        <select
+                          className="table-cell-select"
+                          value={resolveRowOwner(row)}
+                          onChange={(event) => void handleOwnerChange(row, event.target.value)}
+                          disabled={!db}
+                          aria-label={`Owner di ${row.client.name}`}
+                        >
+                          <option value="">—</option>
+                          {owners.map((item) => (
+                            <option key={item} value={item}>{item}</option>
+                          ))}
+                        </select>
+                      </td>
                       <td className="accounting-note-cell">
                         {row.closure?.note
                           ? row.closure.note
@@ -671,7 +703,10 @@ export function AccountingView() {
           clients={accountingClients}
           initialClientId={drawerClientId}
           owners={owners}
-          defaultOwner={currentOwner || ''}
+          defaultOwner={(() => {
+            const row = rows.find((item) => item.client.id === drawerClientId);
+            return (row && resolveRowOwner(row)) || currentOwner || '';
+          })()}
           onClose={() => setDrawerClientId(null)}
           onSave={handleSave}
         />

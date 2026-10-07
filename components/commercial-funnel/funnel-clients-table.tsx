@@ -262,7 +262,7 @@ export function FunnelClientsTable({
               ) : (
                 rows.map(({ entry, client, status, semaforo, isLost, isConverted, isLocked, displayActions }) => {
                   const isExpanded = expandedEntries.has(entry.id);
-                  const isOutOfTrack = isFunnelEntryOutOfTrack(entry, client, campaignTrack);
+                  const isOutOfTrack = isFunnelEntryOutOfTrack(entry, client, campaignTrack, clients);
                   const clientName = client?.name || 'Cliente non trovato';
                   const contactLabel = resolveFunnelContactLabel(client, entry.contactId);
                   const displayOwner = resolveDisplayOwner(entry, client);

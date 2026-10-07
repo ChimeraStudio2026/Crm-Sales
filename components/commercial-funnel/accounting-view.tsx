@@ -310,7 +310,7 @@ export function AccountingView() {
   const accountingClients = useMemo(
     () => clients
       .filter((client) => isClientInWorkspace(client, workspaceId))
-      .filter(isAccountingClient)
+      .filter((client) => isAccountingClient(client, clients))
       .sort((left, right) => left.name.localeCompare(right.name, 'it')),
     [clients, workspaceId],
   );

@@ -11359,6 +11359,19 @@ a.btn:hover {
     padding-left: 18px;
 }
 
+.client-group-revenue {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-end;
+    line-height: 1.2;
+}
+
+.client-group-revenue small {
+    color: var(--pill-lilac-fg);
+    font-size: 0.68rem;
+    font-weight: 600;
+}
+
 .client-group-badge {
     display: inline-flex;
     align-items: center;

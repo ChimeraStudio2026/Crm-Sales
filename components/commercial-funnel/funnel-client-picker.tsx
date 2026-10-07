@@ -37,7 +37,7 @@ export function FunnelClientPicker({
     const query = search.trim().toLowerCase();
     return clients
       .filter((client) => isClientInWorkspace(client, workspaceId))
-      .filter((client) => resolveClientFunnelTrack(client) === track)
+      .filter((client) => resolveClientFunnelTrack(client, clients) === track)
       .filter((client) => !isFunnelClientFullyAdded(client, existingEntryKeys))
       .filter((client) => !typeFilter || client.type === typeFilter)
       .filter((client) => {

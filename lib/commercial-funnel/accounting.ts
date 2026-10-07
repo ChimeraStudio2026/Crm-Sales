@@ -42,8 +42,8 @@ function formatDay(time: number): string {
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
-export function isAccountingClient(client: Client): boolean {
-  return client.relationship !== 'Eliminato' && resolveClientFunnelTrack(client) === 'warm';
+export function isAccountingClient(client: Client, allClients?: readonly Client[]): boolean {
+  return client.relationship !== 'Eliminato' && resolveClientFunnelTrack(client, allClients) === 'warm';
 }
 
 /** Il semaforo diventa rosso quando passano N giorni dall'ultima azione senza un'azione nuova. */

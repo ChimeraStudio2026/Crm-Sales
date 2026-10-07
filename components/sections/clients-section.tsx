@@ -130,6 +130,22 @@ export function ClientsSection() {
     });
     return sizes;
   }, [clients]);
+  // Fatturato del gruppo: il cliente principale mostra anche quello delle sue ragioni sociali.
+  const groupRevenueById = useMemo(() => {
+    const totals = new Map<string, Record<(typeof REVENUE_COLUMNS)[number], number>>();
+    clients.forEach((client) => {
+      if (!client.parentClientId) return;
+      const total = totals.get(client.parentClientId) || { rev2023: 0, rev2024: 0, rev2025: 0, rev2026: 0 };
+      REVENUE_COLUMNS.forEach((column) => {
+        total[column] += Number(client[column]) || 0;
+      });
+      totals.set(client.parentClientId, total);
+    });
+    return totals;
+  }, [clients]);
+  const resolveRevenue = (client: Client, column: (typeof REVENUE_COLUMNS)[number]): number => (
+    (Number(client[column]) || 0) + (groupRevenueById.get(client.id)?.[column] || 0)
+  );
 
   const incompleteCount = useMemo(
     () => clients.filter(
@@ -177,8 +193,8 @@ export function ClientsSection() {
       let valA: string | number = a[col] as string | number;
       let valB: string | number = b[col] as string | number;
       if (isRevenueColumn(col)) {
-        valA = Number(a[col]) || 0;
-        valB = Number(b[col]) || 0;
+        valA = resolveRevenue(a, col);
+        valB = resolveRevenue(b, col);
       } else if (typeof valA === 'string') {
         valA = valA.toLowerCase();
         valB = String(valB).toLowerCase();
@@ -200,7 +216,7 @@ export function ClientsSection() {
       if (client.parentClientId && listedIds.has(client.parentClientId)) return [];
       return [client, ...(childrenByParent.get(client.id) || [])];
     });
-  }, [clients, filterIncomplete, filterOwner, filterRelationship, filterType, hideEliminati, search, sort, workspaceId]);
+  }, [clients, filterIncomplete, filterOwner, filterRelationship, filterType, groupRevenueById, hideEliminati, search, sort, workspaceId]);
 
   const totalInList = useMemo(
     () => clients.filter((c) => {
@@ -319,13 +335,25 @@ export function ClientsSection() {
           </td>
         );
       case 'rev2026':
-        return <td key={columnId} style={{ textAlign: 'right' }}>{formatCurrency(client.rev2026)}</td>;
       case 'rev2025':
-        return <td key={columnId} style={{ textAlign: 'right' }}>{formatCurrency(client.rev2025)}</td>;
       case 'rev2024':
-        return <td key={columnId} style={{ textAlign: 'right' }}>{formatCurrency(client.rev2024)}</td>;
-      case 'rev2023':
-        return <td key={columnId} style={{ textAlign: 'right' }}>{formatCurrency(client.rev2023)}</td>;
+      case 'rev2023': {
+        const groupRevenue = groupRevenueById.get(client.id)?.[columnId] || 0;
+        if (groupRevenue === 0) {
+          return <td key={columnId} style={{ textAlign: 'right' }}>{formatCurrency(client[columnId])}</td>;
+        }
+        return (
+          <td key={columnId} style={{ textAlign: 'right' }}>
+            <span
+              className="client-group-revenue"
+              title={`Proprio: ${formatCurrency(client[columnId])} · Ragioni sociali del gruppo: ${formatCurrency(groupRevenue)}`}
+            >
+              {formatCurrency(resolveRevenue(client, columnId))}
+              <small>gruppo</small>
+            </span>
+          </td>
+        );
+      }
       case 'actions':
         return (
           <td key={columnId}>

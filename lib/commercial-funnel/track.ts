@@ -21,8 +21,16 @@ export function getClientTotalRevenue(client: Client): number {
 }
 
 /** Un cliente è caldo se ci ha fatturato almeno 1€, altrimenti è freddo. */
-export function resolveClientFunnelTrack(client: Client): FunnelTrack {
-  return getClientTotalRevenue(client) > 0 ? 'warm' : 'cold';
+/**
+ * Caldo = ci ha pagato almeno 1€. Con la lista clienti si conta anche il fatturato
+ * delle ragioni sociali raggruppate sotto questo cliente (il gruppo paga per lui).
+ */
+export function resolveClientFunnelTrack(client: Client, allClients?: readonly Client[]): FunnelTrack {
+  if (getClientTotalRevenue(client) > 0) return 'warm';
+  const groupPays = allClients?.some(
+    (item) => item.parentClientId === client.id && getClientTotalRevenue(item) > 0,
+  );
+  return groupPays ? 'warm' : 'cold';
 }
 
 export function normalizeFunnelTrack(value: unknown): FunnelTrack {
@@ -44,9 +52,10 @@ export function isFunnelEntryOutOfTrack(
   entry: CommercialFunnelEntry,
   client: Client | undefined,
   campaignTrack: FunnelTrack,
+  allClients?: readonly Client[],
 ): boolean {
   if (!client) return false;
-  const clientTrack = resolveClientFunnelTrack(client);
+  const clientTrack = resolveClientFunnelTrack(client, allClients);
   if (clientTrack === campaignTrack) return false;
   if (campaignTrack === 'cold' && isFunnelTerminalConvertedEntry(entry)) return false;
   return true;

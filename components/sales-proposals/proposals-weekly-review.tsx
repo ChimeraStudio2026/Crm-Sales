@@ -120,6 +120,14 @@ export function ProposalsWeeklyReview({ proposals }: ProposalsWeeklyReviewProps)
       </div>
       <div className="proposals-weekly-lists">
         <ProposalsWeeklyList
+          title="Nuove proposte"
+          emptyLabel="Nessuna proposta creata in questa settimana."
+          proposals={summary.newProposals}
+          closedDateLabel="Creata il"
+          resolveClosedDate={(proposal) => proposal.creatoIl}
+          showStatus
+        />
+        <ProposalsWeeklyList
           title="Proposte andate in Si"
           emptyLabel="Nessuna proposta chiusa Si in questa settimana."
           proposals={summary.acceptedProposals}

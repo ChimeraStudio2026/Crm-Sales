@@ -13,6 +13,7 @@ interface ProposalsWeeklyListProps {
   proposals: SalesProposal[];
   closedDateLabel: string;
   resolveClosedDate: (proposal: SalesProposal) => string | null;
+  showStatus?: boolean;
 }
 
 function formatProposalValue(proposalValue: number | null): string {
@@ -26,6 +27,7 @@ export function ProposalsWeeklyList({
   proposals,
   closedDateLabel,
   resolveClosedDate,
+  showStatus = false,
 }: ProposalsWeeklyListProps) {
   return (
     <div className="glass-card proposals-panel proposals-weekly-list">
@@ -43,6 +45,7 @@ export function ProposalsWeeklyList({
                 <th>Proposta</th>
                 <th>Cliente</th>
                 <th>Categoria</th>
+                {showStatus && <th>Stato</th>}
                 <th className="analysis-num">Valore</th>
                 <th>{closedDateLabel}</th>
               </tr>
@@ -55,6 +58,7 @@ export function ProposalsWeeklyList({
                     <td><strong>{proposal.nome}</strong></td>
                     <td>{proposal.cliente.trim() || '—'}</td>
                     <td>{proposal.categoria.trim() || '—'}</td>
+                    {showStatus && <td>{proposal.stato.trim() || '—'}</td>}
                     <td className="analysis-num">{formatProposalValue(resolveProposalValue(proposal))}</td>
                     <td>{closedDate ? formatProposalDateLabel(closedDate) : '—'}</td>
                   </tr>

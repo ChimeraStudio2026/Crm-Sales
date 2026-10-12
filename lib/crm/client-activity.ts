@@ -21,6 +21,7 @@ export function buildClientActivity(
       actionType: action.outcome ? `Chiusura · ${action.outcome === 'won' ? 'Won' : 'Lost'}` : action.actionType,
       date: action.actionDate,
       note: action.note,
+      objective: action.objective,
       detail: contactName ? `${author} · con ${contactName}` : author,
       sortStamp: `${action.actionDate}|${action.createdAt}`,
     };

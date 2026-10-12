@@ -75,6 +75,7 @@ interface NewActionInput {
   clientId: string;
   contactId: string;
   note: string;
+  objective: string;
   actionDate: string;
   redAfterDays: number;
   owner: string;
@@ -94,6 +95,7 @@ function NewActionDrawer({ clients, initialClientId, owners, defaultOwner, onClo
   const [owner, setOwner] = useState(defaultOwner);
   const [contactId, setContactId] = useState('');
   const [note, setNote] = useState('');
+  const [objective, setObjective] = useState('');
   const [actionDate, setActionDate] = useState(getTodayString());
   const [redAfterDays, setRedAfterDays] = useState<number>(DEFAULT_RED_AFTER_DAYS);
   const [isSaving, setIsSaving] = useState(false);
@@ -111,7 +113,7 @@ function NewActionDrawer({ clients, initialClientId, owners, defaultOwner, onClo
     if (!clientId || !note.trim()) return;
     setIsSaving(true);
     try {
-      await onSave({ clientId, contactId, note: note.trim(), actionDate, redAfterDays, owner });
+      await onSave({ clientId, contactId, note: note.trim(), objective: objective.trim(), actionDate, redAfterDays, owner });
       onClose();
     } finally {
       setIsSaving(false);
@@ -186,6 +188,17 @@ function NewActionDrawer({ clients, initialClientId, owners, defaultOwner, onClo
                 value={note}
                 onChange={(event) => setNote(event.target.value)}
                 required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="accounting-objective">Obiettivo (opzionale)</label>
+              <textarea
+                id="accounting-objective"
+                className="form-textarea"
+                rows={2}
+                placeholder="Cosa vuoi ottenere con questa azione"
+                value={objective}
+                onChange={(event) => setObjective(event.target.value)}
               />
             </div>
             <div className="form-group">
@@ -417,6 +430,7 @@ export function AccountingView() {
         actionType: ACCOUNTING_ACTION_TYPE,
         actionDate: input.actionDate,
         note: input.note,
+        objective: input.objective,
         author: input.owner,
         createdAt: '',
         contactId: input.contactId,
@@ -613,6 +627,9 @@ export function AccountingView() {
                         {row.closure?.note
                           ? row.closure.note
                           : row.lastAction.note || row.lastAction.actionType}
+                        {!row.closure && row.lastAction.objective && (
+                          <small className="accounting-objective">Obiettivo: {row.lastAction.objective}</small>
+                        )}
                       </td>
                       <td>{formatActionDateDisplay(row.lastAction.actionDate)}</td>
                       <td>
@@ -672,6 +689,9 @@ export function AccountingView() {
                                   <span className="client-last-action-detail">semaforo {action.redAfterDays} gg</span>
                                 )}
                                 <p>{action.note || '—'}</p>
+                                {action.objective && (
+                                  <p className="accounting-objective"><strong>Obiettivo:</strong> {action.objective}</p>
+                                )}
                               </li>
                             ))}
                           </ul>

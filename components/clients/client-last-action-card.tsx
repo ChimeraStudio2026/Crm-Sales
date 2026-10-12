@@ -213,6 +213,9 @@ export function ClientLastActionCard({ clientId }: ClientLastActionCardProps) {
                     {renderDeleteButton(item.key)}
                   </div>
                   {item.note && <p className="client-last-action-note">{item.note}</p>}
+                  {item.objective && (
+                    <p className="client-last-action-note"><strong>Obiettivo:</strong> {item.objective}</p>
+                  )}
                 </li>
               ))}
             </ul>

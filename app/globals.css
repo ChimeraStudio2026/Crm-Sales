@@ -11004,6 +11004,17 @@ a.btn:hover {
     color: var(--text-primary);
 }
 
+.accounting-note-cell .accounting-objective {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.accounting-history li p.accounting-objective {
+    color: var(--text-secondary);
+}
+
 .accounting-due {
     font-size: 0.8rem;
     font-weight: 600;

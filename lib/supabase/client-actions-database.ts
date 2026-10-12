@@ -12,6 +12,7 @@ interface ClientActionRow {
   contact_id: string | null;
   red_after_days: number | null;
   outcome: string | null;
+  objective: string | null;
 }
 
 function rowToClientAction(row: ClientActionRow): ClientAction {
@@ -26,6 +27,7 @@ function rowToClientAction(row: ClientActionRow): ClientAction {
     contactId: row.contact_id || '',
     redAfterDays: row.red_after_days ?? null,
     outcome: row.outcome === 'won' || row.outcome === 'lost' ? row.outcome : null,
+    objective: row.objective || '',
   };
 }
 
@@ -70,6 +72,7 @@ export async function insertClientAction(
       contact_id: action.contactId,
       red_after_days: action.redAfterDays,
       outcome: action.outcome,
+      objective: action.objective?.trim() || null,
     })
     .select('*')
     .single();

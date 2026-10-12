@@ -23,6 +23,8 @@ export interface ClientAction {
   redAfterDays: number | null;
   /** Solo sulle azioni di chiusura Accounting: esito del ciclo di azioni. */
   outcome: AccountingOutcome | null;
+  /** Obiettivo opzionale dell'azione (es. cosa si vuole ottenere con un'azione Accounting). */
+  objective?: string;
 }
 
 export type AccountingOutcome = 'won' | 'lost';
@@ -43,6 +45,7 @@ export interface ClientActivityItem {
   actionType: string;
   date: string;
   note: string;
+  objective?: string;
   detail: string;
   sortStamp: string;
 }

@@ -294,6 +294,8 @@ export function buildProposalWeeklyReview(
 ): ProposalWeeklyReviewSummary {
   const { isoYear, isoWeek } = isoWeekRef;
   const { weekStart, weekEnd, weekLabel } = getWeekRangeFromIsoWeek(isoYear, isoWeek);
+  // Le pending includono anche le proposte della settimana prima ancora aperte a fine settimana.
+  const pendingStart = dateKeyFromUtcMs((parseProposalDateKey(weekStart) ?? 0) - 7 * MS_PER_DAY);
   const newProposals: SalesProposal[] = [];
   const acceptedProposals: SalesProposal[] = [];
   const rejectedProposals: SalesProposal[] = [];
@@ -303,7 +305,7 @@ export function buildProposalWeeklyReview(
     if (createdKey && isDateKeyInRange(createdKey, weekStart, weekEnd)) {
       newProposals.push(proposal);
     }
-    if (wasProposalPendingAtWeekEnd(proposal, weekStart, weekEnd)) {
+    if (wasProposalPendingAtWeekEnd(proposal, pendingStart, weekEnd)) {
       pendingProposals.push(proposal);
     }
     const acceptedKey = normalizeProposalDateKey(proposal.dataAccettazione);

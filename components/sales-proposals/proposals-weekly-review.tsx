@@ -59,7 +59,7 @@ export function ProposalsWeeklyReview({ proposals }: ProposalsWeeklyReviewProps)
           <p>
             Settimana {summary.isoWeek} del {summary.isoYear} ({summary.weekLabel}).
             Nuove e pending per data di creazione; Si e No per data di chiusura.
-            Pending = create in settimana e non chiuse entro fine settimana.
+            Pending = create in settimana o in quella prima e non chiuse entro fine settimana.
           </p>
         </div>
         <div className="proposals-weekly-selectors">
@@ -114,7 +114,7 @@ export function ProposalsWeeklyReview({ proposals }: ProposalsWeeklyReviewProps)
           label="Ancora pending"
           value={summary.pendingCount}
           amountLabel={formatProposalCurrency(summary.pendingTotalValue)}
-          hint="Create in settimana, non chiuse Si/No entro domenica"
+          hint="Create in settimana o in quella prima, non chiuse Si/No entro domenica"
           valueClassName="proposals-kpi-pending"
         />
       </div>

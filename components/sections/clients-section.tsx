@@ -256,12 +256,18 @@ export function ClientsSection() {
     setDrawerOpen(true);
   };
 
+  // Etichetta della colonna, usata dal layout a schede su mobile.
+  const cellAttrs = (columnId: string) => ({
+    'data-col': columnId,
+    'data-label': CRM_TABLE_COLUMN_DEFS[columnId as keyof typeof CRM_TABLE_COLUMN_DEFS]?.label,
+  });
+
   const renderCell = (client: Client, columnId: string) => {
     switch (columnId) {
       case 'name': {
         const isDraft = shouldHighlightIncompleteClient(client);
         return (
-          <td key={columnId} className="col-nome">
+          <td key={columnId} {...cellAttrs(columnId)} className="col-nome">
             <div className="client-name-cell">
               <ChevronRight
                 size={14}
@@ -291,7 +297,7 @@ export function ClientsSection() {
       }
       case 'type':
         return (
-          <td key={columnId}>
+          <td key={columnId} {...cellAttrs(columnId)}>
             <select
               className="table-cell-select"
               value={client.type}
@@ -303,7 +309,7 @@ export function ClientsSection() {
         );
       case 'owner':
         return (
-          <td key={columnId}>
+          <td key={columnId} {...cellAttrs(columnId)}>
             <select
               className="table-cell-select"
               value={client.owner}
@@ -315,7 +321,7 @@ export function ClientsSection() {
         );
       case 'clientOrigin':
         return (
-          <td key={columnId} className={`cell-origin ${getClientOriginCellClass(client.clientOrigin)}`}>
+          <td key={columnId} {...cellAttrs(columnId)} className={`cell-origin ${getClientOriginCellClass(client.clientOrigin)}`}>
             <ClientOriginSelect
               value={client.clientOrigin}
               onChange={(value) => void updateClientField(client.id, 'clientOrigin', value)}
@@ -324,7 +330,7 @@ export function ClientsSection() {
         );
       case 'relationship':
         return (
-          <td key={columnId} onClick={(event) => event.stopPropagation()}>
+          <td key={columnId} {...cellAttrs(columnId)} onClick={(event) => event.stopPropagation()}>
             <select
               className="table-cell-select"
               value={client.relationship}
@@ -340,10 +346,10 @@ export function ClientsSection() {
       case 'rev2023': {
         const groupRevenue = groupRevenueById.get(client.id)?.[columnId] || 0;
         if (groupRevenue === 0) {
-          return <td key={columnId} style={{ textAlign: 'right' }}>{formatCurrency(client[columnId])}</td>;
+          return <td key={columnId} {...cellAttrs(columnId)} style={{ textAlign: 'right' }}>{formatCurrency(client[columnId])}</td>;
         }
         return (
-          <td key={columnId} style={{ textAlign: 'right' }}>
+          <td key={columnId} {...cellAttrs(columnId)} style={{ textAlign: 'right' }}>
             <span
               className="client-group-revenue"
               title={`Proprio: ${formatCurrency(client[columnId])} · Ragioni sociali del gruppo: ${formatCurrency(groupRevenue)}`}
@@ -356,7 +362,7 @@ export function ClientsSection() {
       }
       case 'actions':
         return (
-          <td key={columnId}>
+          <td key={columnId} {...cellAttrs(columnId)}>
             <div className="table-row-actions">
               <button type="button" className="btn-table-action apollo" title="Apollo" onClick={() => void enrichClientApollo(client.id)}>
                 <Sparkles size={16} />
@@ -371,7 +377,7 @@ export function ClientsSection() {
           </td>
         );
       default:
-        return <td key={columnId} />;
+        return <td key={columnId} {...cellAttrs(columnId)} />;
     }
   };
 
@@ -510,7 +516,7 @@ export function ClientsSection() {
           </div>
           <div className="table-container">
             <div className="crm-table-scroll-viewport" ref={tableViewportRef}>
-              <table className="crm-table" ref={tableRef}>
+              <table className="crm-table crm-table-cards" ref={tableRef}>
                 <thead>
                   <tr>
                     {tableColumnOrder.map((colId) => {

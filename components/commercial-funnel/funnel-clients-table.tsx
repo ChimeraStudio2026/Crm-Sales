@@ -59,6 +59,16 @@ function resolveDisplayOwner(entry: CommercialFunnelEntry, client?: Client): str
   return '';
 }
 
+/** Colonne vuote aggiunte solo per allineare la tabella: su mobile non servono. */
+function isSpareActionSlot(
+  actions: CommercialFunnelEntry['actions'],
+  slotIndex: number,
+  isLocked: boolean,
+): boolean {
+  if (actions[slotIndex]?.type) return false;
+  return isLocked || (slotIndex > 0 && !actions[slotIndex - 1]?.type);
+}
+
 export function FunnelClientsTable({
   campaignId,
   entries,
@@ -335,7 +345,7 @@ export function FunnelClientsTable({
                             </select>
                           )}
                         </td>
-                        <td className="funnel-col-owner">
+                        <td className="funnel-col-owner" data-label="Owner">
                           <select
                             className="table-cell-select funnel-owner-select"
                             value={displayOwner}
@@ -347,7 +357,7 @@ export function FunnelClientsTable({
                             ))}
                           </select>
                         </td>
-                        <td className="funnel-col-status">
+                        <td className="funnel-col-status" data-label="Status">
                           <div className="funnel-status-cell">
                             <span className="funnel-status-label">{status.label}</span>
                             {status.date && (
@@ -361,7 +371,11 @@ export function FunnelClientsTable({
                           </div>
                         </td>
                         {displayActions.map((action, slotIndex) => (
-                          <td key={`${entry.id}-action-${slotIndex}`} className="funnel-col-action">
+                          <td
+                            key={`${entry.id}-action-${slotIndex}`}
+                            className={`funnel-col-action${isSpareActionSlot(displayActions, slotIndex, isLocked) ? ' is-spare-slot' : ''}`}
+                            data-label={`Azione ${slotIndex + 1}`}
+                          >
                             <div className="funnel-action-cell">
                               <select
                                 className={`table-cell-select funnel-action-select${isPositiveFunnelActionType(action.type) ? ' is-positive' : ''}`}

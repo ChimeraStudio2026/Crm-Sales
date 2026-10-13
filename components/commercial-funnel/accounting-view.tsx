@@ -555,7 +555,7 @@ export function AccountingView() {
         </div>
       </div>
       <div className="commercial-funnel-table-wrap glass-card">
-        <table className="analysis-table accounting-table">
+        <table className="analysis-table accounting-table mobile-card-table">
           <thead>
             <tr>
               <th className="funnel-col-semaforo">Semaforo</th>
@@ -586,8 +586,8 @@ export function AccountingView() {
                 const isExpanded = expandedClientId === row.client.id;
                 return (
                   <Fragment key={row.client.id}>
-                    <tr className={`accounting-row is-${row.status === 'open' ? row.semaforo : row.status}`}>
-                      <td className="funnel-col-semaforo">
+                    <tr className={`mobile-card-row accounting-row is-${row.status === 'open' ? row.semaforo : row.status}`}>
+                      <td className="funnel-col-semaforo is-card-lead">
                         {row.status === 'open' ? (
                           <span
                             className={`funnel-semaforo funnel-semaforo-${row.semaforo}`}
@@ -598,7 +598,7 @@ export function AccountingView() {
                           <StatusBadge status={row.status} />
                         )}
                       </td>
-                      <td>
+                      <td className="is-card-title">
                         <button
                           type="button"
                           className="funnel-client-toggle"
@@ -608,8 +608,8 @@ export function AccountingView() {
                           <strong>{row.client.name}</strong>
                         </button>
                       </td>
-                      <td>{resolveContactLabel(row.client, row.lastAction.contactId)}</td>
-                      <td>
+                      <td data-label="Contatto">{resolveContactLabel(row.client, row.lastAction.contactId)}</td>
+                      <td data-label="Owner">
                         <select
                           className="table-cell-select"
                           value={resolveRowOwner(row)}
@@ -623,7 +623,7 @@ export function AccountingView() {
                           ))}
                         </select>
                       </td>
-                      <td className="accounting-note-cell">
+                      <td className="accounting-note-cell is-card-full" data-label="Ultima azione">
                         {row.closure?.note
                           ? row.closure.note
                           : row.lastAction.note || row.lastAction.actionType}
@@ -631,8 +631,8 @@ export function AccountingView() {
                           <small className="accounting-objective">Obiettivo: {row.lastAction.objective}</small>
                         )}
                       </td>
-                      <td>{formatActionDateDisplay(row.lastAction.actionDate)}</td>
-                      <td>
+                      <td data-label="Data">{formatActionDateDisplay(row.lastAction.actionDate)}</td>
+                      <td data-label={row.closure ? 'Chiuso' : 'Scadenza'}>
                         {row.closure ? (
                           <span className={`accounting-due is-${row.status}`}>
                             {formatActionDateDisplay(row.closure.actionDate)}
@@ -643,7 +643,7 @@ export function AccountingView() {
                           </span>
                         )}
                       </td>
-                      <td className="accounting-row-actions">
+                      <td className="accounting-row-actions is-card-actions">
                         {row.status === 'open' && (
                           <button
                             type="button"
@@ -668,7 +668,7 @@ export function AccountingView() {
                       </td>
                     </tr>
                     {isExpanded && (
-                      <tr className="accounting-history-row">
+                      <tr className="accounting-history-row mobile-card-detail">
                         <td colSpan={8}>
                           <ul className="accounting-history">
                             {row.closure && (

@@ -33,7 +33,8 @@ export function TopHeader({ onQuickAdd }: TopHeaderProps) {
         <ThemeToggleButton />
         {showRevenue && (
           <div className="quick-stats-badge">
-            <span>Fatturato 2026: </span>
+            <span className="quick-stats-label-long">Fatturato 2026: </span>
+            <span className="quick-stats-label-short">Fatt. 2026 </span>
             <strong id="header-total-revenue">{formatCurrency(totalRevenue2026)}</strong>
           </div>
         )}

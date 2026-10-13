@@ -11435,3 +11435,733 @@ a.btn:hover {
         grid-template-columns: 1fr;
     }
 }
+
+/* ==========================================================================
+   MOBILE: funnel a schede
+   Su telefono ogni riga del funnel diventa una scheda: niente scroll laterale
+   per arrivare a owner, status e azioni.
+   ========================================================================== */
+@media (max-width: 768px) {
+    .commercial-funnel-table-wrap.glass-card {
+        padding: 0;
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        overflow: visible;
+    }
+
+    .commercial-funnel-table-scroll {
+        overflow: visible;
+    }
+
+    table.commercial-funnel-table {
+        display: block;
+        min-width: 0;
+        width: 100%;
+        border-collapse: separate;
+    }
+
+    .commercial-funnel-table thead {
+        display: none;
+    }
+
+    .commercial-funnel-table tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .commercial-funnel-table tr.funnel-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 8px 10px;
+        padding: 14px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        background: var(--bg-card);
+        box-shadow: var(--shadow-sm);
+        transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+
+    .commercial-funnel-table tr.funnel-row.is-focused {
+        border-color: var(--primary);
+        box-shadow: var(--shadow-glow);
+    }
+
+    .commercial-funnel-table tr.funnel-row.is-lost {
+        background: color-mix(in srgb, var(--bg-card) 94%, #f64330);
+        box-shadow: inset 4px 0 0 #f64330;
+    }
+
+    .commercial-funnel-table tr.funnel-row.is-converted {
+        background: color-mix(in srgb, var(--bg-card) 92%, #6fa460);
+        box-shadow: inset 4px 0 0 #6fa460;
+    }
+
+    .commercial-funnel-table tr.funnel-row > td,
+    .commercial-funnel-table tr.funnel-row:hover > td,
+    .commercial-funnel-table tr.funnel-row.is-focused > td {
+        display: block;
+        position: static;
+        min-width: 0;
+        padding: 0;
+        border: none;
+        background: transparent;
+    }
+
+    .commercial-funnel-table tr.funnel-row > td.funnel-col-semaforo {
+        flex: 0 0 auto;
+        width: auto;
+        padding-top: 4px;
+    }
+
+    .commercial-funnel-table tr.funnel-row > td.funnel-col-client {
+        flex: 1 1 calc(100% - 40px);
+        min-width: 0;
+        margin-bottom: 4px;
+    }
+
+    .commercial-funnel-table .funnel-client-toggle {
+        display: flex;
+        flex-wrap: wrap;
+        width: 100%;
+        min-height: 32px;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .commercial-funnel-table .funnel-client-toggle-text {
+        flex: 1 1 0;
+    }
+
+    .commercial-funnel-table .funnel-client-toggle-text strong {
+        font-size: 1rem;
+        overflow-wrap: anywhere;
+    }
+
+    .commercial-funnel-table .funnel-client-toggle-text small {
+        overflow-wrap: anywhere;
+    }
+
+    .commercial-funnel-table .funnel-entry-contact-select {
+        margin-top: 6px;
+        max-width: 100%;
+    }
+
+    /* Owner e status affiancati, poi le azioni in griglia da due. */
+    .commercial-funnel-table tr.funnel-row > td.funnel-col-owner,
+    .commercial-funnel-table tr.funnel-row > td.funnel-col-status,
+    .commercial-funnel-table tr.funnel-row > td.funnel-col-action {
+        flex: 1 1 calc(50% - 5px);
+        max-width: calc(50% - 5px);
+    }
+
+    .commercial-funnel-table tr.funnel-row > td.funnel-col-owner {
+        padding-left: 0;
+    }
+
+    .commercial-funnel-table tr.funnel-row > td[data-label]::before {
+        content: attr(data-label);
+        display: block;
+        margin-bottom: 4px;
+        color: var(--text-muted);
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    .commercial-funnel-table tr.funnel-row > td.funnel-col-action.is-spare-slot {
+        display: none;
+    }
+
+    .commercial-funnel-table tr.funnel-row .table-cell-select,
+    .commercial-funnel-table tr.funnel-row .funnel-owner-select,
+    .commercial-funnel-table tr.funnel-row .funnel-action-select {
+        width: 100%;
+        min-width: 0;
+        max-width: none;
+        min-height: 40px;
+        padding: 8px 26px 8px 10px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-sm);
+        background-color: var(--bg-subtle);
+        text-overflow: ellipsis;
+    }
+
+    .commercial-funnel-table .funnel-status-cell {
+        min-height: 40px;
+        justify-content: center;
+    }
+
+    .commercial-funnel-table .funnel-lost-reason-preview {
+        max-width: 100%;
+    }
+
+    .commercial-funnel-table tr.funnel-row > td.funnel-col-actions {
+        flex: 1 1 100%;
+        padding-top: 10px;
+        border-top: 1px dashed var(--border-color);
+    }
+
+    .commercial-funnel-table tr.funnel-row > td.funnel-col-actions .table-row-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+
+    .commercial-funnel-table tr.funnel-row > td.funnel-col-actions .table-cell-select {
+        flex: 1 1 140px;
+        width: auto;
+    }
+
+    .commercial-funnel-table tr.funnel-row .btn-table-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: auto;
+        min-width: 40px;
+        min-height: 40px;
+        padding: 0 12px;
+        white-space: nowrap;
+    }
+
+    /* Dettaglio espanso attaccato alla sua scheda. */
+    .commercial-funnel-table tr.funnel-row-expanded {
+        display: block;
+        margin-top: -14px;
+        border: 1px solid var(--border-color);
+        border-top: none;
+        border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+        background: var(--bg-subtle);
+        overflow: hidden;
+    }
+
+    .commercial-funnel-table tr.funnel-row:has(+ tr.funnel-row-expanded) {
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+
+    .commercial-funnel-table tr.funnel-row-expanded > td {
+        display: block;
+        padding: 0;
+        background: transparent;
+    }
+
+    .commercial-funnel-table .funnel-expanded-body {
+        flex-direction: column;
+        gap: 14px;
+        padding: 14px;
+    }
+
+    .commercial-funnel-table .funnel-expanded-block {
+        min-width: 0;
+    }
+
+    .commercial-funnel-table .funnel-action-notes-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .commercial-funnel-table .mail-campaigns-empty {
+        display: block;
+        padding: 24px 16px;
+        text-align: center;
+    }
+
+    .commercial-funnel-table tbody > tr:only-child:not(.funnel-row) {
+        display: block;
+        border: 1px dashed var(--border-color);
+        border-radius: var(--radius-lg);
+        background: var(--bg-card);
+    }
+}
+
+/* ==========================================================================
+   MOBILE: header compatto
+   Titolo e tema sulla stessa riga del menu, azienda e fatturato in una riga
+   sottile sotto: il contenuto parte subito.
+   ========================================================================== */
+@media (max-width: 768px) {
+    .top-header {
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 10px;
+        min-height: 0;
+        padding:
+            max(12px, env(safe-area-inset-top, 0px))
+            calc(14px + env(safe-area-inset-right, 0px))
+            6px
+            calc(14px + env(safe-area-inset-left, 0px));
+    }
+
+    .top-header .header-actions {
+        display: contents;
+    }
+
+    .top-header .page-title {
+        order: 1;
+        flex: 1 1 calc(100% - 118px);
+        min-width: 0;
+        margin-left: 54px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        padding-right: 0;
+    }
+
+    .top-header .page-title h1 {
+        gap: 8px;
+        font-size: 1.3rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .top-header .theme-toggle-btn {
+        order: 2;
+        flex: 0 0 auto;
+        width: 44px;
+        height: 44px;
+    }
+
+    .top-header .workspace-selector,
+    .top-header .quick-stats-badge {
+        order: 3;
+        flex: 1 1 auto;
+        width: auto;
+        min-width: 0;
+        min-height: 34px;
+        margin: 0;
+        padding: 4px 12px;
+        font-size: 0.78rem;
+    }
+
+    .top-header .workspace-selector {
+        flex: 0 1 auto;
+        max-width: 55%;
+    }
+
+    .top-header .quick-stats-badge {
+        flex: 1 1 0;
+    }
+
+    .top-header .workspace-selector-label,
+    .top-header .workspace-selector-badge {
+        display: none;
+    }
+
+    .top-header .workspace-selector-select {
+        min-width: 0;
+        max-width: 100%;
+        font-size: 16px;
+        text-overflow: ellipsis;
+    }
+
+    .top-header .quick-stats-badge {
+        justify-content: center;
+        white-space: nowrap;
+    }
+
+    .top-header .quick-stats-label-long {
+        display: none;
+    }
+
+    .top-header #btn-quick-add {
+        order: 4;
+        flex: 1 1 100%;
+        min-height: 40px;
+        padding: 8px 16px;
+    }
+
+    /* Il menu resta raggiungibile anche scorrendo, senza coprire il testo. */
+    .mobile-nav-toggle {
+        background: color-mix(in srgb, var(--bg-card) 88%, transparent);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+}
+
+.quick-stats-label-short {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .top-header .quick-stats-label-short {
+        display: inline;
+    }
+}
+
+/* ==========================================================================
+   MOBILE: lista clienti a schede
+   ========================================================================== */
+@media (max-width: 768px) {
+    .table-container:has(.crm-table-cards) {
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        overflow: visible;
+    }
+
+    .table-container:has(.crm-table-cards) .crm-table-scroll-viewport {
+        overflow: visible;
+    }
+
+    .table-container:has(.crm-table-cards) .table-h-scroll-bar {
+        display: none;
+    }
+
+    table.crm-table-cards {
+        display: block;
+        width: 100%;
+        table-layout: auto;
+    }
+
+    .crm-table-cards thead {
+        display: none;
+    }
+
+    .crm-table-cards tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .crm-table-cards tr.client-row-expandable {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px 12px;
+        padding: 14px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        background: var(--bg-card);
+        box-shadow: var(--shadow-sm);
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .crm-table-cards tr.client-row-expandable.is-row-expanded {
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+
+    .crm-table-cards tr.client-row-expandable.client-row-eliminato {
+        opacity: 0.6;
+    }
+
+    .crm-table-cards tr.client-row-expandable > td,
+    .crm-table-cards tr.client-row-expandable:hover > td {
+        display: block;
+        position: static;
+        width: auto !important;
+        min-width: 0;
+        max-width: none;
+        padding: 0;
+        border: none;
+        background: transparent;
+        text-align: left !important;
+    }
+
+    .crm-table-cards tr.client-row-expandable > td[data-label]:not([data-col="name"]):not([data-col="actions"])::before {
+        content: attr(data-label);
+        display: block;
+        margin-bottom: 4px;
+        color: var(--text-muted);
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    .crm-table-cards tr.client-row-expandable > td[data-col="name"] {
+        grid-column: 1 / -1;
+        order: -2;
+        font-size: 1rem;
+    }
+
+    .crm-table-cards tr.client-row-expandable > td[data-col="name"] .client-name-cell {
+        flex-wrap: wrap;
+        white-space: normal;
+    }
+
+    .crm-table-cards tr.client-row-expandable > td[data-col="name"] strong {
+        overflow-wrap: anywhere;
+    }
+
+    .crm-table-cards tr.client-row-expandable > td[data-col^="rev"] {
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .crm-table-cards tr.client-row-expandable > td[data-col="actions"] {
+        grid-column: 1 / -1;
+        padding-top: 10px;
+        border-top: 1px dashed var(--border-color);
+    }
+
+    .crm-table-cards tr.client-row-expandable > td[data-col="actions"] .table-row-actions {
+        justify-content: flex-end;
+        gap: 8px;
+    }
+
+    .crm-table-cards tr.client-row-expandable > td[data-col="actions"] {
+        padding-top: 8px;
+    }
+
+    .crm-table-cards tr.client-row-expandable .btn-table-action {
+        min-width: 38px;
+        min-height: 38px;
+    }
+
+    .crm-table-cards tr.client-row-expandable > td.cell-origin {
+        padding: 0 !important;
+        background: transparent;
+    }
+
+    .crm-table-cards tr.client-row-expandable .table-cell-select,
+    .crm-table-cards tr.client-row-expandable .cell-origin select {
+        width: 100%;
+        min-height: 40px;
+        padding: 8px 26px 8px 10px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-sm);
+        background-color: var(--bg-subtle);
+        text-overflow: ellipsis;
+    }
+
+    .crm-table-cards tr.client-contacts-detail-row {
+        display: block;
+        margin-top: -10px;
+        border: 1px solid var(--border-color);
+        border-top: none;
+        border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+        overflow: hidden;
+    }
+
+    .crm-table-cards tr.client-contacts-detail-row > td {
+        display: block;
+        width: 100% !important;
+        max-width: none;
+        padding: 0;
+    }
+
+    .crm-table-cards .client-contacts-detail-row .client-detail-panel {
+        position: static;
+        width: 100%;
+    }
+
+    .crm-table-cards tbody > tr:only-child:not(.client-row-expandable) {
+        display: block;
+    }
+
+    .crm-table-cards tbody > tr:only-child:not(.client-row-expandable) > td {
+        display: block;
+    }
+}
+
+/* ==========================================================================
+   MOBILE: tabelle a schede (generico)
+   .mobile-card-table + tr.mobile-card-row; ogni td con data-label mostra la
+   sua etichetta. is-card-title / is-card-full / is-card-actions occupano la
+   riga intera, is-card-stat un quarto, is-card-lead resta accanto al titolo.
+   ========================================================================== */
+@media (max-width: 768px) {
+    .commercial-funnel-table-wrap:has(> .mobile-card-table),
+    .commercial-funnel-table-wrap:has(.mobile-card-table),
+    .funnel-brand-search-panel:has(.mobile-card-table) {
+        padding: 0;
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        overflow: visible;
+    }
+
+    table.mobile-card-table {
+        display: block;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .mobile-card-table thead {
+        display: none;
+    }
+
+    .mobile-card-table tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .mobile-card-table tr.mobile-card-row {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px 12px;
+        padding: 14px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        background: var(--bg-card);
+        box-shadow: var(--shadow-sm);
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .mobile-card-table tr.mobile-card-row > td,
+    .mobile-card-table tr.mobile-card-row:hover > td {
+        display: block;
+        grid-column: span 2;
+        position: static;
+        width: auto;
+        min-width: 0;
+        max-width: none;
+        padding: 0;
+        border: none;
+        background: transparent;
+        text-align: left;
+        white-space: normal;
+    }
+
+    .mobile-card-table tr.mobile-card-row > td[data-label]::before {
+        content: attr(data-label);
+        display: block;
+        margin-bottom: 4px;
+        color: var(--text-muted);
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    .mobile-card-table tr.mobile-card-row > td.is-card-title {
+        grid-column: 1 / -1;
+        font-size: 1rem;
+        font-weight: 700;
+        overflow-wrap: anywhere;
+    }
+
+    .mobile-card-table tr.mobile-card-row:has(> td.is-card-lead) {
+        position: relative;
+    }
+
+    .mobile-card-table tr.mobile-card-row > td.is-card-lead,
+    .mobile-card-table tr.mobile-card-row:hover > td.is-card-lead {
+        position: absolute;
+        top: 16px;
+        right: 14px;
+        left: auto;
+        width: auto;
+    }
+
+    .mobile-card-table tr.mobile-card-row:has(> td.is-card-lead) > td.is-card-title {
+        padding-right: 72px;
+    }
+
+    .mobile-card-table tr.mobile-card-row > td.accounting-note-cell {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 4;
+        overflow: hidden;
+    }
+
+    .mobile-card-table tr.mobile-card-row > td.accounting-note-cell::before {
+        display: block;
+    }
+
+    .mobile-card-table tr.mobile-card-row > td.is-card-full {
+        grid-column: 1 / -1;
+    }
+
+    .mobile-card-table tr.mobile-card-row > td.is-card-stat {
+        order: 1;
+        grid-column: span 1;
+        font-size: 1.05rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .mobile-card-table tr.mobile-card-row:has(> td.is-card-stat) > td.funnel-campaign-date,
+    .mobile-card-table tr.mobile-card-row > td.is-card-stat ~ td:not(.is-card-stat) {
+        order: 2;
+    }
+
+    .mobile-card-table tr.mobile-card-row > td.is-card-actions {
+        order: 3;
+        grid-column: 1 / -1;
+        padding-top: 10px;
+        border-top: 1px dashed var(--border-color);
+    }
+
+    .mobile-card-table tr.mobile-card-row > td.is-card-actions > * {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+
+    .mobile-card-table tr.mobile-card-row > td.is-card-actions.accounting-row-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+
+    .mobile-card-table tr.mobile-card-row .btn-table-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        width: auto;
+        min-height: 40px;
+        min-width: 40px;
+        padding: 0 12px;
+        white-space: nowrap;
+    }
+
+    .mobile-card-table tr.mobile-card-row .table-cell-select,
+    .mobile-card-table tr.mobile-card-row .mail-campaign-status-select {
+        width: 100%;
+        min-width: 0;
+        min-height: 40px;
+        padding: 8px 26px 8px 10px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-sm);
+        background-color: var(--bg-subtle);
+        text-overflow: ellipsis;
+    }
+
+    .mobile-card-table tr.mobile-card-row .funnel-client-toggle {
+        display: flex;
+        width: 100%;
+        min-height: 32px;
+    }
+
+    .mobile-card-table tr.mobile-card-detail {
+        display: block;
+        margin-top: -14px;
+        border: 1px solid var(--border-color);
+        border-top: none;
+        border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+        background: var(--bg-subtle);
+        overflow: hidden;
+    }
+
+    .mobile-card-table tr.mobile-card-row:has(+ tr.mobile-card-detail) {
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+
+    .mobile-card-table tr.mobile-card-detail > td {
+        display: block;
+        padding: 14px;
+        background: transparent;
+    }
+
+    .mobile-card-table tbody > tr:only-child:not(.mobile-card-row) {
+        display: block;
+        border: 1px dashed var(--border-color);
+        border-radius: var(--radius-lg);
+        background: var(--bg-card);
+    }
+
+    .mobile-card-table tbody > tr:only-child:not(.mobile-card-row) > td {
+        display: block;
+        padding: 24px 16px;
+        text-align: center;
+    }
+}

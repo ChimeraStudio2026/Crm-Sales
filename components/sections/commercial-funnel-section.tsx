@@ -389,7 +389,7 @@ export function CommercialFunnelSection() {
               {brandSearchResults.length === 0 ? (
                 <p className="funnel-brand-search-message">Nessun brand trovato nel funnel.</p>
               ) : (
-                <table className="analysis-table funnel-brand-search-table">
+                <table className="analysis-table funnel-brand-search-table mobile-card-table">
                   <thead>
                     <tr>
                       <th>Brand</th>
@@ -408,23 +408,23 @@ export function CommercialFunnelSection() {
                       return (
                         <tr
                           key={result.entryId}
-                          className="funnel-brand-search-row"
+                          className="funnel-brand-search-row mobile-card-row"
                           onClick={() => router.push(entryHref)}
                         >
-                          <td>{result.clientName}</td>
-                          <td>{result.campaignName}</td>
-                          <td>
+                          <td className="is-card-title">{result.clientName}</td>
+                          <td data-label="Campagna">{result.campaignName}</td>
+                          <td data-label="Stage">
                             {status?.label || '—'}
                             {status?.date ? ` (${formatActionDateDisplay(status.date)})` : ''}
                           </td>
-                          <td>
+                          <td data-label="Semaforo">
                             <span
                               className={`funnel-semaforo funnel-semaforo-${semaforo}`}
                               title={semaforo === 'red' ? 'Fuori tempo (oltre 5 giorni)' : 'In tempo (entro 5 giorni)'}
                               aria-label={semaforo === 'red' ? 'Semaforo rosso' : 'Semaforo verde'}
                             />
                           </td>
-                          <td>
+                          <td className="is-card-actions">
                             <Link
                               href={entryHref}
                               className="funnel-brand-search-link"
@@ -442,7 +442,7 @@ export function CommercialFunnelSection() {
             </div>
           )}
           <div className="commercial-funnel-table-wrap glass-card">
-            <table className="analysis-table commercial-funnel-table">
+            <table className="analysis-table commercial-funnel-table mobile-card-table">
               <thead>
                 <tr>
                   <th>Campagna</th>
@@ -470,11 +470,11 @@ export function CommercialFunnelSection() {
                   </tr>
                 ) : (
                   displayRows.map(({ campaign, totalClients, activeCount, convertedCount, lostCount, redSemaforoCount }) => (
-                    <tr key={campaign.id}>
-                      <td>
+                    <tr key={campaign.id} className="mobile-card-row">
+                      <td className="is-card-title">
                         <CampaignNameCell campaign={campaign} onSaveName={handleRenameCampaign} />
                       </td>
-                      <td>
+                      <td data-label="Owner">
                         <select
                           className="table-cell-select"
                           value={campaign.owner}
@@ -489,18 +489,18 @@ export function CommercialFunnelSection() {
                           ))}
                         </select>
                       </td>
-                      <td>
+                      <td data-label="Stato">
                         <CampaignStatusSelect
                           value={campaign.status}
                           onChange={(nextStatus) => void handleStatusChange(campaign.id, nextStatus)}
                         />
                       </td>
-                      <td className="funnel-campaign-date">{campaign.startDate ? formatShortItalianDate(campaign.startDate) : '—'}</td>
-                      <td className="analysis-num">{totalClients}</td>
-                      <td className="analysis-num">{activeCount}</td>
-                      <td className="analysis-num funnel-converted-count">{convertedCount}</td>
-                      <td className="analysis-num">{lostCount}</td>
-                      <td className="analysis-num">
+                      <td className="funnel-campaign-date" data-label="Inizio">{campaign.startDate ? formatShortItalianDate(campaign.startDate) : '—'}</td>
+                      <td className="analysis-num is-card-stat" data-label="Clienti">{totalClients}</td>
+                      <td className="analysis-num is-card-stat" data-label="Attivi">{activeCount}</td>
+                      <td className="analysis-num funnel-converted-count is-card-stat" data-label="Convertiti">{convertedCount}</td>
+                      <td className="analysis-num is-card-stat" data-label="Persi">{lostCount}</td>
+                      <td className="analysis-num" data-label="Semaforo">
                         <span
                           className={`funnel-semaforo-count${redSemaforoCount > 0 ? ' has-red' : ''}`}
                           title={redSemaforoCount > 0
@@ -514,7 +514,7 @@ export function CommercialFunnelSection() {
                           {redSemaforoCount}
                         </span>
                       </td>
-                      <td>
+                      <td className="is-card-actions">
                         <CampaignTableActions
                           manageHref={`/funnel/${campaign.id}`}
                           manageLabel="Apri campagna"

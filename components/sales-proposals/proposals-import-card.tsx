@@ -121,7 +121,7 @@ export function ProposalsImportCard({
         <div>
           <h3><FileSpreadsheet size={18} /> Sincronizzazione da Cerbero</h3>
           <p>
-            Le proposte si aggiornano da sole ogni giorno alle 6:55 e alle 13:55.
+            Le proposte si aggiornano da sole ogni giorno alle 7:10, alle 14:10 e alle 18:10.
             Per un aggiornamento manuale carica qui lo scarico CSV (anche trascinandolo):
             le proposte già presenti (Nome + Creato il) vengono aggiornate.
           </p>

@@ -16,7 +16,10 @@
 //   plan --csv <export.csv> [--cutoff <iso timestamp>] [--margin-hours 48]
 //        [--workspace chimera] [--out <dir>]
 //       Writes <dir>/summary.json, <dir>/preview.sql (read-only: classifies each
-//       candidate as new / changed / same) and <dir>/upsert-001.sql, ... .
+//       candidate as new / changed / same), <dir>/upsert-001.sql, ... and
+//       <dir>/reconcile.sql (run last: removes the old version of a proposal
+//       renamed in Cerbero, since the upsert key includes the name; needs the
+//       public.reconcile_sales_proposals function).
 //       Without --cutoff every proposal in the CSV is a candidate.
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -95,6 +98,20 @@ function buildUpsertSql(rows, workspaceId, importBatch) {
     + 'returning (xmax = 0) as inserted, nome, stato;\n';
 }
 
+// A proposal renamed in Cerbero keeps its code but gets a new name, so the upsert
+// inserts a new row: drop the rows with a touched code that are no longer in the
+// export. Legacy proposals share a code, so the kept rows come from the whole CSV.
+function buildReconcileSql(candidates, allRows, workspaceId) {
+  const codes = new Set(candidates.map((row) => row.code).filter(Boolean));
+  if (codes.size === 0) return null;
+  const current = allRows
+    .filter((row) => codes.has(row.code))
+    .map((row) => ({ nome: row.nome, creato_il: row.creatoIl }));
+  const codeList = [...codes].map(sqlText).join(', ');
+  return `select * from public.reconcile_sales_proposals(${sqlText(workspaceId)}, array[${codeList}],\n`
+    + `  ${sqlText(JSON.stringify(current))}::jsonb);\n`;
+}
+
 function buildPreviewSql(rows, workspaceId, importBatch) {
   const differs = COMPARED_COLUMNS
     .map((column) => `p.${column} is distinct from i.${column}`)
@@ -161,6 +178,11 @@ function plan(args) {
       buildUpsertSql(candidates.slice(offset, offset + ROWS_PER_SQL_FILE), workspaceId, importBatch),
     );
     sqlFiles.push(fileName);
+  }
+  const reconcileSql = buildReconcileSql(candidates, parsed.rows, workspaceId);
+  if (reconcileSql) {
+    writeFileSync(join(outDir, 'reconcile.sql'), reconcileSql);
+    sqlFiles.push('reconcile.sql');
   }
   if (candidates.length > 0) {
     writeFileSync(join(outDir, 'preview.sql'), buildPreviewSql(candidates, workspaceId, importBatch));

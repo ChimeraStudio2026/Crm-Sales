@@ -249,7 +249,7 @@ export function applyColdClientPromotion(
       client: {
         ...synced,
         isColdClient: false,
-        relationship: resolveAutoRelationship(synced.rev2026),
+        relationship: resolveAutoRelationship(synced),
         manualRelationship: false,
       },
     };

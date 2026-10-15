@@ -78,7 +78,6 @@ export const RELATIONSHIPS: Relationship[] = [
   'Freddo',
   'Nuovo Cliente',
   'Ricorrente',
-  'Top 20%',
   'Da recuperare',
   'Eliminato',
 ];

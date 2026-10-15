@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Sparkles, X } from 'lucide-react';
-import { CLIENT_TYPES, RELATIONSHIPS } from '@/lib/constants/crm';
+import { CLIENT_TYPES } from '@/lib/constants/crm';
+import { resolveAutoRelationship } from '@/lib/crm/relationship-rules';
 import { DEFAULT_WORKSPACE_ID } from '@/lib/constants/workspaces';
 import {
   getClientOriginsForWorkspace,
@@ -35,7 +36,7 @@ export function ClientDrawer({ client, isCold, workspaceId, onClose }: ClientDra
   const [type, setType] = useState(CLIENT_TYPES[0]);
   const [owner, setOwner] = useState<Owner>(() => getDefaultOwnerForWorkspace(resolvedWorkspaceId));
   const [clientOrigin, setClientOrigin] = useState<Client['clientOrigin']>('');
-  // Un cliente nuovo parte sempre Freddo: diventa caldo quando fattura (sync Cerbero).
+  // Il rapporto è automatico dal fatturato; si sceglie solo «Eliminato».
   const [relationship, setRelationship] = useState<Client['relationship']>('Freddo');
   const [rev2023, setRev2023] = useState(0);
   const [rev2024, setRev2024] = useState(0);
@@ -46,6 +47,7 @@ export function ClientDrawer({ client, isCold, workspaceId, onClose }: ClientDra
     { id: createUniqueId('contact'), email: '', name: '', role: '', phone: '' },
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const autoRelationship = resolveAutoRelationship({ rev2023, rev2024, rev2025, rev2026 });
 
   useEffect(() => {
     if (client) {
@@ -82,14 +84,14 @@ export function ClientDrawer({ client, isCold, workspaceId, onClose }: ClientDra
           type,
           owner,
           clientOrigin,
-          relationship: client ? relationship : 'Freddo',
+          relationship: client && relationship === 'Eliminato' ? 'Eliminato' : autoRelationship,
           rev2023,
           rev2024,
           rev2025,
           rev2026,
           description,
           contacts: filledContacts,
-          manualRelationship: client?.manualRelationship ?? true,
+          manualRelationship: client ? relationship === 'Eliminato' : false,
         },
         { isEdit: !!client, id: client?.id, isCold: client ? isCold : true, workspaceId },
       );
@@ -143,9 +145,18 @@ export function ClientDrawer({ client, isCold, workspaceId, onClose }: ClientDra
               <>
             <div className="form-group">
               <label htmlFor="form-relationship">Stato Rapporto</label>
-              <select id="form-relationship" className="form-select" value={relationship} onChange={(e) => setRelationship(e.target.value as Client['relationship'])}>
-                {RELATIONSHIPS.map((r) => <option key={r} value={r}>{r}</option>)}
+              <select
+                id="form-relationship"
+                className="form-select"
+                value={relationship === 'Eliminato' ? 'Eliminato' : 'auto'}
+                onChange={(e) => setRelationship(e.target.value === 'Eliminato' ? 'Eliminato' : autoRelationship)}
+              >
+                <option value="auto">Automatico · {client && client.relationship !== 'Eliminato' ? client.relationship : autoRelationship}</option>
+                <option value="Eliminato">Eliminato</option>
               </select>
+              <small className="accounting-red-after-hint">
+                Si calcola dal fatturato: Freddo, Nuovo Cliente, Ricorrente o Da recuperare. Solo «Eliminato» si sceglie a mano.
+              </small>
             </div>
             <div className="form-group">
               <label htmlFor="form-rev-2023">Fatturato 2023 (€)</label>

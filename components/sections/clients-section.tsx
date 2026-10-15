@@ -7,11 +7,11 @@ import {
   CLIENT_TYPES,
   CRM_TABLE_COLUMN_DEFS,
   DEFAULT_TABLE_COLUMN_ORDER,
+  ANALYSIS_YEAR,
   OWNERS,
-  RECURRENT_REV_THRESHOLD,
   RELATIONSHIPS,
-  TOP_20_REV_THRESHOLD,
 } from '@/lib/constants/crm';
+import { resolveAutoRelationship } from '@/lib/crm/relationship-rules';
 import {
   formatCurrency,
   shouldHighlightIncompleteClient,
@@ -333,10 +333,16 @@ export function ClientsSection() {
           <td key={columnId} {...cellAttrs(columnId)} onClick={(event) => event.stopPropagation()}>
             <select
               className="table-cell-select"
-              value={client.relationship}
-              onChange={(e) => void updateClientField(client.id, 'relationship', e.target.value)}
+              value={client.relationship === 'Eliminato' ? 'Eliminato' : 'auto'}
+              title="Il rapporto si calcola dal fatturato: puoi solo segnare il cliente come Eliminato."
+              onChange={(e) => void updateClientField(
+                client.id,
+                'relationship',
+                e.target.value === 'Eliminato' ? 'Eliminato' : resolveAutoRelationship(client),
+              )}
             >
-              {RELATIONSHIPS.map((r) => <option key={r} value={r}>{RELATIONSHIP_LABELS[r]}</option>)}
+              <option value="auto">{RELATIONSHIP_LABELS[client.relationship === 'Eliminato' ? resolveAutoRelationship(client) : client.relationship]}</option>
+              <option value="Eliminato">{RELATIONSHIP_LABELS.Eliminato}</option>
             </select>
           </td>
         );
@@ -393,19 +399,19 @@ export function ClientsSection() {
             </summary>
             <div className="clients-relationship-legend recall-legend">
               <span className="recall-legend-item">
-                <strong>⭐</strong> Nuovo Cliente · fino a {formatCurrency(RECURRENT_REV_THRESHOLD)}
+                ❄️ Freddo · mai fatturato
               </span>
               <span className="recall-legend-item">
-                <strong>⭐⭐</strong> Ricorrente · {formatCurrency(RECURRENT_REV_THRESHOLD)}–{formatCurrency(TOP_20_REV_THRESHOLD)}
+                <strong>⭐</strong> Nuovo Cliente · fattura per la prima volta nel {ANALYSIS_YEAR}
               </span>
               <span className="recall-legend-item">
-                <strong>⭐⭐⭐</strong> Top 20% · oltre {formatCurrency(TOP_20_REV_THRESHOLD)}
+                <strong>⭐⭐</strong> Ricorrente · fattura nel {ANALYSIS_YEAR} e anche negli anni prima
               </span>
               <span className="recall-legend-item">
-                ❄️ Freddo · prospect cold
+                🟡 Da recuperare · ha fatturato in passato ma non nel {ANALYSIS_YEAR}
               </span>
               <span className="recall-legend-item">
-                🟡 Da recuperare · 🔴 Eliminato · solo manuali
+                🔴 Eliminato · l&apos;unico da scegliere a mano
               </span>
             </div>
           </details>

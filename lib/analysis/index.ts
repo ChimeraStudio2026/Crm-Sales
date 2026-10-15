@@ -14,7 +14,6 @@ export const PRODUCT_CATEGORIES = ['Prod', 'Mini Prod', 'Content', 'Evento'] as 
 export const RELATIONSHIP_ROWS = [
   { key: 'Nuovo Cliente', label: 'New' },
   { key: 'Ricorrente', label: 'Ricorrente' },
-  { key: 'Top 20%', label: 'Top 20%' },
 ] as const;
 
 export const CLIENT_TYPE_ROWS = [

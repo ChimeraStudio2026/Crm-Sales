@@ -182,11 +182,11 @@ export function SettingsSection() {
                 <h3><Info size={20} /> Regole Automatiche del CRM</h3>
               </div>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.6 }}>
-                • <strong>Indice 1 — Nuovo Cliente:</strong> fatturato 2026 da €0 a €10.000<br />
-                • <strong>Indice 2 — Ricorrente:</strong> fatturato 2026 da €10.000 a €30.000<br />
-                • <strong>Indice 3 — Top 20%:</strong> fatturato 2026 oltre €30.000<br />
-                • <strong>Da recuperare</strong> e <strong>Eliminato:</strong> solo impostazione manuale<br />
-                • Puoi cambiare il rapporto a mano dalla lista clienti; resta bloccato finché non lo modifichi di nuovo
+                • <strong>Freddo:</strong> nessun fatturato in nessun anno<br />
+                • <strong>Nuovo Cliente:</strong> fattura nel 2026 ed è il suo primo anno<br />
+                • <strong>Ricorrente:</strong> fattura nel 2026 e anche in almeno un anno precedente<br />
+                • <strong>Da recuperare:</strong> ha fatturato negli anni passati ma non nel 2026<br />
+                • <strong>Eliminato:</strong> l&apos;unico rapporto da scegliere a mano; tutti gli altri sono automatici e non si possono cambiare
               </p>
             </div>
           </div>

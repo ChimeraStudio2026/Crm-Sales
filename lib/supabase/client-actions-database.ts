@@ -13,6 +13,7 @@ interface ClientActionRow {
   red_after_days: number | null;
   outcome: string | null;
   objective: string | null;
+  objective_id?: string | null;
 }
 
 function rowToClientAction(row: ClientActionRow): ClientAction {
@@ -28,6 +29,7 @@ function rowToClientAction(row: ClientActionRow): ClientAction {
     redAfterDays: row.red_after_days ?? null,
     outcome: row.outcome === 'won' || row.outcome === 'lost' ? row.outcome : null,
     objective: row.objective || '',
+    objectiveId: row.objective_id || '',
   };
 }
 
@@ -73,6 +75,7 @@ export async function insertClientAction(
       red_after_days: action.redAfterDays,
       outcome: action.outcome,
       objective: action.objective?.trim() || null,
+      objective_id: action.objectiveId || null,
     })
     .select('*')
     .single();
@@ -94,4 +97,18 @@ export async function updateClientActionsAuthor(
   if (actionIds.length === 0) return;
   const { error } = await db.from('client_actions').update({ author }).in('id', actionIds);
   if (error) throw error;
+}
+
+/** Azioni di un tipo, es. le «Call debrief» già fatte che chiudono i reminder. */
+export async function fetchClientActionsByType(
+  db: SupabaseClient,
+  actionType: string,
+): Promise<ClientAction[]> {
+  const { data, error } = await db
+    .from('client_actions')
+    .select('*')
+    .eq('action_type', actionType)
+    .order('action_date', { ascending: false });
+  if (error) throw error;
+  return (data || []).map((row) => rowToClientAction(row as ClientActionRow));
 }

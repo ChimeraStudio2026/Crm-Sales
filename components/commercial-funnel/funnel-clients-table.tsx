@@ -1,17 +1,17 @@
 'use client';
 
 import { Fragment, useEffect, useMemo, useState } from 'react';
-import { ChevronRight, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { ChevronRight, Plus, RotateCcw, Trash2, X } from 'lucide-react';
 import { FunnelActionNoteBlock } from '@/components/commercial-funnel/funnel-action-note-block';
 import { FunnelClientPicker } from '@/components/commercial-funnel/funnel-client-picker';
+import { FunnelNewActionDrawer } from '@/components/commercial-funnel/funnel-new-action-drawer';
 import { FunnelPersoModal } from '@/components/commercial-funnel/funnel-perso-modal';
 import {
-  getMaxDisplayActionColumns,
+  compactFunnelActions,
   isFunnelActionLocked,
   isFunnelTerminalLost,
   isFunnelTerminalConvertedEntry,
   isPositiveFunnelActionType,
-  padDisplayActions,
   resolveFunnelSemaforo,
   resolveFunnelStageDisplay,
 } from '@/lib/commercial-funnel/index';
@@ -39,8 +39,9 @@ interface PersoModalState {
   entryId: string;
   clientName: string;
   initialReason: string;
-  slotIndex?: number;
 }
+
+const COLUMN_COUNT = 7;
 
 interface FunnelClientsTableProps {
   campaignId: string;
@@ -59,16 +60,6 @@ function resolveDisplayOwner(entry: CommercialFunnelEntry, client?: Client): str
   return '';
 }
 
-/** Colonne vuote aggiunte solo per allineare la tabella: su mobile non servono. */
-function isSpareActionSlot(
-  actions: CommercialFunnelEntry['actions'],
-  slotIndex: number,
-  isLocked: boolean,
-): boolean {
-  if (actions[slotIndex]?.type) return false;
-  return isLocked || (slotIndex > 0 && !actions[slotIndex - 1]?.type);
-}
-
 export function FunnelClientsTable({
   campaignId,
   entries,
@@ -82,12 +73,12 @@ export function FunnelClientsTable({
     addClientsToFunnel,
     updateFunnelAction,
     updateFunnelLostReason,
-    markFunnelEntryLost,
     updateFunnelEntryOwner,
     updateFunnelEntryContact,
     removeFunnelEntry,
     moveFunnelEntryToCampaign,
   } = useCrm();
+  const [newActionEntryId, setNewActionEntryId] = useState('');
   const [showPicker, setShowPicker] = useState(false);
   const [expandedEntries, setExpandedEntries] = useState<Set<string>>(
     () => new Set(expandAll ? entries.map((entry) => entry.id) : focusEntryId ? [focusEntryId] : []),
@@ -131,11 +122,6 @@ export function FunnelClientsTable({
     };
   }, [focusEntryId, hasFocusEntry]);
 
-  const maxActionColumns = useMemo(
-    () => getMaxDisplayActionColumns(entries),
-    [entries],
-  );
-
   const rows = useMemo(
     () => entries
       .map((entry) => ({
@@ -146,18 +132,18 @@ export function FunnelClientsTable({
         isLost: isFunnelTerminalLost(entry),
         isConverted: isFunnelTerminalConvertedEntry(entry),
         isLocked: isFunnelActionLocked(entry),
-        displayActions: padDisplayActions(
-          entry.actions,
-          maxActionColumns,
-          !isFunnelActionLocked(entry),
-        ),
+        // Storico dalla più recente, con la posizione originale per modificare nota e tipo.
+        history: compactFunnelActions(entry.actions)
+          .map((action) => ({ action, slotIndex: entry.actions.indexOf(action) }))
+          .filter(({ action }) => action.type)
+          .reverse(),
       }))
       .sort((a, b) => {
         const nameA = a.client?.name || '';
         const nameB = b.client?.name || '';
         return nameA.localeCompare(nameB, 'it');
       }),
-    [entries, clientById, maxActionColumns],
+    [entries, clientById],
   );
 
   const toggleExpanded = (entryId: string): void => {
@@ -169,32 +155,9 @@ export function FunnelClientsTable({
     });
   };
 
-  const handleActionChange = async (
-    entry: CommercialFunnelEntry,
-    slotIndex: number,
-    value: string,
-  ): Promise<void> => {
-    const actionType = value as FunnelActionType | '';
-    if (actionType === 'Perso') {
-      const client = clientById.get(entry.clientId);
-      setPersoModal({
-        entryId: entry.id,
-        clientName: client?.name || 'Cliente',
-        initialReason: entry.lostReason,
-        slotIndex,
-      });
-      return;
-    }
-    await updateFunnelAction(entry.id, slotIndex, actionType);
-  };
-
   const handlePersoSave = async (reason: string): Promise<void> => {
     if (!persoModal || !reason.trim()) return;
-    if (persoModal.slotIndex !== undefined) {
-      await markFunnelEntryLost(persoModal.entryId, persoModal.slotIndex, reason);
-    } else {
-      await updateFunnelLostReason(persoModal.entryId, reason);
-    }
+    await updateFunnelLostReason(persoModal.entryId, reason);
     setPersoModal(null);
   };
 
@@ -235,6 +198,8 @@ export function FunnelClientsTable({
     [campaignId, campaignTrack, currentCampaign, mailCampaigns],
   );
 
+  const newActionEntry = newActionEntryId ? entries.find((entry) => entry.id === newActionEntryId) : undefined;
+
   return (
     <>
       {showAddButton && (
@@ -254,29 +219,27 @@ export function FunnelClientsTable({
                 <th className="funnel-col-client">Cliente</th>
                 <th className="funnel-col-owner">Owner</th>
                 <th className="funnel-col-status">Status</th>
-                {Array.from({ length: maxActionColumns }, (_, index) => (
-                  <th key={`action-header-${index}`} className="funnel-col-action">
-                    Azione {index + 1}
-                  </th>
-                ))}
+                <th className="funnel-col-last">Ultima azione</th>
+                <th className="funnel-col-date">Data</th>
                 <th className="funnel-col-actions"> </th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={maxActionColumns + 5} className="mail-campaigns-empty">
+                  <td colSpan={COLUMN_COUNT} className="mail-campaigns-empty">
                     Nessun cliente in questa campagna. Usa + per aggiungere clienti.
                   </td>
                 </tr>
               ) : (
-                rows.map(({ entry, client, status, semaforo, isLost, isConverted, isLocked, displayActions }) => {
+                rows.map(({ entry, client, status, semaforo, isLost, isConverted, isLocked, history }) => {
                   const isExpanded = expandedEntries.has(entry.id);
                   const isOutOfTrack = isFunnelEntryOutOfTrack(entry, client, campaignTrack, clients);
                   const clientName = client?.name || 'Cliente non trovato';
                   const contactLabel = resolveFunnelContactLabel(client, entry.contactId);
                   const displayOwner = resolveDisplayOwner(entry, client);
                   const displaySemaforo = isConverted ? 'green' : semaforo;
+                  const lastAction = history[0]?.action;
                   const ownKey = buildFunnelEntryKey(entry.clientId, entry.contactId);
                   const switchableContacts = client
                     ? client.contacts.filter((contact) => {
@@ -370,109 +333,40 @@ export function FunnelClientsTable({
                             )}
                           </div>
                         </td>
-                        {displayActions.map((action, slotIndex) => (
-                          <td
-                            key={`${entry.id}-action-${slotIndex}`}
-                            className={`funnel-col-action${isSpareActionSlot(displayActions, slotIndex, isLocked) ? ' is-spare-slot' : ''}`}
-                            data-label={`Azione ${slotIndex + 1}`}
-                          >
-                            <div className="funnel-action-cell">
-                              <select
-                                className={`table-cell-select funnel-action-select${isPositiveFunnelActionType(action.type) ? ' is-positive' : ''}`}
-                                value={action.type}
-                                disabled={isLocked && action.type !== 'Perso'}
-                                onChange={(e) => void handleActionChange(entry, slotIndex, e.target.value)}
-                              >
-                                <option value="">—</option>
-                                {FUNNEL_ACTION_TYPES.map((type) => (
-                                  <option key={type} value={type}>{type}</option>
-                                ))}
-                              </select>
-                              {action.date && (
-                                <small className="funnel-action-date">
-                                  {formatActionDateDisplay(action.date)}
-                                </small>
-                              )}
-                            </div>
-                          </td>
-                        ))}
+                        <td className="funnel-col-last accounting-note-cell" data-label="Ultima azione">
+                          {lastAction ? (
+                            <>
+                              <span className={`client-last-action-type${isPositiveFunnelActionType(lastAction.type) ? ' is-positive' : ''}`}>
+                                {lastAction.type}
+                              </span>
+                              {lastAction.note && <span className="accounting-last-note">{lastAction.note}</span>}
+                            </>
+                          ) : (
+                            <span className="accounting-empty-note">Nessuna azione ancora</span>
+                          )}
+                        </td>
+                        <td className="funnel-col-date" data-label="Data">
+                          {lastAction?.date ? formatActionDateDisplay(lastAction.date) : '—'}
+                        </td>
                         <td className="funnel-col-actions">
                           <div className="table-row-actions">
-                            {isLost && (
-                              <>
-                                <select
-                                  className="table-cell-select funnel-reactivate-select"
-                                  defaultValue=""
-                                  title="Riattiva cliente: scegli nuova azione"
-                                  onChange={(event) => {
-                                    const value = event.target.value as FunnelActionType;
-                                    if (!value) return;
-                                    void handleReactivate(entry, value);
-                                    event.target.value = '';
-                                  }}
-                                >
-                                  <option value="">Riattiva</option>
-                                  {reactivatableActionTypes.map((type) => (
-                                    <option key={type} value={type}>{type}</option>
-                                  ))}
-                                </select>
-                                <button
-                                  type="button"
-                                  className="btn-table-action"
-                                  title="Riporta a nessuna azione (rimuovi Perso)"
-                                  onClick={() => {
-                                    const persoSlotIndex = getPersoSlotIndex(entry);
-                                    if (persoSlotIndex >= 0) {
-                                      void updateFunnelAction(entry.id, persoSlotIndex, '');
-                                    }
-                                  }}
-                                >
-                                  <RotateCcw size={14} />
-                                </button>
-                                <button
-                                  type="button"
-                                  className="btn-table-action"
-                                  title="Motivo perdita"
-                                  onClick={() => openPersoReason(entry, clientName)}
-                                >
-                                  Motivo
-                                </button>
-                              </>
-                            )}
-                            {otherCampaigns.length > 0 && (
-                              <select
-                                className="table-cell-select funnel-move-campaign-select"
-                                defaultValue=""
-                                title="Sposta in altra campagna"
-                                onChange={(event) => {
-                                  const targetCampaignId = event.target.value;
-                                  if (!targetCampaignId) return;
-                                  void moveFunnelEntryToCampaign(entry.id, targetCampaignId);
-                                  event.target.value = '';
-                                }}
+                            {!isConverted && (
+                              <button
+                                type="button"
+                                className="btn-table-action btn-table-action-primary"
+                                title={isLost ? 'Riattiva con una nuova azione' : 'Nuova azione'}
+                                onClick={() => setNewActionEntryId(entry.id)}
                               >
-                                <option value="">Sposta campagna</option>
-                                {otherCampaigns.map((campaign) => (
-                                  <option key={campaign.id} value={campaign.id}>
-                                    {campaign.name}
-                                  </option>
-                                ))}
-                              </select>
+                                <Plus size={14} />
+                                <span>Azione</span>
+                              </button>
                             )}
-                            <button
-                              type="button"
-                              className="btn-table-action btn-table-action-danger"
-                              title="Rimuovi dalla campagna"
-                              onClick={() => void removeFunnelEntry(entry.id)}
-                            >
-                              <Trash2 size={14} />
-                            </button>
                           </div>
                         </td>
                       </tr>
                       {isExpanded && client && (
                         <tr className="funnel-row-expanded">
-                          <td colSpan={maxActionColumns + 5}>
+                          <td colSpan={COLUMN_COUNT}>
                             <div className="funnel-expanded-body">
                               <div className="funnel-expanded-block">
                                 <span className="funnel-expanded-label">Tipo cliente</span>
@@ -499,6 +393,80 @@ export function FunnelClientsTable({
                                   </ul>
                                 )}
                               </div>
+                              <div className="funnel-expanded-block funnel-expanded-manage">
+                                <span className="funnel-expanded-label">Gestisci</span>
+                                <div className="table-row-actions">
+                                  {isLost && (
+                                    <>
+                                      <select
+                                        className="table-cell-select funnel-reactivate-select"
+                                        defaultValue=""
+                                        title="Riattiva cliente: scegli nuova azione"
+                                        onChange={(event) => {
+                                          const value = event.target.value as FunnelActionType;
+                                          if (!value) return;
+                                          void handleReactivate(entry, value);
+                                          event.target.value = '';
+                                        }}
+                                      >
+                                        <option value="">Riattiva</option>
+                                        {reactivatableActionTypes.map((type) => (
+                                          <option key={type} value={type}>{type}</option>
+                                        ))}
+                                      </select>
+                                      <button
+                                        type="button"
+                                        className="btn-table-action"
+                                        title="Riporta a nessuna azione (rimuovi Perso)"
+                                        onClick={() => {
+                                          const persoSlotIndex = getPersoSlotIndex(entry);
+                                          if (persoSlotIndex >= 0) {
+                                            void updateFunnelAction(entry.id, persoSlotIndex, '');
+                                          }
+                                        }}
+                                      >
+                                        <RotateCcw size={14} />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="btn-table-action"
+                                        title="Motivo perdita"
+                                        onClick={() => openPersoReason(entry, clientName)}
+                                      >
+                                        Motivo
+                                      </button>
+                                    </>
+                                  )}
+                                  {otherCampaigns.length > 0 && (
+                                    <select
+                                      className="table-cell-select funnel-move-campaign-select"
+                                      defaultValue=""
+                                      title="Sposta in altra campagna"
+                                      onChange={(event) => {
+                                        const targetCampaignId = event.target.value;
+                                        if (!targetCampaignId) return;
+                                        void moveFunnelEntryToCampaign(entry.id, targetCampaignId);
+                                        event.target.value = '';
+                                      }}
+                                    >
+                                      <option value="">Sposta campagna</option>
+                                      {otherCampaigns.map((campaign) => (
+                                        <option key={campaign.id} value={campaign.id}>
+                                          {campaign.name}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  )}
+                                  <button
+                                    type="button"
+                                    className="btn-table-action btn-table-action-danger"
+                                    title="Rimuovi dalla campagna"
+                                    onClick={() => void removeFunnelEntry(entry.id)}
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </div>
+                              </div>
                               {entry.lostReason && (
                                 <div className="funnel-expanded-block">
                                   <span className="funnel-expanded-label">Motivo perdita</span>
@@ -506,20 +474,38 @@ export function FunnelClientsTable({
                                 </div>
                               )}
                               <div className="funnel-expanded-block funnel-expanded-notes">
-                                <span className="funnel-expanded-label">Note azioni</span>
-                                <div className="funnel-action-notes-grid">
-                                  {entry.actions.map((action, slotIndex) => (
-                                    action.type ? (
-                                      <FunnelActionNoteBlock
-                                        key={`${entry.id}-note-${slotIndex}`}
-                                        entryId={entry.id}
-                                        slotIndex={slotIndex}
-                                        action={action}
-                                        isLocked={isLocked && action.type !== 'Perso'}
-                                      />
-                                    ) : null
-                                  ))}
-                                </div>
+                                <span className="funnel-expanded-label">Azioni</span>
+                                {history.length === 0 ? (
+                                  <p className="accounting-previous-cycles">Nessuna azione ancora: usa «Azione» per registrare la prima.</p>
+                                ) : (
+                                  <ul className="accounting-history funnel-history">
+                                    {history.map(({ action, slotIndex }) => (
+                                      <li key={`${entry.id}-history-${slotIndex}`}>
+                                        <FunnelActionNoteBlock
+                                          entryId={entry.id}
+                                          slotIndex={slotIndex}
+                                          action={action}
+                                          isLocked={isLocked && action.type !== 'Perso'}
+                                        />
+                                        {!(isLocked && action.type !== 'Perso') && (
+                                          <button
+                                            type="button"
+                                            className="funnel-history-remove"
+                                            title="Elimina questa azione"
+                                            aria-label="Elimina questa azione"
+                                            onClick={() => {
+                                              if (window.confirm(`Eliminare l'azione «${action.type}» del ${formatActionDateDisplay(action.date)}?`)) {
+                                                void updateFunnelAction(entry.id, slotIndex, '');
+                                              }
+                                            }}
+                                          >
+                                            <X size={13} />
+                                          </button>
+                                        )}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
                               </div>
                             </div>
                           </td>
@@ -541,11 +527,18 @@ export function FunnelClientsTable({
           onAdd={(refs) => void addClientsToFunnel(campaignId, refs).then(() => setShowPicker(false))}
         />
       )}
+      {newActionEntry && (
+        <FunnelNewActionDrawer
+          entry={newActionEntry}
+          clientName={clientById.get(newActionEntry.clientId)?.name || 'Cliente'}
+          onClose={() => setNewActionEntryId('')}
+        />
+      )}
       {persoModal && (
         <FunnelPersoModal
           clientName={persoModal.clientName}
           initialReason={persoModal.initialReason}
-          isNewLost={persoModal.slotIndex !== undefined}
+          isNewLost={false}
           onClose={() => setPersoModal(null)}
           onSave={(reason) => void handlePersoSave(reason)}
         />

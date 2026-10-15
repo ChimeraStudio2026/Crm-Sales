@@ -4,6 +4,7 @@ import { ToastContainer } from '@/components/ui/toast-container';
 import { Sidebar } from '@/components/layout/sidebar';
 import { WorkspaceRouteGuard } from '@/components/layout/workspace-route-guard';
 import { CrmProvider, useCrm } from '@/providers/crm-provider';
+import { RemindersProvider } from '@/providers/reminders-provider';
 import { WorkspaceProvider } from '@/providers/workspace-provider';
 
 interface CrmShellProps {
@@ -35,12 +36,12 @@ function CrmShellInner({ children }: CrmShellProps) {
     );
   }
   return (
-    <>
+    <RemindersProvider>
       <Sidebar />
       <main className="main-content">
         <WorkspaceRouteGuard>{children}</WorkspaceRouteGuard>
       </main>
       <ToastContainer />
-    </>
+    </RemindersProvider>
   );
 }

@@ -12165,3 +12165,529 @@ a.btn:hover {
         text-align: center;
     }
 }
+
+/* ==========================================================================
+   Account: obiettivi con uno o più clienti
+   ========================================================================== */
+.accounting-objective-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.accounting-objective-heading {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.accounting-objective-row > td {
+    background: var(--bg-subtle);
+}
+
+.accounting-row.is-group-child > td:nth-child(2) {
+    padding-left: 32px;
+}
+
+.accounting-owner-inherited {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.accounting-note-cell .client-last-action-type {
+    display: inline-block;
+    margin-right: 6px;
+    font-size: 0.75rem;
+}
+
+.accounting-last-note {
+    color: var(--text-primary);
+}
+
+.accounting-empty-note {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.accounting-objective-note {
+    margin: 0 0 10px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    white-space: pre-wrap;
+}
+
+.objective-client-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0 0 8px;
+    padding: 0;
+    list-style: none;
+}
+
+.objective-client-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px 4px 10px;
+    border-radius: var(--radius-pill);
+    background: var(--pill-lilac-bg);
+    color: var(--pill-lilac-fg);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.objective-client-chip button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+}
+
+.objective-client-chip button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.objective-first-action {
+    margin-top: 6px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--border-color);
+}
+
+.objective-first-action > strong {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 0.85rem;
+}
+
+.objective-locked {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding: 12px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-subtle);
+    color: var(--text-secondary);
+}
+
+.objective-locked > div {
+    display: grid;
+    gap: 2px;
+}
+
+.objective-locked span {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.objective-locked strong {
+    color: var(--text-primary);
+    white-space: pre-wrap;
+}
+
+.objective-delete-btn {
+    margin-right: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--pill-red-fg);
+}
+
+/* Campagne sales: una riga per cliente con l'ultima azione, come in Account. */
+.commercial-funnel-table .funnel-col-last {
+    min-width: 220px;
+}
+
+.commercial-funnel-table .funnel-col-date {
+    white-space: nowrap;
+}
+
+.client-last-action-type.is-positive {
+    background: var(--pill-green-bg);
+    color: var(--pill-green-fg);
+}
+
+.btn-table-action.btn-table-action-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.funnel-history {
+    padding-left: 0;
+    border-left: none;
+}
+
+.funnel-history li {
+    position: relative;
+    align-items: stretch;
+}
+
+.funnel-history li .funnel-action-note-block {
+    flex: 1 1 auto;
+}
+
+.funnel-history-remove {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.funnel-history-remove:hover {
+    background: var(--bg-subtle);
+    color: var(--pill-red-fg);
+}
+
+/* ==========================================================================
+   Reminder
+   ========================================================================== */
+.menu-item a {
+    position: relative;
+}
+
+.menu-item-badge {
+    margin-left: auto;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: var(--radius-pill);
+    background: #f64330;
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 20px;
+    text-align: center;
+}
+
+.mobile-nav-toggle.has-badge::after {
+    content: '';
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #f64330;
+}
+
+.reminder-group {
+    display: grid;
+    gap: 14px;
+    margin-top: 8px;
+}
+
+.reminder-group-head h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 4px;
+    font-size: 1.1rem;
+}
+
+.reminder-group-head p {
+    margin: 0;
+    max-width: 720px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.reminder-count {
+    min-width: 22px;
+    height: 22px;
+    padding: 0 7px;
+    border-radius: var(--radius-pill);
+    background: #f64330;
+    color: #fff;
+    font-size: 0.75rem;
+    line-height: 22px;
+    text-align: center;
+}
+
+.reminder-empty {
+    margin: 0;
+    padding: 18px;
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-lg);
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.reminder-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 12px;
+}
+
+.reminder-card {
+    display: grid;
+    gap: 10px;
+    padding: 16px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    background: var(--bg-card);
+    box-shadow: var(--shadow-sm);
+    animation: reminder-pop 0.35s ease-out both;
+}
+
+.reminder-card.is-late {
+    box-shadow: inset 4px 0 0 #f64330, var(--shadow-sm);
+}
+
+@keyframes reminder-pop {
+    from { opacity: 0; transform: translateY(6px) scale(0.98); }
+    to { opacity: 1; transform: none; }
+}
+
+.reminder-card-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.reminder-card-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--pill-lilac-bg);
+    color: var(--pill-lilac-fg);
+}
+
+.reminder-card-title {
+    display: grid;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.reminder-card-title small {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+.reminder-card-client {
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--text-primary);
+    font: inherit;
+    font-weight: 700;
+    text-align: left;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+}
+
+.reminder-card-client:hover {
+    color: var(--primary);
+}
+
+.reminder-card-due {
+    flex: 0 0 auto;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--pill-green-fg);
+    white-space: nowrap;
+}
+
+.reminder-card-due.is-late {
+    color: var(--pill-red-fg);
+}
+
+.reminder-card-text {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.reminder-card-proposal {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.reminder-card-proposal svg {
+    flex: 0 0 auto;
+    margin-top: 2px;
+}
+
+.reminder-card-done {
+    display: flex;
+    gap: 8px;
+}
+
+.reminder-card-done .form-input {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.reminder-card-done .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.reminder-upcoming h3 {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 4px 0 8px;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.reminder-upcoming ul {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.reminder-upcoming li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 14px;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+@media (max-width: 768px) {
+    .mobile-card-table tr.mobile-card-row > td.is-card-hidden {
+        display: none;
+    }
+
+    .accounting-row.is-group-child > td:nth-child(2) {
+        padding-left: 0;
+    }
+
+    .mobile-card-table tr.accounting-row.is-group-child {
+        margin-left: 14px;
+    }
+
+    .commercial-funnel-table tr.funnel-row > td.funnel-col-last {
+        flex: 1 1 100%;
+        max-width: 100%;
+    }
+
+    .commercial-funnel-table tr.funnel-row > td.funnel-col-date {
+        flex: 1 1 calc(50% - 5px);
+        max-width: calc(50% - 5px);
+    }
+
+    .reminder-cards {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Bottoni riga con testo («Chiudi», «Azione»): larghezza libera. */
+.accounting-row-actions .btn-table-action:has(> span),
+.btn-table-action.btn-table-action-primary {
+    width: auto;
+    padding: 0 10px;
+}
+
+.accounting-table td.accounting-note-cell {
+    min-width: 280px;
+}
+
+/* L'ultima azione resta su tre righe: il testo completo è nello storico. */
+.accounting-last-note {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+    white-space: normal;
+}
+
+.accounting-table td.accounting-note-cell {
+    min-width: 240px;
+}
+
+.accounting-table .table-cell-select {
+    min-width: 120px;
+}
+
+.accounting-table th.funnel-col-semaforo,
+.accounting-table td.funnel-col-semaforo {
+    width: 64px;
+    padding-left: 12px;
+    padding-right: 4px;
+}
+
+.accounting-table td.is-card-title {
+    min-width: 190px;
+}
+
+.accounting-table td.accounting-note-cell {
+    min-width: 200px;
+}
+
+.commercial-funnel-table .funnel-col-actions {
+    min-width: 110px;
+    width: 1%;
+    white-space: nowrap;
+}
+
+.funnel-expanded-manage .table-row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.funnel-expanded-manage .table-cell-select {
+    width: auto;
+    max-width: 220px;
+}
+
+/* Senza le colonne Azione 1…N la tabella sta nella pagina. */
+.commercial-funnel-table {
+    min-width: 0;
+}
+
+.commercial-funnel-table .funnel-col-last {
+    min-width: 200px;
+}
+
+.commercial-funnel-table td.funnel-col-client,
+.commercial-funnel-table th.funnel-col-client {
+    max-width: 260px;
+}
+
+.commercial-funnel-table .funnel-entry-contact {
+    overflow-wrap: anywhere;
+}

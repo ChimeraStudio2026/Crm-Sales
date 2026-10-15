@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   BarChart3,
+  Bell,
   CheckSquare,
   FileSpreadsheet,
   FileText,
@@ -23,11 +24,13 @@ import { ChimeraWordmark } from '@/components/ui/chimera-wordmark';
 import { NAV_ITEMS } from '@/lib/constants/crm';
 import { getNavItemsForAccess } from '@/lib/crm/workspace-access';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
+import { useOptionalReminders } from '@/providers/reminders-provider';
 import { useUiPreferences } from '@/providers/ui-preferences-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
 
 const ICON_MAP: Record<string, LucideIcon> = {
   BarChart3,
+  Bell,
   FileText,
   Users,
   Mail,
@@ -48,6 +51,7 @@ export function Sidebar() {
   const router = useRouter();
   const { logoDesktopSize } = useUiPreferences();
   const { access } = useWorkspace();
+  const reminderCount = useOptionalReminders()?.myDueCount ?? 0;
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string>('');
   const [isDesktopViewport, setIsDesktopViewport] = useState(false);
@@ -83,6 +87,9 @@ export function Sidebar() {
         <Link href={item.href} onClick={() => setMobileOpen(false)}>
           {Icon && <Icon size={19} strokeWidth={1.75} />}
           <span>{item.label}</span>
+          {item.href === '/reminder' && reminderCount > 0 && (
+            <span className="menu-item-badge" aria-label={`${reminderCount} reminder da fare`}>{reminderCount}</span>
+          )}
         </Link>
       </li>
     );
@@ -98,7 +105,7 @@ export function Sidebar() {
   return (
     <>
       <div
-        className="mobile-nav-toggle"
+        className={`mobile-nav-toggle${reminderCount > 0 ? ' has-badge' : ''}`}
         id="mobile-toggle"
         onClick={() => setMobileOpen(true)}
         role="button"

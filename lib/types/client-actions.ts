@@ -25,6 +25,8 @@ export interface ClientAction {
   outcome: AccountingOutcome | null;
   /** Obiettivo opzionale dell'azione (es. cosa si vuole ottenere con un'azione Accounting). */
   objective?: string;
+  /** Obiettivo Account a cui appartiene l'azione (le azioni Account si vedono solo nel loro obiettivo). */
+  objectiveId?: string;
 }
 
 export type AccountingOutcome = 'won' | 'lost';
@@ -33,6 +35,33 @@ export const ACCOUNTING_ACTION_TYPE = 'Accounting';
 
 /** Chiude il ciclo di azioni Accounting su un cliente con un esito won/lost. */
 export const ACCOUNTING_CLOSE_ACTION_TYPE = 'Chiusura Accounting';
+
+/** Obiettivo Account: uno o più clienti su cui si lavora con azioni preimpostate e una nota. */
+export interface AccountObjective {
+  id: string;
+  workspaceId: string;
+  title: string;
+  note: string;
+  owner: string;
+  clientIds: string[];
+  createdAt: string;
+}
+
+/** Tipi di azione preimpostati negli obiettivi Account (come nelle campagne sales, senza gli esiti). */
+export const ACCOUNT_OBJECTIVE_ACTION_TYPES = [
+  'Call',
+  'Mail Di contatto',
+  'Incontro in presenza',
+  'Messaggio',
+  'Instagram',
+  'Fissato appuntamento',
+  'Presentazione Mandata',
+  'Quotazione richiesta',
+  'Da scaldare',
+] as const;
+
+/** Azione registrata dal Reminder: call di presentazione Chimera a un cliente nuovo. */
+export const CALL_DEBRIEF_ACTION_TYPE = 'Call debrief';
 
 export const RED_AFTER_DAYS_OPTIONS = [3, 7, 30] as const;
 

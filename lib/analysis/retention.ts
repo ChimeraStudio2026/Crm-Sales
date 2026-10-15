@@ -61,12 +61,19 @@ function getClientRevForYear(client: Client, year: number): number {
   return Number(client[field]) || 0;
 }
 
+/** Una ragione sociale conta sempre come il suo macro cliente. */
+function resolveMacroClient(client: Client, clients: Client[]): Client {
+  if (!client.parentClientId) return client;
+  return clients.find((item) => item.id === client.parentClientId) || client;
+}
+
 function resolveOkrGroupKey(
   record: OkrRecord,
   clients: Client[],
 ): { key: string; displayName: string; clientId: string | null } {
   if (record.clientId) {
-    const linkedClient = clients.find((client) => client.id === record.clientId);
+    const found = clients.find((client) => client.id === record.clientId);
+    const linkedClient = found ? resolveMacroClient(found, clients) : undefined;
     if (linkedClient) {
       return { key: linkedClient.id, displayName: linkedClient.name, clientId: linkedClient.id };
     }
@@ -76,9 +83,10 @@ function resolveOkrGroupKey(
       clientId: record.clientId,
     };
   }
-  const matchedClient = clients.find(
+  const nameMatch = clients.find(
     (client) => normalizeOkrClientName(client.name) === normalizeOkrClientName(record.clientName),
   );
+  const matchedClient = nameMatch ? resolveMacroClient(nameMatch, clients) : undefined;
   if (matchedClient) {
     return { key: matchedClient.id, displayName: matchedClient.name, clientId: matchedClient.id };
   }
@@ -125,14 +133,22 @@ export function buildClientYearRevenueMap(
     const entry = ensureClientYearRevenue(map, key, displayName, clientId);
     entry.revenueByYear[record.year] += Number(record.amount) || 0;
   });
+  // Fatturato da anagrafica dove mancano gli OKR: un macro cliente somma le sue ragioni sociali,
+  // che non compaiono mai come clienti a sé (non risultano «persi» se il gruppo fattura).
+  const groupMembers = new Map<string, Client[]>();
+  clients.forEach((client) => {
+    const macro = resolveMacroClient(client, clients);
+    groupMembers.set(macro.id, [...(groupMembers.get(macro.id) || []), client]);
+  });
   clients
-    .filter((client) => isClientInActiveSection(client))
+    .filter((client) => !client.parentClientId && isClientInActiveSection(client))
     .forEach((client) => {
+      const members = groupMembers.get(client.id) || [client];
       const entry = ensureClientYearRevenue(map, client.id, client.name, client.id);
       ANALYSIS_YEARS.forEach((year) => {
         const okrRevenue = entry.revenueByYear[year] || 0;
         if (!hasRevenue(okrRevenue)) {
-          entry.revenueByYear[year] = getClientRevForYear(client, year);
+          entry.revenueByYear[year] = members.reduce((sum, member) => sum + getClientRevForYear(member, year), 0);
         }
       });
     });

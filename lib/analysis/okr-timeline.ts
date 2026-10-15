@@ -1,4 +1,5 @@
 import type { OkrRecord } from '@/lib/types/crm';
+import type { SalesProposal } from '@/lib/types/sales-proposals';
 import { parseOkrMonthNumber } from '@/lib/analysis/index';
 import { ANALYSIS_YEARS, ANALYSIS_YEAR, PREVIOUS_ANALYSIS_YEAR } from '@/lib/constants/crm';
 
@@ -17,7 +18,46 @@ export interface OkrTimelineSnapshot {
   amount: number;
   throughMonth: number;
   throughDay: number;
-  usesSourceUpdatedAt: boolean;
+  /** Almeno un OKR dell'anno ha la data di conferma della proposta (stato «Si» su Cerbero). */
+  usesConfirmationDates: boolean;
+}
+
+/** Codice proposta (es. CS1394) → giorno in cui è stata accettata (YYYY-MM-DD). */
+export type OkrConfirmationIndex = ReadonlyMap<string, string>;
+
+const EMPTY_CONFIRMATION_INDEX: OkrConfirmationIndex = new Map();
+
+function resolveProposalCode(value: string): string {
+  return value.split('||')[0].trim().toUpperCase();
+}
+
+/** Data di conferma di ogni proposta accettata: la prima volta che è passata a «Si». */
+export function buildOkrConfirmationIndex(proposals: SalesProposal[]): OkrConfirmationIndex {
+  const index = new Map<string, string>();
+  proposals.forEach((proposal) => {
+    if (proposal.stato !== 'Si' || !proposal.code) return;
+    const day = (proposal.dataAccettazione || proposal.ultimoAggiornamento || '').slice(0, 10);
+    if (!day) return;
+    const code = resolveProposalCode(proposal.code);
+    const current = index.get(code);
+    if (!current || day < current) index.set(code, day);
+  });
+  return index;
+}
+
+/**
+ * Giorno da cui l'OKR conta come confermato. È la data di accettazione della proposta, ma mai
+ * dopo l'inizio del mese di lavoro: le proposte caricate in blocco su Cerbero hanno date di
+ * accettazione successive al lavoro. Senza proposta vale l'inizio del mese.
+ */
+export function resolveOkrConfirmedOn(record: OkrRecord, confirmations: OkrConfirmationIndex): string | null {
+  const month = resolveOkrRecordMonthNumber(record);
+  const monthStart = month >= 1 && month <= 12
+    ? `${record.year}-${String(month).padStart(2, '0')}-01`
+    : '';
+  const acceptedOn = record.projectCode ? confirmations.get(resolveProposalCode(record.projectCode)) || '' : '';
+  if (acceptedOn && monthStart) return acceptedOn < monthStart ? acceptedOn : monthStart;
+  return acceptedOn || monthStart || null;
 }
 
 export interface OkrMonthlySeries {
@@ -88,30 +128,36 @@ export function getTimelineDayEndDate(year: number, dayOfYear: number): Date {
   return new Date(year, throughMonth - 1, throughDay, 23, 59, 59, 999);
 }
 
-export function hasOkrSourceUpdatedTimeline(
-  records: OkrRecord[],
-  year: number,
-): boolean {
-  return records.some((record) => record.year === year && Boolean(record.sourceUpdatedAt));
+function toDayString(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
 }
 
+export function hasOkrConfirmationDates(
+  records: OkrRecord[],
+  year: number,
+  confirmations: OkrConfirmationIndex,
+): boolean {
+  return records.some((record) => record.year === year
+    && Boolean(record.projectCode && confirmations.has(resolveProposalCode(record.projectCode))));
+}
+
+/**
+ * OKR dell'anno già confermati alla data scelta, su tutti i mesi da gennaio a dicembre:
+ * alla data X conta anche il lavoro dei mesi successivi se la proposta era già accettata.
+ */
 export function filterOkrRecordsAtTimelineDay(
   records: OkrRecord[],
   year: number,
   dayOfYear: number,
+  confirmations: OkrConfirmationIndex = EMPTY_CONFIRMATION_INDEX,
 ): OkrRecord[] {
-  const { throughMonth } = getTimelineDateParts(year, dayOfYear);
-  const endDate = getTimelineDayEndDate(year, dayOfYear);
-  const useSourceUpdated = hasOkrSourceUpdatedTimeline(records, year);
+  const endDay = toDayString(getTimelineDayEndDate(year, dayOfYear));
   return records.filter((record) => {
     if (record.year !== year) return false;
-    if (useSourceUpdated) {
-      if (!record.sourceUpdatedAt) return true;
-      return new Date(record.sourceUpdatedAt).getTime() <= endDate.getTime();
-    }
-    const monthNumber = resolveMonthNumber(record);
-    if (monthNumber === 0) return true;
-    return monthNumber > 0 && monthNumber <= throughMonth;
+    const confirmedOn = resolveOkrConfirmedOn(record, confirmations);
+    return !confirmedOn || confirmedOn <= endDay;
   });
 }
 
@@ -125,16 +171,17 @@ export function computeOkrTimelineSnapshot(
   records: OkrRecord[],
   year: number,
   dayOfYear: number,
+  confirmations: OkrConfirmationIndex = EMPTY_CONFIRMATION_INDEX,
 ): OkrTimelineSnapshot {
   const { throughMonth, throughDay } = getTimelineDateParts(year, dayOfYear);
-  const matched = filterOkrRecordsAtTimelineDay(records, year, dayOfYear);
+  const matched = filterOkrRecordsAtTimelineDay(records, year, dayOfYear, confirmations);
   return {
     year,
     count: matched.length,
     amount: matched.reduce((sum, record) => sum + (Number(record.amount) || 0), 0),
     throughMonth,
     throughDay,
-    usesSourceUpdatedAt: hasOkrSourceUpdatedTimeline(records, year),
+    usesConfirmationDates: hasOkrConfirmationDates(records, year, confirmations),
   };
 }
 
@@ -142,9 +189,10 @@ export function buildOkrMonthlySeries(
   records: OkrRecord[],
   year: number,
   dayOfYear?: number,
+  confirmations: OkrConfirmationIndex = EMPTY_CONFIRMATION_INDEX,
 ): OkrMonthlySeries {
   const scopedRecords = dayOfYear !== undefined
-    ? filterOkrRecordsAtTimelineDay(records, year, dayOfYear)
+    ? filterOkrRecordsAtTimelineDay(records, year, dayOfYear, confirmations)
     : records.filter((record) => record.year === year);
   const monthlyAmounts = Array.from({ length: 12 }, () => 0);
   const monthlyCounts = Array.from({ length: 12 }, () => 0);
@@ -211,10 +259,11 @@ export function computeOkrDailyChangeSummary(
   records: OkrRecord[],
   year: number,
   dayOfYear: number,
+  confirmations: OkrConfirmationIndex = EMPTY_CONFIRMATION_INDEX,
 ): OkrDailyChangeSummary | null {
   if (dayOfYear <= 1) return null;
-  const previousRecords = filterOkrRecordsAtTimelineDay(records, year, dayOfYear - 1);
-  const currentRecords = filterOkrRecordsAtTimelineDay(records, year, dayOfYear);
+  const previousRecords = filterOkrRecordsAtTimelineDay(records, year, dayOfYear - 1, confirmations);
+  const currentRecords = filterOkrRecordsAtTimelineDay(records, year, dayOfYear, confirmations);
   const previousIds = new Set(previousRecords.map((record) => record.id));
   const currentIds = new Set(currentRecords.map((record) => record.id));
   const addedCount = currentRecords.filter((record) => !previousIds.has(record.id)).length;

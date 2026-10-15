@@ -18,6 +18,7 @@ import {
   getOkrComparisonYearRangeLabel,
   getTimelineMonthLabel,
 } from '@/lib/analysis/okr-timeline';
+import { useOkrConfirmations } from '@/lib/analysis/use-okr-confirmations';
 import { ANALYSIS_YEAR, PREVIOUS_ANALYSIS_YEAR } from '@/lib/constants/crm';
 import { filterOkrByClientYearMonth } from '@/lib/crm/client-sold-products';
 import { OkrDetailDrawer } from '@/components/analysis/okr-detail-drawer';
@@ -31,6 +32,7 @@ interface OkrDetailSelection {
 
 export function OkrClientComparisonPanel() {
   const { okrRecords } = useCrm();
+  const confirmations = useOkrConfirmations();
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedClient, setSelectedClient] = useState('');
@@ -54,13 +56,13 @@ export function OkrClientComparisonPanel() {
   );
 
   const monthlySeries = useMemo(
-    () => OKR_COMPARISON_YEARS.map((year) => buildOkrMonthlySeries(clientRecords, year, dayOfYear)),
-    [clientRecords, dayOfYear],
+    () => OKR_COMPARISON_YEARS.map((year) => buildOkrMonthlySeries(clientRecords, year, dayOfYear, confirmations)),
+    [clientRecords, dayOfYear, confirmations],
   );
 
   const snapshots = useMemo(
-    () => OKR_COMPARISON_YEARS.map((year) => computeOkrTimelineSnapshot(clientRecords, year, dayOfYear)),
-    [clientRecords, dayOfYear],
+    () => OKR_COMPARISON_YEARS.map((year) => computeOkrTimelineSnapshot(clientRecords, year, dayOfYear, confirmations)),
+    [clientRecords, dayOfYear, confirmations],
   );
 
   const deltaSnapshots = useMemo(
@@ -75,7 +77,6 @@ export function OkrClientComparisonPanel() {
   const targetMonthlySeries = monthlySeries.find((series) => series.year === ANALYSIS_YEAR);
   const activeMonth = snapshots[0]?.throughMonth ?? 1;
   const activeMonthLabel = getTimelineMonthLabel(activeMonth);
-  const usesSourceUpdatedAt = snapshots.some((snapshot) => snapshot.usesSourceUpdatedAt);
   const showSuggestions = isSearchFocused && !selectedClient && filteredClients.length > 0;
 
   const detailRecords = useMemo(() => {
@@ -238,7 +239,7 @@ export function OkrClientComparisonPanel() {
                     <span className="okr-comparison-stat-year">{snapshot.year} cumulato</span>
                     <strong className="okr-comparison-stat-value">{formatCurrency(snapshot.amount)}</strong>
                     <span className="okr-comparison-stat-meta">
-                      {snapshot.count} OKR · fino a {snapshot.throughDay}/{snapshot.throughMonth.toString().padStart(2, '0')}
+                      {snapshot.count} OKR · confermati al {snapshot.throughDay}/{snapshot.throughMonth.toString().padStart(2, '0')}
                     </span>
                   </div>
                 ))}
@@ -272,8 +273,7 @@ export function OkrClientComparisonPanel() {
                       <span key={label} className="okr-comparison-grid-month">{label}</span>
                     ))}
                   </div>
-                  {monthlySeries.map((series, rowIndex) => {
-                    const snapshot = snapshots[rowIndex];
+                  {monthlySeries.map((series) => {
                     const chartMax = Math.max(...monthlySeries.flatMap((item) => item.monthlyAmounts), 1);
                     return (
                       <div key={series.year} className="okr-comparison-row">
@@ -281,9 +281,7 @@ export function OkrClientComparisonPanel() {
                           {series.monthlyAmounts.map((amount, monthIndex) => {
                             const monthNumber = monthIndex + 1;
                             const count = series.monthlyCounts[monthIndex];
-                            const isIncluded = usesSourceUpdatedAt
-                              ? count > 0
-                              : monthNumber <= snapshot.throughMonth;
+                            const isIncluded = count > 0;
                             const isActiveMonth = monthNumber === activeMonth;
                             const barHeight = Math.max(8, Math.round((amount / chartMax) * 100));
                             return (

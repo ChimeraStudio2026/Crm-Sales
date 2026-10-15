@@ -36,7 +36,7 @@ export function FunnelClientPicker({
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase();
     return clients
-      .filter((client) => isClientInWorkspace(client, workspaceId))
+      .filter((client) => isClientInWorkspace(client, workspaceId) && !client.parentClientId)
       .filter((client) => resolveClientFunnelTrack(client, clients) === track)
       .filter((client) => !isFunnelClientFullyAdded(client, existingEntryKeys))
       .filter((client) => !typeFilter || client.type === typeFilter)

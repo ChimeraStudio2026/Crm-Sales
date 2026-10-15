@@ -55,8 +55,16 @@ function linkOkrClientId(record: OkrRecord, clients: Client[]): OkrRecord {
   };
 }
 
+/** Collega ogni OKR al suo cliente; gli OKR di una ragione sociale vanno sul suo macro cliente. */
 export function linkOkrRecordsToClients(records: OkrRecord[], clients: Client[]): OkrRecord[] {
-  return records.map((record) => linkOkrClientId(record, clients));
+  const clientById = new Map(clients.map((client) => [client.id, client]));
+  return records.map((record) => {
+    const linked = linkOkrClientId(record, clients);
+    const client = linked.clientId ? clientById.get(linked.clientId) : undefined;
+    const macro = client?.parentClientId ? clientById.get(client.parentClientId) : undefined;
+    if (!macro) return linked;
+    return { ...linked, clientId: macro.id, clientName: macro.name };
+  });
 }
 
 export function mergeClientsWithExcelImport(

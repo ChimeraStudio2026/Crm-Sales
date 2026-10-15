@@ -26,6 +26,9 @@ export function getClientTotalRevenue(client: Client): number {
  * delle ragioni sociali raggruppate sotto questo cliente (il gruppo paga per lui).
  */
 export function resolveClientFunnelTrack(client: Client, allClients?: readonly Client[]): FunnelTrack {
+  // Una ragione sociale segue il suo macro cliente.
+  const macro = client.parentClientId ? allClients?.find((item) => item.id === client.parentClientId) : undefined;
+  if (macro) return resolveClientFunnelTrack(macro, allClients);
   if (getClientTotalRevenue(client) > 0) return 'warm';
   const groupPays = allClients?.some(
     (item) => item.parentClientId === client.id && getClientTotalRevenue(item) > 0,

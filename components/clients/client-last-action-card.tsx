@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { History, Plus, Trash2 } from 'lucide-react';
-import { getFunnelEntriesForClient } from '@/lib/commercial-funnel/campaigns';
 import { buildClientActivity } from '@/lib/crm/client-activity';
 import { createUniqueId, formatActionDateDisplay, getTodayString } from '@/lib/crm/utils';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
@@ -32,6 +31,12 @@ export function ClientLastActionCard({ clientId }: ClientLastActionCardProps) {
   const [actionDate, setActionDate] = useState(getTodayString());
   const [note, setNote] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  // Un macro cliente mostra anche le azioni delle sue ragioni sociali.
+  const groupIds = useMemo(
+    () => [clientId, ...clients.filter((client) => client.parentClientId === clientId).map((client) => client.id)],
+    [clientId, clients],
+  );
+  const groupIdsKey = groupIds.join('|');
 
   useEffect(() => {
     setShowForm(false);
@@ -40,7 +45,7 @@ export function ClientLastActionCard({ clientId }: ClientLastActionCardProps) {
     if (!db) return;
     let cancelled = false;
     setIsLoading(true);
-    fetchClientActions(db, clientId)
+    fetchClientActions(db, groupIdsKey.split('|'))
       .then((loaded) => {
         if (!cancelled) setClientActions(loaded);
       })
@@ -53,16 +58,16 @@ export function ClientLastActionCard({ clientId }: ClientLastActionCardProps) {
     return () => {
       cancelled = true;
     };
-  }, [clientId, db]);
+  }, [clientId, db, groupIdsKey]);
 
   const activity = useMemo(
     () => buildClientActivity(
       clientActions,
-      getFunnelEntriesForClient(commercialFunnelEntries, clientId),
+      commercialFunnelEntries.filter((entry) => groupIds.includes(entry.clientId)),
       mailCampaigns,
       clients.find((client) => client.id === clientId)?.contacts || [],
     ),
-    [clientActions, clientId, clients, commercialFunnelEntries, mailCampaigns],
+    [clientActions, clientId, clients, commercialFunnelEntries, groupIds, mailCampaigns],
   );
   const lastAction = activity[0];
   const history = activity.slice(1, HISTORY_PREVIEW_LIMIT + 1);

@@ -35,12 +35,13 @@ function rowToClientAction(row: ClientActionRow): ClientAction {
 
 export async function fetchClientActions(
   db: SupabaseClient,
-  clientId: string,
+  clientId: string | string[],
 ): Promise<ClientAction[]> {
+  const clientIds = Array.isArray(clientId) ? clientId : [clientId];
   const { data, error } = await db
     .from('client_actions')
     .select('*')
-    .eq('client_id', clientId)
+    .in('client_id', clientIds)
     .order('action_date', { ascending: false })
     .order('created_at', { ascending: false });
   if (error) throw error;

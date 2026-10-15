@@ -51,7 +51,10 @@ function formatDay(time: number): string {
 }
 
 export function isAccountingClient(client: Client, allClients?: readonly Client[]): boolean {
-  return client.relationship !== 'Eliminato' && resolveClientFunnelTrack(client, allClients) === 'warm';
+  // Le ragioni sociali non si seguono a parte: si lavora sul loro macro cliente.
+  return !client.parentClientId
+    && client.relationship !== 'Eliminato'
+    && resolveClientFunnelTrack(client, allClients) === 'warm';
 }
 
 /** Il semaforo diventa rosso quando passano N giorni dall'ultima azione senza un'azione nuova. */

@@ -150,6 +150,7 @@ export function ClientsSection() {
   const incompleteCount = useMemo(
     () => clients.filter(
       (c) => isClientInWorkspace(c, workspaceId)
+        && !c.parentClientId
         && c.relationship !== 'Eliminato'
         && shouldHighlightIncompleteClient(c),
     ).length,
@@ -158,15 +159,23 @@ export function ClientsSection() {
 
   const eliminatedCount = useMemo(
     () => clients.filter(
-      (c) => isClientInWorkspace(c, workspaceId) && c.relationship === 'Eliminato',
+      (c) => isClientInWorkspace(c, workspaceId) && !c.parentClientId && c.relationship === 'Eliminato',
     ).length,
     [clients, workspaceId],
   );
 
   const filtered = useMemo(() => {
     const query = search.toLowerCase().trim();
+    // Le ragioni sociali vivono dentro il loro macro cliente: la lista mostra solo il macro,
+    // che si trova anche cercando il nome di una sua ragione sociale.
+    const childNamesByMacro = new Map<string, string>();
+    clients.forEach((c) => {
+      if (!c.parentClientId) return;
+      childNamesByMacro.set(c.parentClientId, `${childNamesByMacro.get(c.parentClientId) || ''} ${c.name.toLowerCase()}`);
+    });
     let list = clients.filter((c) => {
       if (!isClientInWorkspace(c, workspaceId)) return false;
+      if (c.parentClientId) return false;
       if (
         hideEliminati
         && c.relationship === 'Eliminato'
@@ -178,6 +187,7 @@ export function ClientsSection() {
       const matchesQuery =
         !query ||
         c.name.toLowerCase().includes(query) ||
+        (childNamesByMacro.get(c.id) || '').includes(query) ||
         c.contacts.some((ct) =>
           `${ct.name} ${ct.email} ${ct.role} ${ct.phone}`.toLowerCase().includes(query),
         );
@@ -203,24 +213,12 @@ export function ClientsSection() {
       if (valA > valB) return sort.direction === 'asc' ? 1 : -1;
       return 0;
     });
-    // Le ragioni sociali di un gruppo seguono subito il loro cliente principale.
-    const listedIds = new Set(list.map((client) => client.id));
-    const childrenByParent = new Map<string, Client[]>();
-    list.forEach((client) => {
-      if (!client.parentClientId || !listedIds.has(client.parentClientId)) return;
-      const siblings = childrenByParent.get(client.parentClientId) || [];
-      siblings.push(client);
-      childrenByParent.set(client.parentClientId, siblings);
-    });
-    return list.flatMap((client) => {
-      if (client.parentClientId && listedIds.has(client.parentClientId)) return [];
-      return [client, ...(childrenByParent.get(client.id) || [])];
-    });
+    return list;
   }, [clients, filterIncomplete, filterOwner, filterRelationship, filterType, groupRevenueById, hideEliminati, search, sort, workspaceId]);
 
   const totalInList = useMemo(
     () => clients.filter((c) => {
-      if (!isClientInWorkspace(c, workspaceId)) return false;
+      if (!isClientInWorkspace(c, workspaceId) || c.parentClientId) return false;
       if (hideEliminati && c.relationship === 'Eliminato') return false;
       return true;
     }).length,
@@ -280,9 +278,9 @@ export function ClientsSection() {
                   {clientNameById.get(client.parentClientId) || 'Gruppo'}
                 </span>
               ) : (groupSizeById.get(client.id) || 0) > 0 && (
-                <span className="client-group-badge" title="Cliente principale di un gruppo">
+                <span className="client-group-badge" title="Macro cliente: fatturato, OKR e rapporto sono di tutto il gruppo">
                   <Layers size={11} />
-                  +{groupSizeById.get(client.id)} ragioni sociali
+                  Macro · +{groupSizeById.get(client.id)} ragioni sociali
                 </span>
               )}
               {isDraft && (

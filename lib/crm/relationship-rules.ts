@@ -94,11 +94,12 @@ function buildGroupRevenue(clients: Client[]): Map<string, RevenueByYear> {
 
 /**
  * Ricalcola il rapporto di ogni cliente; solo «Eliminato» resta com'è.
- * Un cliente principale conta anche il fatturato delle sue ragioni sociali, come nel database.
+ * Un macro cliente conta anche il fatturato delle sue ragioni sociali, come nel database;
+ * le ragioni sociali prendono rapporto e owner del macro.
  */
 export function applyAutoRelationships(clients: Client[]): Client[] {
   const groupRevenue = buildGroupRevenue(clients);
-  return clients.map((client) => {
+  const macros = clients.filter((client) => !client.parentClientId).map((client) => {
     if (client.relationship === 'Eliminato') {
       return client.manualRelationship ? client : { ...client, manualRelationship: true };
     }
@@ -108,5 +109,23 @@ export function applyAutoRelationships(clients: Client[]): Client[] {
       return client;
     }
     return { ...client, relationship, manualRelationship: false, isColdClient };
+  });
+  // Le ragioni sociali seguono il loro macro cliente: stesso rapporto, owner e stato freddo.
+  const macroById = new Map(macros.map((client) => [client.id, client]));
+  return clients.map((client) => {
+    if (!client.parentClientId) return macroById.get(client.id) || client;
+    const macro = macroById.get(client.parentClientId);
+    if (!macro) return client;
+    if (client.relationship === macro.relationship && client.owner === macro.owner
+      && client.isColdClient === macro.isColdClient && client.manualRelationship === macro.manualRelationship) {
+      return client;
+    }
+    return {
+      ...client,
+      relationship: macro.relationship,
+      owner: macro.owner,
+      isColdClient: macro.isColdClient,
+      manualRelationship: macro.manualRelationship,
+    };
   });
 }

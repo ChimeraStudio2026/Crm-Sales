@@ -93,7 +93,7 @@ import {
   fetchAllAnalysisForecasts,
   fetchClientTasks,
   fetchClients,
-  updateClientParent,
+  setClientMacro,
   assertClientsHistoricalRevenueSchema,
   fetchIdeas,
   fetchAllOkrRecords,
@@ -847,18 +847,18 @@ export function CrmProvider({ children }: CrmProviderProps) {
       throw new Error('Supabase non configurato');
     }
     try {
-      await updateClientParent(db, clientId, parentClientId);
-      setClients((prev) => prev.map((c) => (
-        c.id === clientId ? { ...c, parentClientId: parentClientId || undefined } : c
-      )));
+      await setClientMacro(db, clientId, parentClientId);
+      // Il database sposta anche le ragioni sociali del cliente e ricalcola rapporto e owner:
+      // si ricarica tutto, così clienti e OKR ragionano subito sul macro cliente.
+      await reloadRemoteCrmState();
     } catch (error) {
       const message = error && typeof error === 'object' && 'message' in error
         ? String((error as { message: unknown }).message)
         : 'errore';
-      showToast(`Ragione sociale non collegata: ${message}`, 'danger');
+      showToast(`Macro cliente non aggiornato: ${message}`, 'danger');
       throw error;
     }
-  }, [db, showToast]);
+  }, [db, reloadRemoteCrmState, showToast]);
 
   const updateClientField = useCallback(async (
     clientId: string,

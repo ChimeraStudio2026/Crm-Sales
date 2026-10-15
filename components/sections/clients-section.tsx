@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { ChevronRight, Download, Edit, FilterX, Info, Layers, Search, Sparkles, Trash2 } from 'lucide-react';
+import { ChevronRight, Download, Edit, FilterX, Info, Search, Sparkles, Trash2 } from 'lucide-react';
 import {
   CLIENT_TYPES,
   CRM_TABLE_COLUMN_DEFS,
@@ -119,10 +119,6 @@ export function ClientsSection() {
     [clients, workspaceId],
   );
   const duplicates = useDuplicateCandidates(workspaceClients);
-  const clientNameById = useMemo(
-    () => new Map(clients.map((client) => [client.id, client.name.trim()])),
-    [clients],
-  );
   const groupSizeById = useMemo(() => {
     const sizes = new Map<string, number>();
     clients.forEach((client) => {
@@ -272,16 +268,12 @@ export function ClientsSection() {
                 className={`row-expand-icon ${expandedClients.has(client.id) ? 'is-expanded' : ''}`}
               />
               <strong>{client.name}</strong>
-              {client.parentClientId ? (
-                <span className="client-group-badge" title="Ragione sociale di un gruppo">
-                  <Layers size={11} />
-                  {clientNameById.get(client.parentClientId) || 'Gruppo'}
-                </span>
-              ) : (groupSizeById.get(client.id) || 0) > 0 && (
-                <span className="client-group-badge" title="Macro cliente: fatturato, OKR e rapporto sono di tutto il gruppo">
-                  <Layers size={11} />
-                  Macro · +{groupSizeById.get(client.id)} ragioni sociali
-                </span>
+              {!client.parentClientId && (groupSizeById.get(client.id) || 0) > 0 && (
+                <span
+                  className="client-macro-dot"
+                  title={`Macro cliente con ${groupSizeById.get(client.id)} ragioni sociali: fatturato, OKR e rapporto sono di tutto il gruppo`}
+                  aria-label="Macro cliente con ragioni sociali"
+                />
               )}
               {isDraft && (
                 <span className="client-draft-badge" title="Completa nome, tipologia, owner, origine e almeno un contatto con email. L'azione è opzionale.">

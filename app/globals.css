@@ -12691,3 +12691,25 @@ a.btn:hover {
 .commercial-funnel-table .funnel-entry-contact {
     overflow-wrap: anywhere;
 }
+
+/* Macro cliente: solo un punto viola accanto al nome, che resta sempre intero. */
+.client-macro-dot {
+    flex: 0 0 auto;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--pill-lilac-fg);
+}
+
+/* Il nome cliente si legge sempre per intero: va a capo invece di finire con «…». */
+.client-name-cell strong {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.crm-table td.col-nome,
+.crm-table th.col-nome {
+    min-width: 200px;
+}

@@ -63,6 +63,11 @@ export function isRejectedProposal(proposal: SalesProposal): boolean {
   return normalizeProposalStatus(proposal.stato) === PROPOSAL_STATUS_REJECTED;
 }
 
+/** NCC = costi interni di Chimera registrati come proposte (codice "NCC_…"), non vendite. */
+export function isNccProposal(proposal: SalesProposal): boolean {
+  return /^ncc/i.test((proposal.code || proposal.nome).trim());
+}
+
 export function isPendingProposal(proposal: SalesProposal): boolean {
   return !isAcceptedProposal(proposal) && !isRejectedProposal(proposal);
 }
@@ -162,6 +167,20 @@ export function resolveProposalClosedDate(proposal: SalesProposal): string | nul
   return null;
 }
 
+/**
+ * Giorno di chiusura per la weekly review: Cerbero spesso non compila la data di
+ * accettazione/rifiuto, quindi si ripiega su «Ultimo aggiornamento» (quando è cambiato lo stato).
+ */
+export function resolveProposalWeeklyCloseDate(proposal: SalesProposal): string | null {
+  if (isAcceptedProposal(proposal)) {
+    return normalizeProposalDateKey(proposal.dataAccettazione || proposal.ultimoAggiornamento);
+  }
+  if (isRejectedProposal(proposal)) {
+    return normalizeProposalDateKey(proposal.dataRifiuto || proposal.ultimoAggiornamento);
+  }
+  return null;
+}
+
 export function buildAverageConversionStats(proposals: SalesProposal[]): {
   averageDays: number | null;
   sampleCount: number;
@@ -251,10 +270,8 @@ export function collectProposalIsoYears(proposals: SalesProposal[], currentYear:
   proposals.forEach((proposal) => {
     const createdKey = normalizeProposalDateKey(proposal.creatoIl);
     if (createdKey) years.add(getIsoWeekRefFromDate(new Date(`${createdKey}T00:00:00Z`)).isoYear);
-    const acceptedKey = normalizeProposalDateKey(proposal.dataAccettazione);
-    if (acceptedKey) years.add(getIsoWeekRefFromDate(new Date(`${acceptedKey}T00:00:00Z`)).isoYear);
-    const rejectedKey = normalizeProposalDateKey(proposal.dataRifiuto);
-    if (rejectedKey) years.add(getIsoWeekRefFromDate(new Date(`${rejectedKey}T00:00:00Z`)).isoYear);
+    const closedKey = resolveProposalWeeklyCloseDate(proposal);
+    if (closedKey) years.add(getIsoWeekRefFromDate(new Date(`${closedKey}T00:00:00Z`)).isoYear);
   });
   return Array.from(years).sort((left, right) => right - left);
 }
@@ -277,15 +294,8 @@ function wasProposalPendingAtWeekEnd(
   if (!createdKey || !isDateKeyInRange(createdKey, weekStart, weekEnd)) {
     return false;
   }
-  const acceptedKey = normalizeProposalDateKey(proposal.dataAccettazione);
-  if (isAcceptedProposal(proposal) && acceptedKey && acceptedKey <= weekEnd) {
-    return false;
-  }
-  const rejectedKey = normalizeProposalDateKey(proposal.dataRifiuto);
-  if (isRejectedProposal(proposal) && rejectedKey && rejectedKey <= weekEnd) {
-    return false;
-  }
-  return true;
+  const closedKey = resolveProposalWeeklyCloseDate(proposal);
+  return !closedKey || closedKey > weekEnd;
 }
 
 export function buildProposalWeeklyReview(
@@ -301,6 +311,7 @@ export function buildProposalWeeklyReview(
   const rejectedProposals: SalesProposal[] = [];
   const pendingProposals: SalesProposal[] = [];
   proposals.forEach((proposal) => {
+    if (isNccProposal(proposal)) return;
     const createdKey = normalizeProposalDateKey(proposal.creatoIl);
     if (createdKey && isDateKeyInRange(createdKey, weekStart, weekEnd)) {
       newProposals.push(proposal);
@@ -308,29 +319,23 @@ export function buildProposalWeeklyReview(
     if (wasProposalPendingAtWeekEnd(proposal, pendingStart, weekEnd)) {
       pendingProposals.push(proposal);
     }
-    const acceptedKey = normalizeProposalDateKey(proposal.dataAccettazione);
-    if (isAcceptedProposal(proposal) && acceptedKey && isDateKeyInRange(acceptedKey, weekStart, weekEnd)) {
-      acceptedProposals.push(proposal);
-    }
-    const rejectedKey = normalizeProposalDateKey(proposal.dataRifiuto);
-    if (isRejectedProposal(proposal) && rejectedKey && isDateKeyInRange(rejectedKey, weekStart, weekEnd)) {
-      rejectedProposals.push(proposal);
+    const closedKey = resolveProposalWeeklyCloseDate(proposal);
+    if (closedKey && isDateKeyInRange(closedKey, weekStart, weekEnd)) {
+      if (isAcceptedProposal(proposal)) acceptedProposals.push(proposal);
+      else rejectedProposals.push(proposal);
     }
   });
+  const byCloseDateDesc = (left: SalesProposal, right: SalesProposal): number => {
+    const leftKey = resolveProposalWeeklyCloseDate(left) || left.creatoIl;
+    const rightKey = resolveProposalWeeklyCloseDate(right) || right.creatoIl;
+    return rightKey.localeCompare(leftKey);
+  };
   const sortByCloseOrCreate = (left: SalesProposal, right: SalesProposal): number => {
     return right.creatoIl.localeCompare(left.creatoIl);
   };
   newProposals.sort(sortByCloseOrCreate);
-  acceptedProposals.sort((left, right) => {
-    const leftKey = normalizeProposalDateKey(left.dataAccettazione) || left.creatoIl;
-    const rightKey = normalizeProposalDateKey(right.dataAccettazione) || right.creatoIl;
-    return rightKey.localeCompare(leftKey);
-  });
-  rejectedProposals.sort((left, right) => {
-    const leftKey = normalizeProposalDateKey(left.dataRifiuto) || left.creatoIl;
-    const rightKey = normalizeProposalDateKey(right.dataRifiuto) || right.creatoIl;
-    return rightKey.localeCompare(leftKey);
-  });
+  acceptedProposals.sort(byCloseDateDesc);
+  rejectedProposals.sort(byCloseDateDesc);
   pendingProposals.sort(sortByCloseOrCreate);
   return {
     isoYear,

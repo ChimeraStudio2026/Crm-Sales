@@ -10,6 +10,7 @@ import {
   getIsoWeeksInYear,
   getPreviousIsoWeekRef,
   getWeekRangeFromIsoWeek,
+  resolveProposalWeeklyCloseDate,
 } from '@/lib/sales-proposals/stats';
 import type { ProposalIsoWeekRef, SalesProposal } from '@/lib/types/sales-proposals';
 
@@ -132,14 +133,14 @@ export function ProposalsWeeklyReview({ proposals }: ProposalsWeeklyReviewProps)
           emptyLabel="Nessuna proposta chiusa Si in questa settimana."
           proposals={summary.acceptedProposals}
           closedDateLabel="Data Si"
-          resolveClosedDate={(proposal) => proposal.dataAccettazione}
+          resolveClosedDate={resolveProposalWeeklyCloseDate}
         />
         <ProposalsWeeklyList
           title="Proposte andate in No"
           emptyLabel="Nessuna proposta chiusa No in questa settimana."
           proposals={summary.rejectedProposals}
           closedDateLabel="Data No"
-          resolveClosedDate={(proposal) => proposal.dataRifiuto}
+          resolveClosedDate={resolveProposalWeeklyCloseDate}
         />
         <ProposalsWeeklyList
           title="Proposte ancora pending"

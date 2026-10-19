@@ -33,7 +33,7 @@ import {
   RED_AFTER_DAYS_OPTIONS,
 } from '@/lib/types/client-actions';
 import type { AccountObjective, AccountingOutcome, ClientAction } from '@/lib/types/client-actions';
-import type { Client } from '@/lib/types/crm';
+import type { Client, ClientContact } from '@/lib/types/crm';
 import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
 
@@ -173,12 +173,54 @@ function ActionFields({
   );
 }
 
+function getNamedContacts(client: Client | undefined): ClientContact[] {
+  return client?.contacts.filter((contact) => contact.name.trim() || contact.email.trim()) || [];
+}
+
+/** Contatto del cliente a cui si collega l'azione. */
+function ContactSelect({
+  id,
+  contacts,
+  value,
+  onChange,
+}: {
+  id: string;
+  contacts: ClientContact[];
+  value: string;
+  onChange: (contactId: string) => void;
+}) {
+  return (
+    <div className="form-group">
+      <label htmlFor={id}>Contatto</label>
+      <select
+        id={id}
+        className="form-select"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        disabled={contacts.length === 0}
+      >
+        {contacts.length === 0 ? (
+          <option value="">Nessun contatto su questo cliente</option>
+        ) : (
+          contacts.map((contact) => (
+            <option key={contact.id} value={contact.id}>
+              {contact.name.trim() || contact.email}
+              {contact.role ? ` · ${contact.role}` : ''}
+            </option>
+          ))
+        )}
+      </select>
+    </div>
+  );
+}
+
 interface ObjectiveDrawerInput {
   title: string;
   note: string;
   owner: string;
   clientIds: string[];
   firstAction: ActionFieldsValue;
+  firstContactId: string;
 }
 
 interface ObjectiveDrawerProps {
@@ -210,8 +252,17 @@ function ObjectiveDrawer({
   const [clientIds, setClientIds] = useState<string[]>(objective?.clientIds || []);
   const [pickerValue, setPickerValue] = useState('');
   const [firstAction, setFirstAction] = useState<ActionFieldsValue>(createEmptyActionFields);
+  const [firstContactId, setFirstContactId] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const clientById = useMemo(() => new Map(clients.map((client) => [client.id, client])), [clients]);
+  const onlyClientId = clientIds.length === 1 ? clientIds[0] : '';
+  const firstContacts = getNamedContacts(clientById.get(onlyClientId));
+
+  useEffect(() => {
+    setFirstContactId(firstContacts[0]?.id || '');
+    // Solo al cambio cliente: il contatto di default è il primo del cliente scelto.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onlyClientId]);
   const pickableClients = useMemo(
     () => clients.filter((client) => !clientIds.includes(client.id)),
     [clientIds, clients],
@@ -229,7 +280,7 @@ function ObjectiveDrawer({
     if (!canSave) return;
     setIsSaving(true);
     try {
-      await onSave({ title: title.trim(), note: note.trim(), owner, clientIds, firstAction });
+      await onSave({ title: title.trim(), note: note.trim(), owner, clientIds, firstAction, firstContactId });
       onClose();
     } finally {
       setIsSaving(false);
@@ -321,6 +372,12 @@ function ObjectiveDrawer({
             {!isEdit && clientIds.length === 1 && (
               <div className="objective-first-action">
                 <strong>Prima azione</strong>
+                <ContactSelect
+                  id="objective-first-contact"
+                  contacts={firstContacts}
+                  value={firstContactId}
+                  onChange={setFirstContactId}
+                />
                 <ActionFields idPrefix="objective-first" value={firstAction} onChange={setFirstAction} isTypeRequired={false} />
               </div>
             )}
@@ -374,7 +431,7 @@ function NewActionDrawer({ objective, clients, initialClientId, onClose, onSave 
   const [fields, setFields] = useState<ActionFieldsValue>(createEmptyActionFields);
   const [isSaving, setIsSaving] = useState(false);
   const selectedClient = objectiveClients.find((client) => client.id === clientId);
-  const contacts = selectedClient?.contacts.filter((contact) => contact.name.trim() || contact.email.trim()) || [];
+  const contacts = getNamedContacts(selectedClient);
 
   useEffect(() => {
     setContactId(contacts[0]?.id || '');
@@ -431,27 +488,7 @@ function NewActionDrawer({ objective, clients, initialClientId, onClose, onSave 
                 </select>
               </div>
             )}
-            <div className="form-group">
-              <label htmlFor="accounting-contact">Contatto</label>
-              <select
-                id="accounting-contact"
-                className="form-select"
-                value={contactId}
-                onChange={(event) => setContactId(event.target.value)}
-                disabled={contacts.length === 0}
-              >
-                {contacts.length === 0 ? (
-                  <option value="">Nessun contatto su questo cliente</option>
-                ) : (
-                  contacts.map((contact) => (
-                    <option key={contact.id} value={contact.id}>
-                      {contact.name.trim() || contact.email}
-                      {contact.role ? ` · ${contact.role}` : ''}
-                    </option>
-                  ))
-                )}
-              </select>
-            </div>
+            <ContactSelect id="accounting-contact" contacts={contacts} value={contactId} onChange={setContactId} />
             <ActionFields idPrefix="accounting-action" value={fields} onChange={setFields} isTypeRequired />
           </div>
           <div className="drawer-footer">
@@ -767,12 +804,11 @@ export function AccountingView() {
       setObjectives((prev) => [created, ...prev]);
       const [onlyClientId] = input.clientIds;
       if (input.clientIds.length === 1 && onlyClientId && input.firstAction.actionType) {
-        const client = workspaceClients.find((item) => item.id === onlyClientId);
         await saveAction(created, {
           ...input.firstAction,
           note: input.firstAction.note.trim(),
           clientId: onlyClientId,
-          contactId: client?.contacts.find((contact) => contact.name.trim() || contact.email.trim())?.id || '',
+          contactId: input.firstContactId,
         });
       }
       showToast('Obiettivo creato.', 'success');

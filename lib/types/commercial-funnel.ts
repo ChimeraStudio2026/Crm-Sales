@@ -42,6 +42,8 @@ export interface FunnelActionSlot {
   date: string;
   note: string;
   taskIds: string[];
+  /** Giorni senza una nuova azione dopo cui il semaforo diventa rosso (come negli obiettivi). */
+  redAfterDays?: number | null;
 }
 
 export type FunnelClientSource = 'cold' | 'main';

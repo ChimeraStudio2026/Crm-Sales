@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight, Search } from 'lucide-react';
 import { FunnelClientsTable } from '@/components/commercial-funnel/funnel-clients-table';
-import { FunnelNewActionForm } from '@/components/commercial-funnel/funnel-new-action-form';
 import { resolveFunnelContactLabel } from '@/lib/commercial-funnel/contacts';
 import { resolveFunnelSemaforo, resolveFunnelStageDisplay } from '@/lib/commercial-funnel/index';
 import {
@@ -180,7 +179,6 @@ export function FunnelClientsView({
   // perdita/riattivazione, spostamento e rimozione.
   const renderExpandedBody = (row: FunnelClientRow): React.ReactNode => (
     <div className="funnel-client-view-expanded">
-      <FunnelNewActionForm entry={row.entry} />
       <FunnelClientsTable
         campaignId={row.entry.campaignId}
         entries={[row.entry]}

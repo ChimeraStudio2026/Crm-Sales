@@ -32,7 +32,31 @@ export function writeFunnelTrackPreference(track: FunnelTrack): void {
   }
 }
 
-export type FunnelClientSortKey = 'client' | 'campaign' | 'stage' | 'owner' | 'semaforo' | 'lastAction';
+/** Vista di Sales: obiettivi (come Account), campagne o elenco clienti delle campagne. */
+export type SalesPageView = 'objectives' | 'campaigns' | 'clients';
+
+export const SALES_PAGE_VIEW_STORAGE_KEY = 'crm-sales-page-view';
+
+export function readSalesPageViewPreference(): SalesPageView {
+  if (typeof window === 'undefined') return 'objectives';
+  try {
+    const value = window.localStorage.getItem(SALES_PAGE_VIEW_STORAGE_KEY);
+    return value === 'campaigns' || value === 'clients' ? value : 'objectives';
+  } catch {
+    return 'objectives';
+  }
+}
+
+export function writeSalesPageViewPreference(view: SalesPageView): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(SALES_PAGE_VIEW_STORAGE_KEY, view);
+  } catch {
+    // Preferenza non salvabile: la vista vale solo per questa visita.
+  }
+}
+
+export type FunnelClientSortKey ='client' | 'campaign' | 'stage' | 'owner' | 'semaforo' | 'lastAction';
 export type FunnelClientSortDirection = 'asc' | 'desc';
 
 export interface FunnelClientSort {

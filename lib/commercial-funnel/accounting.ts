@@ -4,6 +4,7 @@ import {
   DEFAULT_RED_AFTER_DAYS,
 } from '@/lib/types/client-actions';
 import type { AccountObjective, AccountingOutcome, ClientAction } from '@/lib/types/client-actions';
+import type { FunnelTrack } from '@/lib/types/commercial-funnel';
 import type { Client } from '@/lib/types/crm';
 
 export type AccountingSemaforo = 'green' | 'red';
@@ -50,12 +51,14 @@ function formatDay(time: number): string {
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
-export function isAccountingClient(client: Client, allClients?: readonly Client[]): boolean {
+/** Clienti che si possono mettere in un obiettivo del funnel (caldi in Account, senza fatturato in Sales). */
+export function isObjectiveClient(client: Client, track: FunnelTrack, allClients?: readonly Client[]): boolean {
   // Le ragioni sociali non si seguono a parte: si lavora sul loro macro cliente.
   return !client.parentClientId
     && client.relationship !== 'Eliminato'
-    && resolveClientFunnelTrack(client, allClients) === 'warm';
+    && resolveClientFunnelTrack(client, allClients) === track;
 }
+
 
 /** Il semaforo diventa rosso quando passano N giorni dall'ultima azione senza un'azione nuova. */
 export function resolveAccountingDue(

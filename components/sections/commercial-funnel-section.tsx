@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Download, Plus, Search } from 'lucide-react';
+import { Download, Plus, Search, X } from 'lucide-react';
 import {
   buildFunnelCampaignDashboardRow,
   filterCampaignsByWorkspace,
@@ -17,10 +17,13 @@ import {
   readFunnelOwnerFilter,
   readFunnelTrackPreference,
   readHideClosedFunnelCampaignsPreference,
+  readSalesPageViewPreference,
   writeFunnelOwnerFilter,
   writeFunnelTrackPreference,
   writeHideClosedFunnelCampaignsPreference,
+  writeSalesPageViewPreference,
 } from '@/lib/commercial-funnel/preferences';
+import type { SalesPageView } from '@/lib/commercial-funnel/preferences';
 import { normalizeOwner } from '@/lib/crm/owners';
 import { getOwnersForWorkspace } from '@/lib/crm/workspace-clients';
 import {
@@ -31,7 +34,7 @@ import {
 import { downloadCommercialFunnelExcel } from '@/lib/commercial-funnel/export';
 import { resolveFunnelSemaforo, resolveFunnelStageDisplay } from '@/lib/commercial-funnel/index';
 import { buildFunnelStatsSummary } from '@/lib/commercial-funnel/stats';
-import { formatActionDateDisplay, formatShortItalianDate } from '@/lib/crm/utils';
+import { formatActionDateDisplay, formatShortItalianDate, getTodayString, isClientInColdSection } from '@/lib/crm/utils';
 import { resolveWorkspaceLabel } from '@/lib/constants/workspaces';
 import { CampaignNameCell } from '@/components/mail-campaigns/campaign-name-cell';
 import { CampaignStatusSelect } from '@/components/mail-campaigns/campaign-status-select';
@@ -39,24 +42,33 @@ import { CampaignTableActions } from '@/components/mail-campaigns/campaign-table
 import { FunnelStatsCharts } from '@/components/commercial-funnel/funnel-stats-charts';
 import { AccountingView } from '@/components/commercial-funnel/accounting-view';
 import { FunnelClientsView } from '@/components/commercial-funnel/funnel-clients-view';
-import { OWNERS } from '@/lib/constants/crm';
+import { ClientChipsField, getNamedContacts } from '@/components/commercial-funnel/action-fields';
+import { isObjectiveClient } from '@/lib/commercial-funnel/accounting';
+import { isClientInWorkspace } from '@/lib/crm/workspace-access';
+import { isOwner, OWNERS } from '@/lib/constants/crm';
 import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
 import { TopHeader } from '@/components/layout/top-header';
 import type { MailCampaignStatus } from '@/lib/types/mail-campaigns';
 import { FUNNEL_TRACKS } from '@/lib/types/commercial-funnel';
-import type { FunnelTrack } from '@/lib/types/commercial-funnel';
+import type { FunnelClientRef, FunnelTrack } from '@/lib/types/commercial-funnel';
 import type { Owner } from '@/lib/types/crm';
 
 const BRAND_SEARCH_MIN_LENGTH = 2;
-type FunnelPageView = 'campaigns' | 'clients';
+const SALES_PAGE_VIEWS: readonly [SalesPageView, string][] = [
+  ['objectives', 'Obiettivi'],
+  ['campaigns', 'Campagne'],
+  ['clients', 'Clienti'],
+];
 
 export function CommercialFunnelSection() {
   const router = useRouter();
   const {
     clients,
+    currentOwner,
     mailCampaigns,
     commercialFunnelEntries,
+    addClientsToFunnel,
     saveMailCampaign,
     updateMailCampaignOwner,
     updateMailCampaignStatus,
@@ -66,12 +78,11 @@ export function CommercialFunnelSection() {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [status, setStatus] = useState<MailCampaignStatus>('Bozza');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
   const [owner, setOwner] = useState<Owner | ''>('');
+  const [newCampaignClientIds, setNewCampaignClientIds] = useState<string[]>([]);
+  const [isCreating, setIsCreating] = useState(false);
   const [brandSearch, setBrandSearch] = useState('');
-  const [pageView, setPageView] = useState<FunnelPageView>('campaigns');
+  const [pageView, setPageView] = useState<SalesPageView>('objectives');
   const [hideClosedCampaigns, setHideClosedCampaigns] = useState(true);
   const [hideClosedPreferenceReady, setHideClosedPreferenceReady] = useState(false);
   const [track, setTrack] = useState<FunnelTrack>('cold');
@@ -82,6 +93,7 @@ export function CommercialFunnelSection() {
     setHideClosedPreferenceReady(true);
     setTrack(readFunnelTrackPreference());
     setOwnerFilter(readFunnelOwnerFilter());
+    setPageView(readSalesPageViewPreference());
   }, []);
 
   const changeOwnerFilter = (next: string[]): void => {
@@ -93,6 +105,11 @@ export function CommercialFunnelSection() {
     changeOwnerFilter(ownerFilter.includes(ownerName)
       ? ownerFilter.filter((item) => item !== ownerName)
       : [...ownerFilter, ownerName]);
+  };
+
+  const changePageView = (nextView: SalesPageView): void => {
+    setPageView(nextView);
+    writeSalesPageViewPreference(nextView);
   };
 
   const handleTrackChange = (nextTrack: FunnelTrack): void => {
@@ -203,26 +220,51 @@ export function CommercialFunnelSection() {
     return rows.filter((row) => matchingCampaignIds.has(row.campaign.id));
   }, [brandSearch, brandSearchResults, rows]);
 
-  const handleCreate = async (event: React.FormEvent): Promise<void> => {
-    event.preventDefault();
-    const campaignId = await saveMailCampaign({
-      workspaceId,
-      funnelTrack: track,
-      name,
-      description,
-      status,
-      startDate,
-      endDate,
-      owner,
-    });
-    setShowForm(false);
+  const salesClients = useMemo(
+    () => clients
+      .filter((client) => isClientInWorkspace(client, workspaceId) && isObjectiveClient(client, track, clients))
+      .sort((left, right) => left.name.localeCompare(right.name, 'it')),
+    [clients, track, workspaceId],
+  );
+
+  const openCampaignForm = (): void => {
     setName('');
     setDescription('');
-    setStatus('Bozza');
-    setStartDate('');
-    setEndDate('');
-    setOwner('');
-    router.push(`/funnel/${campaignId}`);
+    setOwner(isOwner(currentOwner || '') ? (currentOwner as Owner) : '');
+    setNewCampaignClientIds([]);
+    setShowForm(true);
+  };
+
+  // Come «Nuovo obiettivo»: nome, clienti, owner e nota in un passo; la campagna parte subito.
+  const handleCreate = async (event: React.FormEvent): Promise<void> => {
+    event.preventDefault();
+    if (!name.trim() || newCampaignClientIds.length === 0 || isCreating) return;
+    setIsCreating(true);
+    try {
+      const campaignId = await saveMailCampaign({
+        workspaceId,
+        funnelTrack: track,
+        name: name.trim(),
+        description: description.trim(),
+        status: 'Attiva',
+        startDate: getTodayString(),
+        endDate: '',
+        owner,
+      });
+      const refs: FunnelClientRef[] = newCampaignClientIds.map((clientId) => {
+        const client = clients.find((item) => item.id === clientId);
+        return {
+          clientId,
+          contactId: getNamedContacts(client)[0]?.id || '',
+          clientSource: client && isClientInColdSection(client) ? 'cold' : 'main',
+        };
+      });
+      await addClientsToFunnel(campaignId, refs, workspaceId);
+      setShowForm(false);
+      router.push(`/funnel/${campaignId}`);
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const handleRenameCampaign = async (campaignId: string, name: string): Promise<void> => {
@@ -268,6 +310,21 @@ export function CommercialFunnelSection() {
   };
 
   const isBrandSearchActive = brandSearch.trim().length >= BRAND_SEARCH_MIN_LENGTH;
+  const salesViewToggle = (
+    <div className="task-view-toggle" role="group" aria-label="Vista Sales">
+      {SALES_PAGE_VIEWS.map(([view, label]) => (
+        <button
+          key={view}
+          type="button"
+          className={`task-view-toggle-btn${pageView === view ? ' is-active' : ''}`}
+          aria-pressed={pageView === view}
+          onClick={() => changePageView(view)}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
   const displayRows = isBrandSearchActive ? filteredRows : rows;
 
   return (
@@ -296,7 +353,9 @@ export function CommercialFunnelSection() {
             ))}
           </div>
           {track === 'warm' ? (
-            <AccountingView />
+            <AccountingView track="warm" />
+          ) : pageView === 'objectives' ? (
+            <AccountingView track="cold" toolbarExtra={salesViewToggle} />
           ) : (
           <>
           <div className="table-filter-bar">
@@ -312,22 +371,7 @@ export function CommercialFunnelSection() {
               </div>
             </div>
             <div className="filter-right">
-              <div className="task-view-toggle" role="group" aria-label="Vista funnel">
-                <button
-                  type="button"
-                  className={`task-view-toggle-btn${pageView === 'campaigns' ? ' is-active' : ''}`}
-                  onClick={() => setPageView('campaigns')}
-                >
-                  Campagne
-                </button>
-                <button
-                  type="button"
-                  className={`task-view-toggle-btn${pageView === 'clients' ? ' is-active' : ''}`}
-                  onClick={() => setPageView('clients')}
-                >
-                  Clienti
-                </button>
-              </div>
+              {salesViewToggle}
               {closedCampaignCount > 0 ? (
                 <button
                   type="button"
@@ -343,7 +387,7 @@ export function CommercialFunnelSection() {
                 <Download size={16} />
                 <span>Scarica Excel</span>
               </button>
-              <button type="button" className="btn btn-primary" onClick={() => setShowForm(true)}>
+              <button type="button" className="btn btn-primary" onClick={openCampaignForm}>
                 <Plus size={16} />
                 <span>Nuova campagna</span>
               </button>
@@ -537,58 +581,68 @@ export function CommercialFunnelSection() {
         <>
           <div className="drawer-overlay open" onClick={() => setShowForm(false)} />
           <div className="drawer open">
-            <div className="drawer-header"><h3>Nuova campagna · {FUNNEL_TRACK_LABELS[track]}</h3></div>
+            <div className="drawer-header">
+              <h3>Nuova campagna · {FUNNEL_TRACK_LABELS[track]}</h3>
+              <div className="drawer-close" onClick={() => setShowForm(false)} role="button" tabIndex={0}>
+                <X size={20} />
+              </div>
+            </div>
             <form onSubmit={(event) => void handleCreate(event)}>
               <div className="drawer-body">
-                <p className={`funnel-track-note funnel-track-note-${track}`}>
-                  La campagna verrà creata in <strong>{FUNNEL_TRACK_LABELS[track]}</strong>:
-                  potrai aggiungere solo {track === 'warm'
-                    ? 'clienti che hanno fatturato almeno 1€'
-                    : 'clienti che non hanno ancora fatturato'}.
-                </p>
                 <div className="form-group">
-                  <label>Nome Campagna *</label>
-                  <input className="form-input" value={name} onChange={(e) => setName(e.target.value)} required />
+                  <label htmlFor="campaign-name">Campagna *</label>
+                  <input
+                    id="campaign-name"
+                    className="form-input"
+                    placeholder="Es. Agenzie Milano, follow-up evento…"
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    required
+                  />
+                </div>
+                <ClientChipsField
+                  clients={salesClients}
+                  clientIds={newCampaignClientIds}
+                  onChange={setNewCampaignClientIds}
+                  removeLabel="Togli dalla campagna"
+                  placeholder="Cerca un cliente senza fatturato..."
+                  hint="Per un solo cliente puoi usare anche un obiettivo: la campagna serve per lavorare più clienti insieme."
+                />
+                <div className="form-group">
+                  <label htmlFor="campaign-owner">Owner</label>
+                  <select
+                    id="campaign-owner"
+                    className="form-select"
+                    value={owner}
+                    onChange={(event) => setOwner(event.target.value as Owner | '')}
+                  >
+                    <option value="">—</option>
+                    {OWNERS.map((profile) => (
+                      <option key={profile} value={profile}>{profile}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="form-group">
-                  <label>Descrizione</label>
-                  <textarea className="form-textarea" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Owner</label>
-                    <select
-                      className="form-select"
-                      value={owner}
-                      onChange={(event) => setOwner(event.target.value as Owner | '')}
-                    >
-                      <option value="">—</option>
-                      {OWNERS.map((profile) => (
-                        <option key={profile} value={profile}>{profile}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Stato</label>
-                    <CampaignStatusSelect
-                      className="form-select"
-                      value={status}
-                      onChange={setStatus}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Data Inizio</label>
-                    <input type="date" className="form-input" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-                  </div>
-                  <div className="form-group">
-                    <label>Data Fine</label>
-                    <input type="date" className="form-input" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-                  </div>
+                  <label htmlFor="campaign-note">Nota (opzionale)</label>
+                  <textarea
+                    id="campaign-note"
+                    className="form-textarea"
+                    rows={2}
+                    placeholder="Contesto, messaggio, prossimi passi…"
+                    value={description}
+                    onChange={(event) => setDescription(event.target.value)}
+                  />
                 </div>
               </div>
               <div className="drawer-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>Annulla</button>
-                <button type="submit" className="btn btn-primary">Crea campagna</button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={isCreating || !name.trim() || newCampaignClientIds.length === 0}
+                >
+                  {isCreating ? 'Creazione…' : 'Crea campagna'}
+                </button>
               </div>
             </form>
           </div>

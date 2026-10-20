@@ -1,12 +1,20 @@
 'use client';
 
 import { Fragment, useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import { CheckCircle2, ChevronRight, Pencil, Plus, Search, Target, Trash2, X } from 'lucide-react';
-import { ClientSearchSelect } from '@/components/clients/client-search-select';
+import {
+  ActionFields,
+  ClientChipsField,
+  ContactSelect,
+  createEmptyActionFields,
+  getNamedContacts,
+} from '@/components/commercial-funnel/action-fields';
+import type { ActionFieldsValue } from '@/components/commercial-funnel/action-fields';
 import {
   buildAccountingObjectiveRows,
   formatDaysToDue,
-  isAccountingClient,
+  isObjectiveClient,
 } from '@/lib/commercial-funnel/accounting';
 import type {
   AccountingClientRow,
@@ -26,14 +34,12 @@ import {
 } from '@/lib/supabase/account-objectives-database';
 import { fetchAllClientActions, insertClientAction } from '@/lib/supabase/client-actions-database';
 import {
-  ACCOUNT_OBJECTIVE_ACTION_TYPES,
   ACCOUNTING_ACTION_TYPE,
   ACCOUNTING_CLOSE_ACTION_TYPE,
-  DEFAULT_RED_AFTER_DAYS,
-  RED_AFTER_DAYS_OPTIONS,
 } from '@/lib/types/client-actions';
 import type { AccountObjective, AccountingOutcome, ClientAction } from '@/lib/types/client-actions';
-import type { Client, ClientContact } from '@/lib/types/crm';
+import type { FunnelTrack } from '@/lib/types/commercial-funnel';
+import type { Client } from '@/lib/types/crm';
 import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
 
@@ -41,26 +47,51 @@ type AccountingFilter = 'open' | 'red' | 'won' | 'lost';
 
 const ACCOUNTING_OWNER_FILTER_STORAGE_KEY = 'crm-accounting-owner-filter';
 
-function readOwnerFilter(): string[] {
+function ownerFilterStorageKey(track: FunnelTrack): string {
+  return track === 'warm' ? ACCOUNTING_OWNER_FILTER_STORAGE_KEY : 'crm-sales-objectives-owner-filter';
+}
+
+function readOwnerFilter(track: FunnelTrack): string[] {
   if (typeof window === 'undefined') return [];
   try {
-    const parsed: unknown = JSON.parse(window.localStorage.getItem(ACCOUNTING_OWNER_FILTER_STORAGE_KEY) || '[]');
+    const parsed: unknown = JSON.parse(window.localStorage.getItem(ownerFilterStorageKey(track)) || '[]');
     return Array.isArray(parsed) ? parsed.filter((owner): owner is string => typeof owner === 'string') : [];
   } catch {
     return [];
   }
 }
 
-function writeOwnerFilter(owners: string[]): void {
+function writeOwnerFilter(track: FunnelTrack, owners: string[]): void {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.setItem(ACCOUNTING_OWNER_FILTER_STORAGE_KEY, JSON.stringify(owners));
+    window.localStorage.setItem(ownerFilterStorageKey(track), JSON.stringify(owners));
   } catch {
     // Filtro non salvabile: resta valido solo per questa visita.
   }
 }
 
-const OUTCOME_LABELS: Record<AccountingOutcome, string> = { won: 'Won', lost: 'Lost' };
+interface TrackCopy {
+  name: string;
+  outcome: Record<AccountingOutcome, string>;
+  outcomeOption: Record<AccountingOutcome, string>;
+  clientPlaceholder: string;
+}
+
+/** Account e Sales usano lo stesso schema di obiettivi: cambiano solo i nomi degli esiti. */
+const TRACK_COPY: Record<FunnelTrack, TrackCopy> = {
+  warm: {
+    name: 'Account',
+    outcome: { won: 'Won', lost: 'Lost' },
+    outcomeOption: { won: 'Won · obiettivo raggiunto', lost: 'Lost · non è andata' },
+    clientPlaceholder: 'Cerca un cliente caldo...',
+  },
+  cold: {
+    name: 'Sales',
+    outcome: { won: 'Convertito', lost: 'Perso' },
+    outcomeOption: { won: 'Convertito · è diventato cliente', lost: 'Perso · non è andata' },
+    clientPlaceholder: 'Cerca un cliente senza fatturato...',
+  },
+};
 
 function resolveContactLabel(client: Client, contactId: string): string {
   const contact = client.contacts.find((item) => item.id === contactId);
@@ -83,137 +114,6 @@ const SEMAFORO_TITLES: Record<AccountingClientRow['semaforo'], string> = {
   red: 'In ritardo: serve una nuova azione',
 };
 
-interface ActionFieldsValue {
-  actionType: string;
-  note: string;
-  actionDate: string;
-  redAfterDays: number;
-}
-
-function createEmptyActionFields(): ActionFieldsValue {
-  return { actionType: '', note: '', actionDate: getTodayString(), redAfterDays: DEFAULT_RED_AFTER_DAYS };
-}
-
-/** Tipo preimpostato + nota, data e semaforo: uguali per obiettivi singoli e di gruppo. */
-function ActionFields({
-  idPrefix,
-  value,
-  onChange,
-  isTypeRequired,
-}: {
-  idPrefix: string;
-  value: ActionFieldsValue;
-  onChange: (next: ActionFieldsValue) => void;
-  isTypeRequired: boolean;
-}) {
-  return (
-    <>
-      <div className="form-group">
-        <label htmlFor={`${idPrefix}-type`}>Azione{isTypeRequired ? ' *' : ''}</label>
-        <select
-          id={`${idPrefix}-type`}
-          className="form-select"
-          value={value.actionType}
-          onChange={(event) => onChange({ ...value, actionType: event.target.value })}
-          required={isTypeRequired}
-        >
-          <option value="">{isTypeRequired ? 'Scegli il tipo di azione…' : 'Nessuna azione per ora'}</option>
-          {ACCOUNT_OBJECTIVE_ACTION_TYPES.map((type) => (
-            <option key={type} value={type}>{type}</option>
-          ))}
-        </select>
-      </div>
-      {value.actionType && (
-        <>
-          <div className="form-group">
-            <label htmlFor={`${idPrefix}-note`}>Nota</label>
-            <textarea
-              id={`${idPrefix}-note`}
-              className="form-textarea"
-              rows={3}
-              placeholder="Cosa è stato fatto e qual è il prossimo passo"
-              value={value.note}
-              onChange={(event) => onChange({ ...value, note: event.target.value })}
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor={`${idPrefix}-date`}>Data azione</label>
-            <input
-              id={`${idPrefix}-date`}
-              type="date"
-              className="form-input"
-              value={value.actionDate}
-              onChange={(event) => onChange({ ...value, actionDate: event.target.value })}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>Semaforo rosso dopo</label>
-            <div className="accounting-red-after" role="radiogroup" aria-label="Semaforo rosso dopo">
-              {RED_AFTER_DAYS_OPTIONS.map((days) => (
-                <button
-                  key={days}
-                  type="button"
-                  role="radio"
-                  aria-checked={value.redAfterDays === days}
-                  className={`clients-filter-chip${value.redAfterDays === days ? ' is-active' : ''}`}
-                  onClick={() => onChange({ ...value, redAfterDays: days })}
-                >
-                  {days} giorni
-                </button>
-              ))}
-            </div>
-            <small className="accounting-red-after-hint">
-              Se entro {value.redAfterDays} giorni non registri una nuova azione, il semaforo diventa rosso.
-            </small>
-          </div>
-        </>
-      )}
-    </>
-  );
-}
-
-function getNamedContacts(client: Client | undefined): ClientContact[] {
-  return client?.contacts.filter((contact) => contact.name.trim() || contact.email.trim()) || [];
-}
-
-/** Contatto del cliente a cui si collega l'azione. */
-function ContactSelect({
-  id,
-  contacts,
-  value,
-  onChange,
-}: {
-  id: string;
-  contacts: ClientContact[];
-  value: string;
-  onChange: (contactId: string) => void;
-}) {
-  return (
-    <div className="form-group">
-      <label htmlFor={id}>Contatto</label>
-      <select
-        id={id}
-        className="form-select"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        disabled={contacts.length === 0}
-      >
-        {contacts.length === 0 ? (
-          <option value="">Nessun contatto su questo cliente</option>
-        ) : (
-          contacts.map((contact) => (
-            <option key={contact.id} value={contact.id}>
-              {contact.name.trim() || contact.email}
-              {contact.role ? ` · ${contact.role}` : ''}
-            </option>
-          ))
-        )}
-      </select>
-    </div>
-  );
-}
-
 interface ObjectiveDrawerInput {
   title: string;
   note: string;
@@ -224,6 +124,7 @@ interface ObjectiveDrawerInput {
 }
 
 interface ObjectiveDrawerProps {
+  copy: TrackCopy;
   clients: Client[];
   owners: readonly string[];
   /** In modifica: obiettivo esistente e clienti che hanno già azioni (non si possono togliere). */
@@ -236,6 +137,7 @@ interface ObjectiveDrawerProps {
 }
 
 function ObjectiveDrawer({
+  copy,
   clients,
   owners,
   objective,
@@ -250,7 +152,6 @@ function ObjectiveDrawer({
   const [note, setNote] = useState(objective?.note || '');
   const [owner, setOwner] = useState(objective?.owner || defaultOwner);
   const [clientIds, setClientIds] = useState<string[]>(objective?.clientIds || []);
-  const [pickerValue, setPickerValue] = useState('');
   const [firstAction, setFirstAction] = useState<ActionFieldsValue>(createEmptyActionFields);
   const [firstContactId, setFirstContactId] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -263,17 +164,7 @@ function ObjectiveDrawer({
     // Solo al cambio cliente: il contatto di default è il primo del cliente scelto.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onlyClientId]);
-  const pickableClients = useMemo(
-    () => clients.filter((client) => !clientIds.includes(client.id)),
-    [clientIds, clients],
-  );
   const canSave = !isSaving && Boolean(title.trim()) && clientIds.length > 0;
-
-  const addClient = (clientId: string): void => {
-    if (!clientId) return;
-    setClientIds((prev) => (prev.includes(clientId) ? prev : [...prev, clientId]));
-    setPickerValue('');
-  };
 
   const handleSubmit = async (event: React.FormEvent): Promise<void> => {
     event.preventDefault();
@@ -292,7 +183,7 @@ function ObjectiveDrawer({
       <div className="drawer-overlay open" onClick={onClose} aria-hidden />
       <div className="drawer open">
         <div className="drawer-header">
-          <h3>{isEdit ? 'Modifica obiettivo' : 'Nuovo obiettivo · Account'}</h3>
+          <h3>{isEdit ? 'Modifica obiettivo' : `Nuovo obiettivo · ${copy.name}`}</h3>
           <div className="drawer-close" onClick={onClose} role="button" tabIndex={0}>
             <X size={20} />
           </div>
@@ -310,40 +201,16 @@ function ObjectiveDrawer({
                 required
               />
             </div>
-            <div className="form-group">
-              <label>Clienti *</label>
-              {clientIds.length > 0 && (
-                <ul className="objective-client-chips">
-                  {clientIds.map((clientId) => {
-                    const isLocked = lockedClientIds?.has(clientId) ?? false;
-                    return (
-                      <li key={clientId} className="objective-client-chip">
-                        <span>{clientById.get(clientId)?.name || 'Cliente non trovato'}</span>
-                        <button
-                          type="button"
-                          aria-label="Togli dall'obiettivo"
-                          title={isLocked ? 'Ha già azioni in questo obiettivo' : "Togli dall'obiettivo"}
-                          disabled={isLocked}
-                          onClick={() => setClientIds((prev) => prev.filter((item) => item !== clientId))}
-                        >
-                          <X size={12} />
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-              <ClientSearchSelect
-                activeClients={pickableClients}
-                coldClients={[]}
-                value={pickerValue}
-                onChange={addClient}
-                placeholder={clientIds.length === 0 ? 'Cerca un cliente caldo...' : 'Aggiungi un altro cliente...'}
-              />
-              <small className="accounting-red-after-hint">
-                Con più clienti l&apos;obiettivo funziona come una campagna: per ogni cliente registri azioni preimpostate con una nota.
-              </small>
-            </div>
+            <ClientChipsField
+              clients={clients}
+              clientIds={clientIds}
+              onChange={setClientIds}
+              lockedClientIds={lockedClientIds}
+              lockedTitle="Ha già azioni in questo obiettivo"
+              removeLabel="Togli dall'obiettivo"
+              placeholder={copy.clientPlaceholder}
+              hint="Con più clienti l'obiettivo funziona come una campagna: per ogni cliente registri azioni preimpostate con una nota."
+            />
             <div className="form-group">
               <label htmlFor="objective-owner">Owner</label>
               <select
@@ -458,7 +325,7 @@ function NewActionDrawer({ objective, clients, initialClientId, onClose, onSave 
       <div className="drawer-overlay open" onClick={onClose} aria-hidden />
       <div className="drawer open">
         <div className="drawer-header">
-          <h3>Nuova azione · {selectedClient?.name || 'Account'}</h3>
+          <h3>Nuova azione · {selectedClient?.name || 'Cliente'}</h3>
           <div className="drawer-close" onClick={onClose} role="button" tabIndex={0}>
             <X size={20} />
           </div>
@@ -504,12 +371,13 @@ function NewActionDrawer({ objective, clients, initialClientId, onClose, onSave 
 }
 
 interface CloseCycleDrawerProps {
+  copy: TrackCopy;
   row: AccountingClientRow;
   onClose: () => void;
   onSave: (input: { outcome: AccountingOutcome; note: string; actionDate: string }) => Promise<void>;
 }
 
-function CloseCycleDrawer({ row, onClose, onSave }: CloseCycleDrawerProps) {
+function CloseCycleDrawer({ copy, row, onClose, onSave }: CloseCycleDrawerProps) {
   const [outcome, setOutcome] = useState<AccountingOutcome>('won');
   const [note, setNote] = useState('');
   const [actionDate, setActionDate] = useState(getTodayString());
@@ -558,7 +426,7 @@ function CloseCycleDrawer({ row, onClose, onSave }: CloseCycleDrawerProps) {
                     className={`accounting-outcome-option is-${value}${outcome === value ? ' is-active' : ''}`}
                     onClick={() => setOutcome(value)}
                   >
-                    {value === 'won' ? 'Won · obiettivo raggiunto' : 'Lost · non è andata'}
+                    {copy.outcomeOption[value]}
                   </button>
                 ))}
               </div>
@@ -592,7 +460,7 @@ function CloseCycleDrawer({ row, onClose, onSave }: CloseCycleDrawerProps) {
           <div className="drawer-footer">
             <button type="button" className="btn btn-secondary" onClick={onClose}>Annulla</button>
             <button type="submit" className="btn btn-primary" disabled={!canSave}>
-              {isSaving ? 'Salvataggio…' : `Chiudi come ${OUTCOME_LABELS[outcome]}`}
+              {isSaving ? 'Salvataggio…' : `Chiudi come ${copy.outcome[outcome]}`}
             </button>
           </div>
         </form>
@@ -601,12 +469,12 @@ function CloseCycleDrawer({ row, onClose, onSave }: CloseCycleDrawerProps) {
   );
 }
 
-function StatusBadge({ status }: { status: AccountingStatus }) {
+function StatusBadge({ status, copy }: { status: AccountingStatus; copy: TrackCopy }) {
   if (status === 'open') return null;
-  return <span className={`accounting-outcome-badge is-${status}`}>{OUTCOME_LABELS[status]}</span>;
+  return <span className={`accounting-outcome-badge is-${status}`}>{copy.outcome[status]}</span>;
 }
 
-function ClientHistory({ row }: { row: AccountingClientRow }) {
+function ClientHistory({ row, copy }: { row: AccountingClientRow; copy: TrackCopy }) {
   if (!row.closure && row.actions.length === 0) {
     return <p className="accounting-previous-cycles">Nessuna azione ancora su questo obiettivo: usa + per registrare la prima.</p>;
   }
@@ -615,7 +483,7 @@ function ClientHistory({ row }: { row: AccountingClientRow }) {
       <ul className="accounting-history">
         {row.closure && (
           <li className={`accounting-history-closure is-${row.status}`}>
-            <StatusBadge status={row.status} />
+            <StatusBadge status={row.status} copy={copy} />
             <span>{formatActionDateDisplay(row.closure.actionDate)}</span>
             {row.closure.author && <span className="client-last-action-detail">{row.closure.author}</span>}
             <p>{row.closure.note || 'Chiuso.'}</p>
@@ -646,7 +514,9 @@ function ClientHistory({ row }: { row: AccountingClientRow }) {
 
 const COLUMN_COUNT = 7;
 
-export function AccountingView() {
+/** Obiettivi di un funnel: Account (clienti caldi) o Sales (new business), stesso schema. */
+export function AccountingView({ track = 'warm', toolbarExtra }: { track?: FunnelTrack; toolbarExtra?: ReactNode }) {
+  const copy = TRACK_COPY[track];
   const { clients, currentOwner, showToast } = useCrm();
   const { workspaceId } = useWorkspace();
   const db = useMemo(() => createBrowserSupabaseClient(), []);
@@ -667,12 +537,12 @@ export function AccountingView() {
   );
 
   useEffect(() => {
-    setOwnerFilter(readOwnerFilter());
-  }, []);
+    setOwnerFilter(readOwnerFilter(track));
+  }, [track]);
 
   const changeOwnerFilter = (next: string[]): void => {
     setOwnerFilter(next);
-    writeOwnerFilter(next);
+    writeOwnerFilter(track, next);
   };
 
   useEffect(() => {
@@ -683,7 +553,7 @@ export function AccountingView() {
       .then(([loadedActions, loadedObjectives]) => {
         if (cancelled) return;
         setActions(loadedActions);
-        setObjectives(loadedObjectives);
+        setObjectives(loadedObjectives.filter((objective) => objective.track === track));
       })
       .catch((error) => {
         showToast(`Errore lettura obiettivi: ${error instanceof Error ? error.message : 'errore'}`, 'danger');
@@ -694,17 +564,17 @@ export function AccountingView() {
     return () => {
       cancelled = true;
     };
-  }, [db, showToast, workspaceId]);
+  }, [db, showToast, track, workspaceId]);
 
   const workspaceClients = useMemo(
     () => clients.filter((client) => isClientInWorkspace(client, workspaceId)),
     [clients, workspaceId],
   );
-  const accountingClients = useMemo(
+  const objectiveClients = useMemo(
     () => workspaceClients
-      .filter((client) => isAccountingClient(client, clients))
+      .filter((client) => isObjectiveClient(client, track, clients))
       .sort((left, right) => left.name.localeCompare(right.name, 'it')),
-    [clients, workspaceClients],
+    [clients, track, workspaceClients],
   );
   const objectiveRows = useMemo(
     () => buildAccountingObjectiveRows(objectives, workspaceClients, actions, getTodayString())
@@ -795,6 +665,7 @@ export function AccountingView() {
       const created = await insertAccountObjective(db, {
         id: createUniqueId('objective'),
         workspaceId,
+        track,
         title: input.title,
         note: input.note,
         owner: input.owner,
@@ -862,7 +733,7 @@ export function AccountingView() {
         outcome: input.outcome,
       });
       setActions((prev) => [saved, ...prev]);
-      showToast(`${row.client.name} chiuso come ${OUTCOME_LABELS[input.outcome]}.`, 'success');
+      showToast(`${row.client.name} chiuso come ${copy.outcome[input.outcome]}.`, 'success');
     } catch (error) {
       showToast(`Errore chiusura: ${error instanceof Error ? error.message : 'errore'}`, 'danger');
       throw error;
@@ -910,7 +781,7 @@ export function AccountingView() {
                 aria-label={SEMAFORO_TITLES[row.semaforo]}
               />
             ) : (
-              <StatusBadge status={row.status} />
+              <StatusBadge status={row.status} copy={copy} />
             )}
           </td>
           <td className="is-card-title">
@@ -966,7 +837,7 @@ export function AccountingView() {
               <button
                 type="button"
                 className="btn-table-action"
-                title="Chiudi con esito Won o Lost"
+                title={`Chiudi con esito ${copy.outcome.won} o ${copy.outcome.lost}`}
                 onClick={() => setClosingRow(row)}
                 disabled={!db}
               >
@@ -1002,7 +873,7 @@ export function AccountingView() {
               {!options.isGroupChild && row.objective.note && (
                 <p className="accounting-objective-note"><strong>Nota obiettivo:</strong> {row.objective.note}</p>
               )}
-              <ClientHistory row={row} />
+              <ClientHistory row={row} copy={copy} />
             </td>
           </tr>
         )}
@@ -1085,12 +956,12 @@ export function AccountingView() {
               onChange={(event) => setSearch(event.target.value)}
             />
           </div>
-          <div className="proposals-list-chips" role="group" aria-label="Filtra Account">
+          <div className="proposals-list-chips" role="group" aria-label={`Filtra ${copy.name}`}>
             {([
               ['open', 'Aperti'],
               ['red', 'In ritardo'],
-              ['won', 'Won'],
-              ['lost', 'Lost'],
+              ['won', copy.outcome.won],
+              ['lost', copy.outcome.lost],
             ] as const).map(([value, label]) => (
               <button
                 key={value}
@@ -1105,6 +976,7 @@ export function AccountingView() {
           </div>
         </div>
         <div className="filter-right">
+          {toolbarExtra}
           <div className="proposals-list-chips" role="group" aria-label="Filtra per owner">
             <button
               type="button"
@@ -1160,9 +1032,9 @@ export function AccountingView() {
               <tr>
                 <td colSpan={COLUMN_COUNT} className="mail-campaigns-empty">
                   {objectiveRows.length === 0
-                    ? 'Nessun obiettivo in Account. Usa «Nuovo obiettivo» per scegliere cosa vuoi ottenere e su quali clienti.'
+                    ? `Nessun obiettivo in ${copy.name}. Usa «Nuovo obiettivo» per scegliere cosa vuoi ottenere e su quali clienti.`
                     : filter === 'open'
-                      ? 'Nessun obiettivo aperto: tutti i clienti sono chiusi come Won o Lost.'
+                      ? `Nessun obiettivo aperto: tutti i clienti sono chiusi come ${copy.outcome.won} o ${copy.outcome.lost}.`
                       : 'Nessun obiettivo con questi filtri.'}
                 </td>
               </tr>
@@ -1174,6 +1046,7 @@ export function AccountingView() {
       </div>
       {closingRow && (
         <CloseCycleDrawer
+          copy={copy}
           row={closingRow}
           onClose={() => setClosingRow(null)}
           onSave={(input) => handleCloseCycle(closingRow, input)}
@@ -1190,10 +1063,11 @@ export function AccountingView() {
       )}
       {objectiveDrawer && (
         <ObjectiveDrawer
+          copy={copy}
           clients={editingObjective
-            ? [...accountingClients, ...workspaceClients.filter((client) => editingObjective.clientIds.includes(client.id)
-              && !accountingClients.some((item) => item.id === client.id))]
-            : accountingClients}
+            ? [...objectiveClients, ...workspaceClients.filter((client) => editingObjective.clientIds.includes(client.id)
+              && !objectiveClients.some((item) => item.id === client.id))]
+            : objectiveClients}
           owners={owners}
           objective={editingObjective}
           lockedClientIds={editingLockedClientIds}

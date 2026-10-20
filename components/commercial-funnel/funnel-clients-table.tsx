@@ -259,7 +259,7 @@ export function FunnelClientsTable({
                         <td className="funnel-col-semaforo">
                           <span
                             className={`funnel-semaforo funnel-semaforo-${displaySemaforo}`}
-                            title={isConverted ? 'Convertito' : displaySemaforo === 'green' ? 'Nei tempi (entro 5 giorni)' : 'Fuori tempo (oltre 5 giorni)'}
+                            title={isConverted ? 'Convertito' : displaySemaforo === 'green' ? 'Nei tempi' : 'In ritardo: serve una nuova azione'}
                           />
                         </td>
                         <td className="funnel-col-client">
@@ -530,7 +530,7 @@ export function FunnelClientsTable({
       {newActionEntry && (
         <FunnelNewActionDrawer
           entry={newActionEntry}
-          clientName={clientById.get(newActionEntry.clientId)?.name || 'Cliente'}
+          client={clientById.get(newActionEntry.clientId)}
           onClose={() => setNewActionEntryId('')}
         />
       )}

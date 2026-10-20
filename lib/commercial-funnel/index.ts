@@ -108,6 +108,8 @@ export function resolveFunnelSemaforo(actions: FunnelActionSlot[], today = getTo
   const last = actions[lastIndex];
   if (last.type === 'Convertito' || last.type === 'Perso') return 'green';
   const elapsed = daysBetween(last.date, today);
+  // Come negli obiettivi: rosso dopo i giorni scelti sull'azione. Le azioni vecchie restano a 5 giorni.
+  if (last.redAfterDays) return elapsed > last.redAfterDays ? 'red' : 'green';
   return elapsed >= FUNNEL_SEMAFORO_THRESHOLD_DAYS ? 'red' : 'green';
 }
 

@@ -24,6 +24,12 @@ import type { CommercialFunnelEntry, FunnelActionType, FunnelClientRef } from '@
 import type { MailCampaign } from '@/lib/types/mail-campaigns';
 import type { Client } from '@/lib/types/crm';
 
+/** Data e semaforo scelti nel drawer azione, come negli obiettivi. */
+export interface FunnelActionOptions {
+  actionDate?: string;
+  redAfterDays?: number;
+}
+
 interface CommercialFunnelPersistDeps {
   db: SupabaseClient | null;
   setCommercialFunnelEntries: Dispatch<SetStateAction<CommercialFunnelEntry[]>>;
@@ -87,6 +93,8 @@ export function createCommercialFunnelActions(
   const addClientsToFunnel = async (
     campaignId: string,
     clientRefs: FunnelClientRef[],
+    /** Per una campagna appena creata, non ancora nello stato. */
+    fallbackWorkspaceId?: string,
   ): Promise<void> => {
     await runMutation(async () => {
       const state = getEntries();
@@ -96,7 +104,7 @@ export function createCommercialFunnelActions(
           .map((entry) => buildFunnelEntryKey(entry.clientId, entry.contactId)),
       );
       const campaign = deps.getCampaignById(campaignId);
-      const workspaceId = campaign?.workspaceId || DEFAULT_WORKSPACE_ID;
+      const workspaceId = campaign?.workspaceId || fallbackWorkspaceId || DEFAULT_WORKSPACE_ID;
       const newEntries: CommercialFunnelEntry[] = clientRefs
         .filter((ref) => !existingKeys.has(buildFunnelEntryKey(ref.clientId, ref.contactId)))
         .map((ref) => persistableEntry({
@@ -173,6 +181,7 @@ export function createCommercialFunnelActions(
     actionType: FunnelActionType,
     note: string,
     lostReason = '',
+    options: FunnelActionOptions = {},
   ): Promise<void> => {
     if (actionType === 'Perso' && !lostReason.trim()) {
       deps.showToast('Inserisci il motivo della perdita.', 'warning');
@@ -198,8 +207,9 @@ export function createCommercialFunnelActions(
       nextActions[slotIndex] = {
         ...createEmptyFunnelActionSlot(),
         type: actionType,
-        date: new Date().toISOString().slice(0, 10),
+        date: options.actionDate || new Date().toISOString().slice(0, 10),
         note: note.trim(),
+        ...(options.redAfterDays ? { redAfterDays: options.redAfterDays } : {}),
       };
       const nextEntry = persistableEntry({
         ...entry,

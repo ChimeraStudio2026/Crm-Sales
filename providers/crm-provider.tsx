@@ -54,6 +54,7 @@ import {
 } from '@/lib/supabase/commercial-funnel-database';
 import { createMailCampaignActions } from '@/providers/mail-campaign-actions';
 import { createCommercialFunnelActions } from '@/providers/commercial-funnel-actions';
+import type { FunnelActionOptions } from '@/providers/commercial-funnel-actions';
 import { createPropositivitaActions } from '@/providers/propositivita-actions';
 import type { CreativeProposal, CreativeProposalStage, SpecialDiscount, SpecialDiscountType } from '@/lib/types/propositivita';
 import {
@@ -214,14 +215,20 @@ interface CrmContextValue {
   markMailSentToday: (trackingId: string) => Promise<void>;
   saveCampaignSteps: (campaignId: string, steps: MailCampaignStep[]) => Promise<void>;
   commercialFunnelEntries: CommercialFunnelEntry[];
-  addClientsToFunnel: (campaignId: string, clientRefs: FunnelClientRef[]) => Promise<void>;
+  addClientsToFunnel: (campaignId: string, clientRefs: FunnelClientRef[], fallbackWorkspaceId?: string) => Promise<void>;
   updateFunnelAction: (entryId: string, slotIndex: number, actionType: FunnelActionType | '') => Promise<void>;
   updateFunnelLostReason: (entryId: string, lostReason: string) => Promise<void>;
   markFunnelEntryLost: (entryId: string, slotIndex: number, lostReason: string) => Promise<void>;
   updateFunnelEntryOwner: (entryId: string, owner: string) => Promise<void>;
   updateFunnelEntryContact: (entryId: string, contactId: string) => Promise<void>;
   updateFunnelActionNote: (entryId: string, slotIndex: number, note: string) => Promise<void>;
-  addFunnelAction: (entryId: string, actionType: FunnelActionType, note: string, lostReason?: string) => Promise<void>;
+  addFunnelAction: (
+    entryId: string,
+    actionType: FunnelActionType,
+    note: string,
+    lostReason?: string,
+    options?: FunnelActionOptions,
+  ) => Promise<void>;
   addTaskToFunnelAction: (entryId: string, slotIndex: number, taskId: string) => Promise<void>;
   removeFunnelEntry: (entryId: string) => Promise<void>;
   moveFunnelEntryToCampaign: (entryId: string, targetCampaignId: string) => Promise<void>;

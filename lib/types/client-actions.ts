@@ -1,3 +1,5 @@
+import type { FunnelTrack } from '@/lib/types/commercial-funnel';
+
 export const CLIENT_ACTION_TYPES = [
   'Call',
   'Mail',
@@ -36,10 +38,12 @@ export const ACCOUNTING_ACTION_TYPE = 'Accounting';
 /** Chiude il ciclo di azioni Accounting su un cliente con un esito won/lost. */
 export const ACCOUNTING_CLOSE_ACTION_TYPE = 'Chiusura Accounting';
 
-/** Obiettivo Account: uno o più clienti su cui si lavora con azioni preimpostate e una nota. */
+/** Obiettivo (Account o Sales): uno o più clienti su cui si lavora con azioni preimpostate e una nota. */
 export interface AccountObjective {
   id: string;
   workspaceId: string;
+  /** Funnel dell'obiettivo: 'warm' = Account, 'cold' = Sales. */
+  track: FunnelTrack;
   title: string;
   note: string;
   owner: string;

@@ -148,6 +148,7 @@ export function sanitizeFunnelActionSlot(slot: Partial<FunnelActionSlot>): Funne
     taskIds: Array.isArray(slot.taskIds)
       ? slot.taskIds.filter((id): id is string => typeof id === 'string')
       : [],
+    ...(typeof slot.redAfterDays === 'number' && slot.redAfterDays > 0 ? { redAfterDays: slot.redAfterDays } : {}),
   };
 }
 

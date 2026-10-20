@@ -1,36 +1,51 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { X } from 'lucide-react';
+import {
+  ActionFields,
+  ContactSelect,
+  createEmptyActionFields,
+  getNamedContacts,
+} from '@/components/commercial-funnel/action-fields';
+import type { ActionFieldsValue } from '@/components/commercial-funnel/action-fields';
 import { isFunnelTerminalLost } from '@/lib/commercial-funnel/index';
 import { FUNNEL_ACTION_TYPES } from '@/lib/types/commercial-funnel';
 import type { CommercialFunnelEntry, FunnelActionType } from '@/lib/types/commercial-funnel';
+import type { Client } from '@/lib/types/crm';
 import { useCrm } from '@/providers/crm-provider';
 
 interface FunnelNewActionDrawerProps {
   entry: CommercialFunnelEntry;
-  clientName: string;
+  client: Client | undefined;
   onClose: () => void;
 }
 
-/** Nuova azione su un cliente della campagna: tipo preimpostato + nota, come in Account. */
-export function FunnelNewActionDrawer({ entry, clientName, onClose }: FunnelNewActionDrawerProps) {
-  const { addFunnelAction } = useCrm();
-  const [actionType, setActionType] = useState<FunnelActionType | ''>('');
-  const [note, setNote] = useState('');
+/** Nuova azione su un cliente della campagna: stessi campi degli obiettivi (contatto, nota, data, semaforo). */
+export function FunnelNewActionDrawer({ entry, client, onClose }: FunnelNewActionDrawerProps) {
+  const { addFunnelAction, updateFunnelEntryContact } = useCrm();
+  const contacts = useMemo(() => getNamedContacts(client), [client]);
+  const [contactId, setContactId] = useState(entry.contactId || contacts[0]?.id || '');
+  const [fields, setFields] = useState<ActionFieldsValue>(createEmptyActionFields);
   const [lostReason, setLostReason] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const isLost = isFunnelTerminalLost(entry);
   const availableTypes = FUNNEL_ACTION_TYPES.filter((type) => !(isLost && type === 'Perso'));
-  const needsReason = actionType === 'Perso';
-  const canSave = Boolean(actionType) && (!needsReason || Boolean(lostReason.trim())) && !isSaving;
+  const needsReason = fields.actionType === 'Perso';
+  const canSave = Boolean(fields.actionType) && (!needsReason || Boolean(lostReason.trim())) && !isSaving;
 
   const handleSubmit = async (event: React.FormEvent): Promise<void> => {
     event.preventDefault();
-    if (!actionType || !canSave) return;
+    if (!canSave) return;
     setIsSaving(true);
     try {
-      await addFunnelAction(entry.id, actionType, note.trim(), lostReason.trim());
+      if (contactId && contactId !== entry.contactId) {
+        await updateFunnelEntryContact(entry.id, contactId);
+      }
+      await addFunnelAction(entry.id, fields.actionType as FunnelActionType, fields.note.trim(), lostReason.trim(), {
+        actionDate: fields.actionDate,
+        redAfterDays: fields.redAfterDays,
+      });
       onClose();
     } finally {
       setIsSaving(false);
@@ -42,7 +57,7 @@ export function FunnelNewActionDrawer({ entry, clientName, onClose }: FunnelNewA
       <div className="drawer-overlay open" onClick={onClose} aria-hidden />
       <div className="drawer open">
         <div className="drawer-header">
-          <h3>{isLost ? 'Riattiva' : 'Nuova azione'} · {clientName}</h3>
+          <h3>{isLost ? 'Riattiva' : 'Nuova azione'} · {client?.name || 'Cliente'}</h3>
           <div className="drawer-close" onClick={onClose} role="button" tabIndex={0}>
             <X size={20} />
           </div>
@@ -54,32 +69,14 @@ export function FunnelNewActionDrawer({ entry, clientName, onClose }: FunnelNewA
                 Il cliente è perso: la nuova azione lo riattiva nella campagna.
               </p>
             )}
-            <div className="form-group">
-              <label htmlFor="funnel-action-type">Azione *</label>
-              <select
-                id="funnel-action-type"
-                className="form-select"
-                value={actionType}
-                onChange={(event) => setActionType(event.target.value as FunnelActionType | '')}
-                required
-              >
-                <option value="">Scegli il tipo di azione…</option>
-                {availableTypes.map((type) => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label htmlFor="funnel-action-note">Nota</label>
-              <textarea
-                id="funnel-action-note"
-                className="form-textarea"
-                rows={4}
-                placeholder="Cosa è stato fatto e qual è il prossimo passo"
-                value={note}
-                onChange={(event) => setNote(event.target.value)}
-              />
-            </div>
+            <ContactSelect id="funnel-action-contact" contacts={contacts} value={contactId} onChange={setContactId} />
+            <ActionFields
+              idPrefix="funnel-action"
+              value={fields}
+              onChange={setFields}
+              isTypeRequired
+              actionTypes={availableTypes}
+            />
             {needsReason && (
               <div className="form-group">
                 <label htmlFor="funnel-action-lost-reason">Motivo della perdita *</label>

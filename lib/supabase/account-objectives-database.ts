@@ -4,6 +4,7 @@ import type { AccountObjective } from '@/lib/types/client-actions';
 interface AccountObjectiveRow {
   id: string;
   workspace_id: string;
+  funnel_track: string | null;
   title: string;
   note: string | null;
   owner: string | null;
@@ -15,6 +16,8 @@ function rowToObjective(row: AccountObjectiveRow): AccountObjective {
   return {
     id: row.id,
     workspaceId: row.workspace_id,
+    // Gli obiettivi nati prima di Sales sono tutti di Account.
+    track: row.funnel_track === 'cold' ? 'cold' : 'warm',
     title: row.title || '',
     note: row.note || '',
     owner: row.owner || '',
@@ -45,6 +48,7 @@ export async function insertAccountObjective(
     .insert({
       id: objective.id,
       workspace_id: objective.workspaceId,
+      funnel_track: objective.track,
       title: objective.title,
       note: objective.note,
       owner: objective.owner,

@@ -47,6 +47,7 @@ import { FUNNEL_TRACKS } from '@/lib/types/commercial-funnel';
 import type { FunnelClientRef, FunnelTrack } from '@/lib/types/commercial-funnel';
 import type { Owner } from '@/lib/types/crm';
 
+// Sales e Account hanno la stessa struttura: obiettivi e campagne in una lista, più i clienti delle campagne.
 const SALES_PAGE_VIEWS: readonly [SalesPageView, string][] = [
   ['list', 'Obiettivi e campagne'],
   ['clients', 'Clienti campagne'],
@@ -224,7 +225,7 @@ export function CommercialFunnelSection() {
   };
 
   const salesViewToggle = (
-    <div className="task-view-toggle" role="group" aria-label="Vista Sales">
+    <div className="task-view-toggle" role="group" aria-label="Vista funnel">
       {SALES_PAGE_VIEWS.map(([view, label]) => (
         <button
           key={view}
@@ -268,19 +269,16 @@ export function CommercialFunnelSection() {
               >
                 <span className="funnel-track-tab-label">
                   {FUNNEL_TRACK_LABELS[item]}
-                  {item === 'cold' && (
-                    <span className="funnel-track-tab-count">{campaignCountByTrack[item]}</span>
-                  )}
+                  <span className="funnel-track-tab-count">{campaignCountByTrack[item]}</span>
                 </span>
                 <small>{FUNNEL_TRACK_DESCRIPTIONS[item]}</small>
               </button>
             ))}
           </div>
-          {track === 'warm' ? (
-            <AccountingView track="warm" />
-          ) : pageView === 'list' ? (
+          {pageView === 'list' ? (
             <AccountingView
-              track="cold"
+              key={track}
+              track={track}
               toolbarExtra={(
                 <>
                   {salesViewToggle}

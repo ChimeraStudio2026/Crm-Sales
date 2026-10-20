@@ -39,37 +39,51 @@ import {
   ACCOUNTING_CLOSE_ACTION_TYPE,
 } from '@/lib/types/client-actions';
 import type { AccountObjective, AccountingOutcome, ClientAction } from '@/lib/types/client-actions';
-import type { FunnelTrack } from '@/lib/types/commercial-funnel';
 import type { Client } from '@/lib/types/crm';
 import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
 
 type AccountingFilter = 'open' | 'red' | 'won' | 'lost';
 
-const ACCOUNTING_OWNER_FILTER_STORAGE_KEY = 'crm-accounting-owner-filter';
+/** Cosa mostrare nella lista: obiettivi e campagne insieme, oppure solo uno dei due. */
+type KindFilter = 'all' | 'objectives' | 'campaigns';
 
-function ownerFilterStorageKey(track: FunnelTrack): string {
-  return track === 'warm' ? ACCOUNTING_OWNER_FILTER_STORAGE_KEY : 'crm-sales-objectives-owner-filter';
-}
+const OWNER_FILTER_STORAGE_KEY = 'crm-objectives-owner-filter';
+const KIND_FILTER_STORAGE_KEY = 'crm-objectives-kind-filter';
 
-function readOwnerFilter(track: FunnelTrack): string[] {
-  if (typeof window === 'undefined') return [];
+function readStoredJson(key: string): unknown {
+  if (typeof window === 'undefined') return null;
   try {
-    const parsed: unknown = JSON.parse(window.localStorage.getItem(ownerFilterStorageKey(track)) || '[]');
-    return Array.isArray(parsed) ? parsed.filter((owner): owner is string => typeof owner === 'string') : [];
+    return JSON.parse(window.localStorage.getItem(key) || 'null');
   } catch {
-    return [];
+    return null;
   }
 }
 
-function writeOwnerFilter(track: FunnelTrack, owners: string[]): void {
+function writeStoredJson(key: string, value: unknown): void {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.setItem(ownerFilterStorageKey(track), JSON.stringify(owners));
+    window.localStorage.setItem(key, JSON.stringify(value));
   } catch {
     // Filtro non salvabile: resta valido solo per questa visita.
   }
 }
+
+function readOwnerFilter(): string[] {
+  const parsed = readStoredJson(OWNER_FILTER_STORAGE_KEY);
+  return Array.isArray(parsed) ? parsed.filter((owner): owner is string => typeof owner === 'string') : [];
+}
+
+function readKindFilter(): KindFilter {
+  const parsed = readStoredJson(KIND_FILTER_STORAGE_KEY);
+  return parsed === 'objectives' || parsed === 'campaigns' ? parsed : 'all';
+}
+
+const KIND_FILTERS: readonly [KindFilter, string][] = [
+  ['all', 'Tutto'],
+  ['objectives', 'Obiettivi'],
+  ['campaigns', 'Campagne'],
+];
 
 interface TrackCopy {
   name: string;
@@ -78,20 +92,12 @@ interface TrackCopy {
   clientPlaceholder: string;
 }
 
-/** Account e Sales usano lo stesso schema di obiettivi: cambiano solo i nomi degli esiti. */
-const TRACK_COPY: Record<FunnelTrack, TrackCopy> = {
-  warm: {
-    name: 'Account',
-    outcome: { won: 'Won', lost: 'Lost' },
-    outcomeOption: { won: 'Won · obiettivo raggiunto', lost: 'Lost · non è andata' },
-    clientPlaceholder: 'Cerca un cliente caldo...',
-  },
-  cold: {
-    name: 'Sales',
-    outcome: { won: 'Convertito', lost: 'Perso' },
-    outcomeOption: { won: 'Convertito · è diventato cliente', lost: 'Perso · non è andata' },
-    clientPlaceholder: 'Cerca un cliente senza fatturato...',
-  },
+/** Sales e Account non sono più separati: un solo schema per obiettivi e campagne di tutti. */
+const COPY: TrackCopy = {
+  name: 'Obiettivi e campagne',
+  outcome: { won: 'Won', lost: 'Lost' },
+  outcomeOption: { won: 'Won · obiettivo raggiunto', lost: 'Lost · non è andata' },
+  clientPlaceholder: 'Cerca tra tutti i clienti...',
 };
 
 function resolveContactLabel(client: Client, contactId: string): string {
@@ -164,6 +170,12 @@ function ObjectiveDrawer({
   const canChooseKind = !isEdit && Boolean(onCreateCampaign);
   const [kind, setKind] = useState<CreateKind>('objective');
   const isCampaign = kind === 'campaign';
+  // Un obiettivo è su un solo cliente: scegliendone un altro, sostituisce il precedente.
+  // Gli obiettivi di gruppo nati prima restano modificabili con tutti i loro clienti.
+  const isSingleClient = !isCampaign && (!isEdit || (objective?.clientIds.length || 0) <= 1);
+  const handleClientIdsChange = (next: string[]): void => {
+    setClientIds(isSingleClient && next.length > 1 ? next.slice(-1) : next);
+  };
   const [title, setTitle] = useState(objective?.title || '');
   const [note, setNote] = useState(objective?.note || '');
   const [owner, setOwner] = useState(objective?.owner || defaultOwner);
@@ -180,7 +192,8 @@ function ObjectiveDrawer({
     // Solo al cambio cliente: il contatto di default è il primo del cliente scelto.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onlyClientId]);
-  const canSave = !isSaving && Boolean(title.trim()) && clientIds.length > 0;
+  const hasTooManyClients = isSingleClient && clientIds.length > 1;
+  const canSave = !isSaving && Boolean(title.trim()) && clientIds.length > 0 && !hasTooManyClients;
 
   const handleSubmit = async (event: React.FormEvent): Promise<void> => {
     event.preventDefault();
@@ -206,7 +219,7 @@ function ObjectiveDrawer({
           <h3>
             {isEdit
               ? 'Modifica obiettivo'
-              : canChooseKind ? `Nuovo · ${copy.name}` : `Nuovo obiettivo · ${copy.name}`}
+              : canChooseKind ? 'Nuovo' : 'Nuovo obiettivo'}
           </h3>
           <div className="drawer-close" onClick={onClose} role="button" tabIndex={0}>
             <X size={20} />
@@ -219,8 +232,8 @@ function ObjectiveDrawer({
                 <label>Cosa vuoi creare?</label>
                 <div className="objective-kind-choice" role="radiogroup" aria-label="Cosa vuoi creare">
                   {([
-                    ['objective', 'Obiettivo', 'Uno o più clienti, azioni con nota e semaforo'],
-                    ['campaign', 'Campagna', 'Pipeline di più clienti con status e statistiche'],
+                    ['objective', 'Crea nuovo obiettivo', 'Su un singolo cliente: le tue azioni con nota e scadenza'],
+                    ['campaign', 'Crea campagna', 'Un obiettivo comune a più clienti, ognuno con le sue azioni'],
                   ] as const).map(([value, label, description]) => (
                     <button
                       key={value}
@@ -253,15 +266,22 @@ function ObjectiveDrawer({
             <ClientChipsField
               clients={clients}
               clientIds={clientIds}
-              onChange={setClientIds}
+              onChange={handleClientIdsChange}
               lockedClientIds={lockedClientIds}
               lockedTitle="Ha già azioni in questo obiettivo"
               removeLabel={isCampaign ? 'Togli dalla campagna' : "Togli dall'obiettivo"}
               placeholder={copy.clientPlaceholder}
               hint={isCampaign
-                ? 'Nella campagna ogni cliente ha il suo status (in contatto, convertito, perso) e le statistiche di pipeline.'
-                : "Con più clienti l'obiettivo funziona come una campagna: per ogni cliente registri azioni preimpostate con una nota."}
+                ? 'Scegli tutti i clienti della campagna: ognuno ha le sue azioni, il suo status e la sua scadenza.'
+                : isSingleClient
+                  ? "Un obiettivo è su un cliente solo. Per più clienti crea una campagna."
+                  : "Obiettivo di gruppo creato prima della nuova struttura: puoi gestirne i clienti."}
             />
+            {hasTooManyClients && (
+              <p className="funnel-track-note">
+                Un obiettivo è su un cliente solo: togli quelli in più oppure crea una campagna.
+              </p>
+            )}
             <div className="form-group">
               <label htmlFor="objective-owner">Owner</label>
               <select
@@ -565,8 +585,7 @@ function ClientHistory({ row, copy }: { row: AccountingClientRow; copy: TrackCop
 
 const COLUMN_COUNT = 7;
 
-/** Obiettivi di un funnel: Account (clienti caldi) o Sales (new business), stesso schema. */
-/** Campagna mostrata nella stessa lista degli obiettivi (Sales): si gestisce nella sua pagina. */
+/** Campagna mostrata nella stessa lista degli obiettivi: si gestisce nella sua pagina. */
 export interface ObjectiveListCampaign {
   id: string;
   name: string;
@@ -583,7 +602,6 @@ export interface ObjectiveListCampaign {
 }
 
 interface AccountingViewProps {
-  track?: FunnelTrack;
   toolbarExtra?: ReactNode;
   /** Campagne del funnel, elencate insieme agli obiettivi. */
   campaigns?: ObjectiveListCampaign[];
@@ -601,14 +619,13 @@ function campaignCountForFilter(campaign: ObjectiveListCampaign, filter: Account
 }
 
 export function AccountingView({
-  track = 'warm',
   toolbarExtra,
   campaigns = [],
   onCreateCampaign,
   onCampaignOwnerChange,
   onDeleteCampaign,
 }: AccountingViewProps) {
-  const copy = TRACK_COPY[track];
+  const copy = COPY;
   const { clients, currentOwner, showToast } = useCrm();
   const { workspaceId } = useWorkspace();
   const db = useMemo(() => createBrowserSupabaseClient(), []);
@@ -622,19 +639,31 @@ export function AccountingView({
   const [actionTarget, setActionTarget] = useState<{ objective: AccountObjective; clientId: string } | null>(null);
   const [objectiveDrawer, setObjectiveDrawer] = useState<{ objective?: AccountObjective } | null>(null);
   const [ownerFilter, setOwnerFilter] = useState<string[]>([]);
+  const [kindFilter, setKindFilter] = useState<KindFilter>('all');
   const owners = useMemo(() => getOwnersForWorkspace(workspaceId), [workspaceId]);
+  // «I miei» per primo, poi gli altri owner del workspace.
+  const ownerChips = useMemo(
+    () => [...owners].sort((left, right) => Number(right === currentOwner) - Number(left === currentOwner)),
+    [currentOwner, owners],
+  );
   const activeOwnerFilter = useMemo(
     () => new Set(ownerFilter.filter((item) => (owners as readonly string[]).includes(item))),
     [ownerFilter, owners],
   );
 
   useEffect(() => {
-    setOwnerFilter(readOwnerFilter(track));
-  }, [track]);
+    setOwnerFilter(readOwnerFilter());
+    setKindFilter(readKindFilter());
+  }, []);
 
   const changeOwnerFilter = (next: string[]): void => {
     setOwnerFilter(next);
-    writeOwnerFilter(track, next);
+    writeStoredJson(OWNER_FILTER_STORAGE_KEY, next);
+  };
+
+  const changeKindFilter = (next: KindFilter): void => {
+    setKindFilter(next);
+    writeStoredJson(KIND_FILTER_STORAGE_KEY, next);
   };
 
   useEffect(() => {
@@ -645,7 +674,7 @@ export function AccountingView({
       .then(([loadedActions, loadedObjectives]) => {
         if (cancelled) return;
         setActions(loadedActions);
-        setObjectives(loadedObjectives.filter((objective) => objective.track === track));
+        setObjectives(loadedObjectives);
       })
       .catch((error) => {
         showToast(`Errore lettura obiettivi: ${error instanceof Error ? error.message : 'errore'}`, 'danger');
@@ -656,28 +685,34 @@ export function AccountingView({
     return () => {
       cancelled = true;
     };
-  }, [db, showToast, track, workspaceId]);
+  }, [db, showToast, workspaceId]);
 
   const workspaceClients = useMemo(
     () => clients.filter((client) => isClientInWorkspace(client, workspaceId)),
     [clients, workspaceId],
   );
+  // Si sceglie tra tutti i clienti, con o senza fatturato.
   const objectiveClients = useMemo(
     () => workspaceClients
-      .filter((client) => isObjectiveClient(client, track, clients))
+      .filter((client) => isObjectiveClient(client))
       .sort((left, right) => left.name.localeCompare(right.name, 'it')),
-    [clients, track, workspaceClients],
+    [workspaceClients],
   );
   const objectiveRows = useMemo(
     () => buildAccountingObjectiveRows(objectives, workspaceClients, actions, getTodayString())
       .filter((row) => activeOwnerFilter.size === 0 || activeOwnerFilter.has(normalizeOwner(row.objective.owner) || '')),
     [actions, activeOwnerFilter, objectives, workspaceClients],
   );
-  const allClientRows = useMemo(() => objectiveRows.flatMap((row) => row.clients), [objectiveRows]);
+  const showObjectives = kindFilter !== 'campaigns';
+  const showCampaigns = kindFilter !== 'objectives';
+  const allClientRows = useMemo(
+    () => (showObjectives ? objectiveRows.flatMap((row) => row.clients) : []),
+    [objectiveRows, showObjectives],
+  );
   const ownerCampaigns = useMemo(
-    () => campaigns.filter((campaign) => activeOwnerFilter.size === 0
+    () => (showCampaigns ? campaigns : []).filter((campaign) => activeOwnerFilter.size === 0
       || activeOwnerFilter.has(normalizeOwner(campaign.owner) || '')),
-    [activeOwnerFilter, campaigns],
+    [activeOwnerFilter, campaigns, showCampaigns],
   );
   const counts = useMemo(() => {
     const countFor = (value: AccountingFilter): number => allClientRows.filter((row) => matchesFilter(row, value)).length
@@ -694,6 +729,7 @@ export function AccountingView({
         || campaign.clientNames.some((name) => name.toLowerCase().includes(query)));
   }, [filter, ownerCampaigns, search]);
   const visibleRows = useMemo(() => {
+    if (!showObjectives) return [];
     const query = search.trim().toLowerCase();
     return objectiveRows
       .map((row) => {
@@ -706,7 +742,7 @@ export function AccountingView({
       // Un obiettivo appena creato senza clienti visibili resta tra gli aperti.
       .filter((row) => row.clients.length > 0
         || (filter === 'open' && row.objective.clientIds.length === 0 && (!query || row.objective.title.toLowerCase().includes(query))));
-  }, [filter, objectiveRows, search]);
+  }, [filter, objectiveRows, search, showObjectives]);
 
   const toggleExpanded = (key: string): void => {
     setExpandedKeys((prev) => {
@@ -770,7 +806,7 @@ export function AccountingView({
       const created = await insertAccountObjective(db, {
         id: createUniqueId('objective'),
         workspaceId,
-        track,
+        track: 'warm',
         title: input.title,
         note: input.note,
         owner: input.owner,
@@ -986,7 +1022,7 @@ export function AccountingView({
     );
   };
 
-  const newButtonLabel = onCreateCampaign ? 'Nuovo obiettivo o campagna' : 'Nuovo obiettivo';
+  const newButtonLabel = onCreateCampaign ? 'Nuovo' : 'Nuovo obiettivo';
 
   const renderCampaignRow = (campaign: ObjectiveListCampaign) => (
     <tr key={`campaign:${campaign.id}`} className="mobile-card-row accounting-objective-row accounting-campaign-row">
@@ -1125,6 +1161,19 @@ export function AccountingView({
               onChange={(event) => setSearch(event.target.value)}
             />
           </div>
+          <div className="task-view-toggle" role="group" aria-label="Cosa mostrare">
+            {KIND_FILTERS.map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                className={`task-view-toggle-btn${kindFilter === value ? ' is-active' : ''}`}
+                aria-pressed={kindFilter === value}
+                onClick={() => changeKindFilter(value)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <div className="proposals-list-chips" role="group" aria-label={`Filtra ${copy.name}`}>
             {([
               ['open', 'Aperti'],
@@ -1155,18 +1204,18 @@ export function AccountingView({
             >
               Tutti
             </button>
-            {owners.map((item) => (
+            {ownerChips.map((item) => (
               <button
                 key={item}
                 type="button"
                 className={`clients-filter-chip${activeOwnerFilter.has(item) ? ' is-active' : ''}`}
                 aria-pressed={activeOwnerFilter.has(item)}
-                title={`Solo gli obiettivi seguiti da ${item}`}
+                title={item === currentOwner ? 'Solo obiettivi e campagne seguiti da te' : `Solo quelli seguiti da ${item}`}
                 onClick={() => changeOwnerFilter(activeOwnerFilter.has(item)
                   ? ownerFilter.filter((value) => value !== item)
                   : [...ownerFilter, item])}
               >
-                Solo {item.split(' ')[0]}
+                {item === currentOwner ? 'I miei' : `Solo ${item.split(' ')[0]}`}
               </button>
             ))}
           </div>
@@ -1201,7 +1250,7 @@ export function AccountingView({
               <tr>
                 <td colSpan={COLUMN_COUNT} className="mail-campaigns-empty">
                   {objectiveRows.length === 0 && ownerCampaigns.length === 0
-                    ? `Nessun obiettivo in ${copy.name}. Usa «${newButtonLabel}» per scegliere cosa vuoi ottenere e su quali clienti.`
+                    ? `Niente da mostrare. Usa «${newButtonLabel}» per creare un obiettivo su un cliente o una campagna su più clienti.`
                     : filter === 'open'
                       ? `Nessun obiettivo aperto: tutti i clienti sono chiusi come ${copy.outcome.won} o ${copy.outcome.lost}.`
                       : 'Nessun obiettivo con questi filtri.'}

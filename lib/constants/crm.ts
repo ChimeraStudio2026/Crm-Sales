@@ -146,7 +146,7 @@ export const PAGE_META: Record<string, { title: string; subtitle: string }> = {
     title: 'Gestione Clienti',
     subtitle: 'Clienti attivi e prospect freddi nella stessa lista. Usa Rapporto «Freddo» per i contatti cold.',
   },
-  '/funnel': { title: 'Funnel Commerciale', subtitle: 'Campagne commerciali con pipeline clienti, azioni, status e semaforo tempi.' },
+  '/funnel': { title: 'Funnel Commerciale', subtitle: 'Obiettivi su un cliente e campagne su più clienti, con azioni e scadenze. Filtra i tuoi o quelli degli altri.' },
   '/reminder': { title: 'Reminder', subtitle: 'Promemoria sui clienti: call debrief con i clienti nuovi.' },
   '/propositivita': { title: 'Propositività', subtitle: 'Creatività proposte ai clienti e sconti/extra concessi.' },
   '/import': { title: 'Importazione Dati', subtitle: 'Carica fatturati 2023–2026 da foglio di calcolo.' },

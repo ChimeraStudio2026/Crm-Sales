@@ -1,10 +1,8 @@
-import { resolveClientFunnelTrack } from '@/lib/commercial-funnel/track';
 import {
   ACCOUNTING_CLOSE_ACTION_TYPE,
   DEFAULT_RED_AFTER_DAYS,
 } from '@/lib/types/client-actions';
 import type { AccountObjective, AccountingOutcome, ClientAction } from '@/lib/types/client-actions';
-import type { FunnelTrack } from '@/lib/types/commercial-funnel';
 import type { Client } from '@/lib/types/crm';
 
 export type AccountingSemaforo = 'green' | 'red';
@@ -51,12 +49,10 @@ function formatDay(time: number): string {
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
-/** Clienti che si possono mettere in un obiettivo del funnel (caldi in Account, senza fatturato in Sales). */
-export function isObjectiveClient(client: Client, track: FunnelTrack, allClients?: readonly Client[]): boolean {
+/** Clienti che si possono mettere in un obiettivo o in una campagna: tutti, con o senza fatturato. */
+export function isObjectiveClient(client: Client): boolean {
   // Le ragioni sociali non si seguono a parte: si lavora sul loro macro cliente.
-  return !client.parentClientId
-    && client.relationship !== 'Eliminato'
-    && resolveClientFunnelTrack(client, allClients) === track;
+  return !client.parentClientId && client.relationship !== 'Eliminato';
 }
 
 

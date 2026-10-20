@@ -14,22 +14,15 @@ import {
 } from '@/lib/commercial-funnel/campaigns';
 import {
   readFunnelOwnerFilter,
-  readFunnelTrackPreference,
   readHideClosedFunnelCampaignsPreference,
   readSalesPageViewPreference,
   writeFunnelOwnerFilter,
-  writeFunnelTrackPreference,
   writeHideClosedFunnelCampaignsPreference,
   writeSalesPageViewPreference,
 } from '@/lib/commercial-funnel/preferences';
 import type { SalesPageView } from '@/lib/commercial-funnel/preferences';
 import { normalizeOwner } from '@/lib/crm/owners';
 import { getOwnersForWorkspace } from '@/lib/crm/workspace-clients';
-import {
-  FUNNEL_TRACK_DESCRIPTIONS,
-  FUNNEL_TRACK_LABELS,
-  filterCampaignsByTrack,
-} from '@/lib/commercial-funnel/track';
 import { downloadCommercialFunnelExcel } from '@/lib/commercial-funnel/export';
 import { buildFunnelStatsSummary } from '@/lib/commercial-funnel/stats';
 import { getTodayString, isClientInColdSection } from '@/lib/crm/utils';
@@ -43,13 +36,12 @@ import { isOwner } from '@/lib/constants/crm';
 import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
 import { TopHeader } from '@/components/layout/top-header';
-import { FUNNEL_TRACKS } from '@/lib/types/commercial-funnel';
-import type { FunnelClientRef, FunnelTrack } from '@/lib/types/commercial-funnel';
+import type { FunnelClientRef } from '@/lib/types/commercial-funnel';
 import type { Owner } from '@/lib/types/crm';
 
-// Sales e Account hanno la stessa struttura: obiettivi e campagne in una lista, più i clienti delle campagne.
+// Obiettivi e campagne di tutti in una lista, più i clienti delle campagne.
 const SALES_PAGE_VIEWS: readonly [SalesPageView, string][] = [
-  ['list', 'Obiettivi e campagne'],
+  ['list', 'Lista'],
   ['clients', 'Clienti campagne'],
 ];
 
@@ -68,13 +60,11 @@ export function CommercialFunnelSection() {
   const [pageView, setPageView] = useState<SalesPageView>('list');
   const [hideClosedCampaigns, setHideClosedCampaigns] = useState(true);
   const [hideClosedPreferenceReady, setHideClosedPreferenceReady] = useState(false);
-  const [track, setTrack] = useState<FunnelTrack>('cold');
   const [ownerFilter, setOwnerFilter] = useState<string[]>([]);
 
   useEffect(() => {
     setHideClosedCampaigns(readHideClosedFunnelCampaignsPreference());
     setHideClosedPreferenceReady(true);
-    setTrack(readFunnelTrackPreference());
     setOwnerFilter(readFunnelOwnerFilter());
     setPageView(readSalesPageViewPreference());
   }, []);
@@ -95,30 +85,15 @@ export function CommercialFunnelSection() {
     writeSalesPageViewPreference(nextView);
   };
 
-  const handleTrackChange = (nextTrack: FunnelTrack): void => {
-    setTrack(nextTrack);
-    writeFunnelTrackPreference(nextTrack);
-  };
-
   useEffect(() => {
     if (!hideClosedPreferenceReady) return;
     writeHideClosedFunnelCampaignsPreference(hideClosedCampaigns);
   }, [hideClosedCampaigns, hideClosedPreferenceReady]);
 
-  const workspaceCampaigns = useMemo(
+  // Sales e Account non sono più separati: tutte le campagne del workspace in una lista.
+  const scopedCampaigns = useMemo(
     () => filterCampaignsByWorkspace(mailCampaigns, workspaceId),
     [mailCampaigns, workspaceId],
-  );
-  const campaignCountByTrack = useMemo(
-    () => ({
-      cold: filterCampaignsByTrack(workspaceCampaigns, 'cold').length,
-      warm: filterCampaignsByTrack(workspaceCampaigns, 'warm').length,
-    }),
-    [workspaceCampaigns],
-  );
-  const scopedCampaigns = useMemo(
-    () => filterCampaignsByTrack(workspaceCampaigns, track),
-    [track, workspaceCampaigns],
   );
   const scopedEntries = useMemo(
     () => filterEntriesByVisibleCampaigns(
@@ -184,7 +159,7 @@ export function CommercialFunnelSection() {
   const handleCreateCampaign = async (input: NewCampaignInput): Promise<void> => {
     const campaignId = await saveMailCampaign({
       workspaceId,
-      funnelTrack: track,
+      funnelTrack: 'cold',
       name: input.name,
       description: input.note,
       status: 'Attiva',
@@ -220,7 +195,7 @@ export function CommercialFunnelSection() {
       entries: visibleEntries,
       clients,
       mailCampaigns: visibleCampaigns,
-      workspaceLabel: `${resolveWorkspaceLabel(workspaceId)} ${FUNNEL_TRACK_LABELS[track]}`,
+      workspaceLabel: resolveWorkspaceLabel(workspaceId),
     });
   };
 
@@ -257,28 +232,8 @@ export function CommercialFunnelSection() {
       <TopHeader />
       <div className="content-body">
         <section className="app-section active">
-          <div className="funnel-track-tabs" role="tablist" aria-label="Tipo di funnel">
-            {FUNNEL_TRACKS.map((item) => (
-              <button
-                key={item}
-                type="button"
-                role="tab"
-                aria-selected={track === item}
-                className={`funnel-track-tab funnel-track-tab-${item}${track === item ? ' is-active' : ''}`}
-                onClick={() => handleTrackChange(item)}
-              >
-                <span className="funnel-track-tab-label">
-                  {FUNNEL_TRACK_LABELS[item]}
-                  <span className="funnel-track-tab-count">{campaignCountByTrack[item]}</span>
-                </span>
-                <small>{FUNNEL_TRACK_DESCRIPTIONS[item]}</small>
-              </button>
-            ))}
-          </div>
           {pageView === 'list' ? (
             <AccountingView
-              key={track}
-              track={track}
               toolbarExtra={(
                 <>
                   {salesViewToggle}
@@ -326,7 +281,7 @@ export function CommercialFunnelSection() {
                   </button>
                 ))}
               </div>
-              <FunnelStatsCharts title={`Totali ${FUNNEL_TRACK_LABELS[track]}`} stats={clientsStats} />
+              <FunnelStatsCharts title="Totali campagne" stats={clientsStats} />
               <FunnelClientsView
                 entries={ownerEntries}
                 clients={clients}

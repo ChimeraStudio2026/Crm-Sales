@@ -20,12 +20,6 @@ import {
   resolveFunnelContactLabel,
 } from '@/lib/commercial-funnel/contacts';
 import { filterCampaignsByWorkspace, isClosedCampaign } from '@/lib/commercial-funnel/campaigns';
-import {
-  FUNNEL_TRACK_LABELS,
-  filterCampaignsByTrack,
-  isFunnelEntryOutOfTrack,
-  normalizeFunnelTrack,
-} from '@/lib/commercial-funnel/track';
 import { formatActionDateDisplay } from '@/lib/crm/utils';
 import { getOwnersForWorkspace } from '@/lib/crm/workspace-clients';
 import { normalizeOwner } from '@/lib/crm/owners';
@@ -91,8 +85,6 @@ export function FunnelClientsTable({
     [campaignId, mailCampaigns],
   );
   const workspaceId = currentCampaign?.workspaceId || DEFAULT_WORKSPACE_ID;
-  const campaignTrack = normalizeFunnelTrack(currentCampaign?.funnelTrack);
-  const otherTrackLabel = FUNNEL_TRACK_LABELS[campaignTrack === 'warm' ? 'cold' : 'warm'];
   const availableOwners = useMemo(() => getOwnersForWorkspace(workspaceId), [workspaceId]);
 
   const clientById = useMemo(
@@ -191,11 +183,11 @@ export function FunnelClientsTable({
       const workspaceCampaigns = currentCampaign
         ? filterCampaignsByWorkspace(mailCampaigns, currentCampaign.workspaceId)
         : mailCampaigns;
-      return filterCampaignsByTrack(workspaceCampaigns, campaignTrack)
+      return workspaceCampaigns
         .filter((campaign) => campaign.id !== campaignId && !isClosedCampaign(campaign))
         .sort((a, b) => a.name.localeCompare(b.name, 'it'));
     },
-    [campaignId, campaignTrack, currentCampaign, mailCampaigns],
+    [campaignId, currentCampaign, mailCampaigns],
   );
 
   const newActionEntry = newActionEntryId ? entries.find((entry) => entry.id === newActionEntryId) : undefined;
@@ -234,7 +226,6 @@ export function FunnelClientsTable({
               ) : (
                 rows.map(({ entry, client, status, semaforo, isLost, isConverted, isLocked, history }) => {
                   const isExpanded = expandedEntries.has(entry.id);
-                  const isOutOfTrack = isFunnelEntryOutOfTrack(entry, client, campaignTrack, clients);
                   const clientName = client?.name || 'Cliente non trovato';
                   const contactLabel = resolveFunnelContactLabel(client, entry.contactId);
                   const displayOwner = resolveDisplayOwner(entry, client);
@@ -280,14 +271,6 @@ export function FunnelClientsTable({
                             </span>
                             {entry.clientSource === 'main' && (
                                   <span className="funnel-main-list-badge">Lista</span>
-                                )}
-                                {isOutOfTrack && (
-                                  <span
-                                    className="funnel-out-of-track-badge"
-                                    title={`Questo cliente appartiene a ${otherTrackLabel}: va gestito in una campagna di quel funnel.`}
-                                  >
-                                    Va in {otherTrackLabel}
-                                  </span>
                                 )}
                                 {isLost && <span className="funnel-lost-badge">Perso</span>}
                                 {isConverted && <span className="funnel-converted-badge">Convertito</span>}
@@ -521,7 +504,6 @@ export function FunnelClientsTable({
       </div>
       {showPicker && (
         <FunnelClientPicker
-          track={campaignTrack}
           existingEntryKeys={existingEntryKeys}
           onClose={() => setShowPicker(false)}
           onAdd={(refs) => void addClientsToFunnel(campaignId, refs).then(() => setShowPicker(false))}

@@ -51,7 +51,6 @@ export type FunnelClientSource = 'cold' | 'main';
 /** cold = new business (mai fatturato), warm = cliente che ha fatturato almeno 1€. */
 export type FunnelTrack = 'cold' | 'warm';
 
-export const FUNNEL_TRACKS: readonly FunnelTrack[] = ['cold', 'warm'];
 
 export interface FunnelClientRef {
   clientId: string;

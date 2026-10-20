@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { FunnelClientsTable } from '@/components/commercial-funnel/funnel-clients-table';
@@ -10,8 +10,6 @@ import { CampaignStatusSelect } from '@/components/mail-campaigns/campaign-statu
 import { getFunnelEntriesForCampaign } from '@/lib/commercial-funnel/campaigns';
 import { buildFunnelStatsSummary } from '@/lib/commercial-funnel/stats';
 import { filterCampaignsByWorkspace } from '@/lib/commercial-funnel/campaigns';
-import { writeFunnelTrackPreference } from '@/lib/commercial-funnel/preferences';
-import { FUNNEL_TRACK_LABELS, normalizeFunnelTrack } from '@/lib/commercial-funnel/track';
 import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
 import { TopHeader } from '@/components/layout/top-header';
@@ -30,7 +28,6 @@ export function FunnelCampaignDetailSection({ campaignId, focusEntryId }: Funnel
   const [detailView, setDetailView] = useState<CampaignDetailView>('table');
 
   const campaign = mailCampaigns.find((item) => item.id === campaignId);
-  const campaignTrack = normalizeFunnelTrack(campaign?.funnelTrack);
   const isCampaignInWorkspace = campaign
     ? filterCampaignsByWorkspace([campaign], workspaceId).length > 0
     : false;
@@ -43,11 +40,6 @@ export function FunnelCampaignDetailSection({ campaignId, focusEntryId }: Funnel
     () => buildFunnelStatsSummary(entries),
     [entries],
   );
-
-  // Tornando all'elenco si riapre il funnel di questa campagna.
-  useEffect(() => {
-    if (campaign) writeFunnelTrackPreference(campaignTrack);
-  }, [campaign, campaignTrack]);
 
   if (!campaign || !isCampaignInWorkspace) {
     return (
@@ -78,9 +70,6 @@ export function FunnelCampaignDetailSection({ campaignId, focusEntryId }: Funnel
               <p className="funnel-campaign-detail-desc">{campaign.description}</p>
             )}
             <div className="funnel-campaign-detail-meta">
-              <span className={`funnel-track-badge funnel-track-badge-${campaignTrack}`}>
-                {FUNNEL_TRACK_LABELS[campaignTrack]}
-              </span>
               <span className="funnel-campaign-detail-status">
                 Stato:{' '}
                 <CampaignStatusSelect

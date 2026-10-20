@@ -131,6 +131,7 @@ export const EXCEL_IMPORT_DESC_PREFIX = 'Cliente creato da import Excel';
 export const NAV_ITEMS = [
   { href: '/analysis', label: 'Analisi', icon: 'BarChart3' },
   { href: '/proposte', label: 'Proposte', icon: 'FileText' },
+  { href: '/preventivi', label: 'Crea preventivo', icon: 'FilePlus2' },
   { href: '/clients', label: 'Lista Clienti', icon: 'Users' },
   { href: '/funnel', label: 'Funnel Commerciale', icon: 'GitBranch' },
   { href: '/reminder', label: 'Reminder', icon: 'Bell' },
@@ -142,6 +143,10 @@ export const NAV_ITEMS = [
 export const PAGE_META: Record<string, { title: string; subtitle: string }> = {
   '/analysis': { title: 'Analisi', subtitle: 'OKR, previsioni e breakdown per quarter.' },
   '/proposte': { title: 'Proposte', subtitle: 'Preventivi commerciali: KPI, ticket medio e tutte le proposte come su Cerbero.' },
+  '/preventivi': {
+    title: 'Crea preventivo',
+    subtitle: 'Preventivi nella struttura Cerbero, con l\'assistente che prepara la bozza dal listino.',
+  },
   '/clients': {
     title: 'Gestione Clienti',
     subtitle: 'Clienti attivi e prospect freddi nella stessa lista. Usa Rapporto «Freddo» per i contatti cold.',

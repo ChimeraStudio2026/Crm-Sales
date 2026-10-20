@@ -5,6 +5,8 @@
    ========================================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap');
+/* Montserrat: il font dei preventivi PDF di Cerbero, usato nella stampa del preventivo. */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
 
 /* Neue Plak Extended — the display face used on chimerastudioss.com, served from the site's CDN. */
 @font-face {
@@ -12712,4 +12714,746 @@ a.btn:hover {
 .crm-table td.col-nome,
 .crm-table th.col-nome {
     min-width: 200px;
+}
+
+/* ==========================================================================
+   CREA PREVENTIVO
+   ========================================================================== */
+.quotes-toolbar {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.quotes-toolbar h3 {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    margin-bottom: 4px;
+}
+
+.quotes-toolbar p,
+.quotes-empty {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.quotes-empty-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--text-secondary);
+}
+
+.quotes-list-card {
+    padding: 0;
+    overflow-x: auto;
+}
+
+.quotes-table,
+.quote-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.86rem;
+}
+
+.quotes-table th,
+.quote-table th {
+    text-align: left;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary);
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+}
+
+.quotes-table td,
+.quote-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-subtle);
+    vertical-align: middle;
+}
+
+.quotes-table tbody tr:hover {
+    background: var(--bg-hover);
+}
+
+.quotes-table .is-numeric,
+.quote-table .is-numeric {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.quotes-link {
+    color: var(--text-primary);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.quotes-link:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.quote-status {
+    display: inline-flex;
+    padding: 2px 10px;
+    border-radius: var(--radius-pill);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.quote-status-draft { background: var(--pill-lilac-bg); color: var(--pill-lilac-fg); }
+.quote-status-pending { background: var(--pill-amber-bg); color: var(--pill-amber-fg); }
+.quote-status-accepted { background: var(--pill-green-bg); color: var(--pill-green-fg); }
+.quote-status-rejected { background: var(--pill-red-bg); color: var(--pill-red-fg); }
+
+.quote-editor-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.quote-editor-toolbar .btn {
+    text-decoration: none;
+}
+
+.quote-editor-title {
+    flex: 1;
+    min-width: 200px;
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+}
+
+.quote-save-state {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+.quote-save-state.is-dirty,
+.quote-save-state.is-saving { color: var(--warning); }
+.quote-save-state.is-error { color: var(--danger); }
+
+.quote-delete-btn:hover {
+    color: var(--danger);
+}
+
+.quote-editor-layout {
+    display: grid;
+    grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+
+.quote-editor-main {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+
+.quote-card {
+    padding: 18px;
+}
+
+.quote-card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--border-color);
+}
+
+.quote-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.quote-card-header h4 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+
+.quote-section-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    cursor: pointer;
+    text-align: left;
+}
+
+.quote-section-total {
+    font-weight: 700;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.quote-section-card:not(:has(.quote-section-note)) .quote-card-header {
+    margin-bottom: 0;
+}
+
+.quote-section-note {
+    margin-bottom: 12px;
+}
+
+.quote-section-empty,
+.quote-margin-hint {
+    color: var(--text-muted);
+    font-size: 0.82rem;
+}
+
+.quote-margin-hint {
+    margin-top: 12px;
+}
+
+.quote-header-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.quote-header-grid .is-wide {
+    grid-column: 1 / -1;
+}
+
+.quote-report-note {
+    color: var(--text-secondary);
+}
+
+.quote-extras {
+    color: var(--text-muted);
+}
+
+.quote-table-scroll {
+    overflow-x: auto;
+    margin: 0 -6px;
+}
+
+.quote-items-table td {
+    padding: 6px;
+}
+
+.quote-items-table .col-id {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.quote-items-table .col-job { min-width: 240px; }
+.quote-items-table .col-note { min-width: 140px; }
+.quote-items-table .col-small { width: 72px; }
+.quote-items-table .col-money { width: 110px; }
+
+.quote-cell-input.form-input {
+    min-height: 34px;
+    padding: 6px 8px;
+    font-size: 0.85rem;
+}
+
+.quote-number-input.form-input {
+    text-align: right;
+    min-width: 64px;
+}
+
+.quote-free-item {
+    display: inline-block;
+    margin-top: 3px;
+    font-size: 0.7rem;
+    color: var(--pill-amber-fg);
+}
+
+.quote-price-cell {
+    font-weight: 600;
+}
+
+.quote-remove-btn {
+    display: inline-flex;
+    padding: 6px;
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.quote-remove-btn:hover {
+    background: var(--danger-glow);
+    color: var(--danger);
+}
+
+.quote-section-summary,
+.quote-totals-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-left: auto;
+    max-width: 380px;
+    font-size: 0.86rem;
+}
+
+.quote-section-summary {
+    margin-top: 12px;
+}
+
+.quote-section-summary div,
+.quote-totals-list div {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.quote-section-summary dd,
+.quote-totals-list dd {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.quote-section-summary .is-total,
+.quote-totals-list .is-total {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--secondary);
+}
+
+.quote-totals-list .is-premium dd { color: var(--success); }
+.quote-totals-list .is-discount dd { color: var(--danger); }
+
+.quote-totals-list .quote-margin {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+}
+
+.quote-totals-list .quote-margin:first-of-type {
+    border-top: 1px dashed var(--border-color);
+    padding-top: 6px;
+}
+
+.quote-totals-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 24px;
+}
+
+.quote-totals-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.quote-target-row {
+    display: flex;
+    gap: 8px;
+}
+
+/* --- Chat assistente --- */
+.quote-chat {
+    position: sticky;
+    top: calc(var(--header-height) + 16px);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: calc(100vh - var(--header-height) - 48px);
+    padding: 16px;
+}
+
+.quote-chat:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--border-color);
+}
+
+.quote-chat-header {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+
+.quote-chat-header svg {
+    color: var(--brand-lilac);
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.quote-chat-header p {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+
+.quote-chat-messages {
+    flex: 1;
+    min-height: 180px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.quote-chat-empty p {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+
+.quote-chat-example {
+    text-align: left;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    border: 1px dashed var(--border-color-hover);
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.quote-chat-example:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.quote-chat-message {
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    max-width: 92%;
+}
+
+.quote-chat-message.is-user {
+    align-self: flex-end;
+    background: var(--primary);
+    color: var(--primary-contrast);
+}
+
+.quote-chat-message.is-assistant {
+    align-self: flex-start;
+    background: var(--bg-selected);
+    color: var(--text-primary);
+}
+
+.quote-chat-message.is-pending {
+    color: var(--text-secondary);
+    animation: quote-chat-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes quote-chat-pulse {
+    50% { opacity: 0.55; }
+}
+
+.quote-chat-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.quote-chat-input.form-input {
+    resize: vertical;
+    min-height: 90px;
+    font-size: 0.88rem;
+    line-height: 1.45;
+}
+
+.quote-chat-hint {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    text-align: right;
+}
+
+@media (max-width: 1100px) {
+    .quote-editor-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .quote-chat {
+        position: static;
+        max-height: none;
+    }
+
+    .quote-chat-messages {
+        max-height: 360px;
+    }
+}
+
+@media (max-width: 700px) {
+    .quotes-toolbar {
+        flex-direction: column;
+    }
+
+    .quote-totals-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+/* --- Stampa preventivo (stessa impaginazione del PDF Cerbero) --- */
+.quote-print {
+    display: none;
+}
+
+@media print {
+    @page {
+        size: A4 landscape;
+        margin: 12mm 14mm;
+    }
+
+    html,
+    body {
+        height: auto !important;
+        overflow: visible !important;
+        background: #fff !important;
+    }
+
+    body:has(.quote-print) .sidebar,
+    body:has(.quote-print) .quote-screen,
+    body:has(.quote-print) .toast-container,
+    body:has(.quote-print) .mobile-nav-toggle,
+    body:has(.quote-print) .sidebar-mobile-backdrop {
+        display: none !important;
+    }
+
+    body:has(.quote-print) .main-content {
+        margin: 0 !important;
+        max-width: none !important;
+        overflow: visible !important;
+        background: #fff !important;
+    }
+
+    .quote-print {
+        display: block;
+        color: #3d3d3d;
+        font-size: 9.5pt;
+    }
+
+    .quote-print * {
+        font-family: 'Montserrat', var(--font-body);
+        letter-spacing: 0;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .quote-print-page {
+        position: relative;
+        min-height: 180mm;
+        break-after: page;
+    }
+
+    .quote-print-page:last-child {
+        break-after: auto;
+    }
+
+    .quote-print-header {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        margin-bottom: 12mm;
+    }
+
+    .quote-print-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16mm;
+        height: 16mm;
+        border-radius: 50%;
+        border: 2px solid #8a9bb8;
+        color: #3d3d3d;
+        font-weight: 700;
+        font-size: 18pt;
+        flex-shrink: 0;
+    }
+
+    .quote-print-header h1 {
+        flex: 1;
+        font-size: 18pt;
+        font-weight: 700;
+        line-height: 1.25;
+    }
+
+    .quote-print-header h2 {
+        font-size: 22pt;
+        font-weight: 700;
+        text-align: right;
+        max-width: 45%;
+    }
+
+    .quote-print-meta {
+        display: flex;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 8mm;
+        font-size: 8.5pt;
+    }
+
+    .quote-print-meta dl div {
+        display: flex;
+        gap: 12px;
+    }
+
+    .quote-print-meta dt {
+        font-weight: 700;
+        min-width: 26mm;
+    }
+
+    .quote-print-recipient,
+    .quote-print-note {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        text-align: right;
+        font-style: normal;
+    }
+
+    .quote-print-table {
+        width: 100%;
+        border-collapse: collapse;
+        border-top: 1px solid #3d3d3d;
+    }
+
+    .quote-print-table th {
+        text-align: left;
+        font-weight: 700;
+        font-size: 8.5pt;
+        padding: 6px 4px;
+        border-bottom: 1px solid #3d3d3d;
+    }
+
+    .quote-print-table td {
+        padding: 5px 4px;
+        border-bottom: 1px solid #3d3d3d;
+        vertical-align: middle;
+    }
+
+    .quote-print-table td small {
+        display: block;
+        font-size: 7.5pt;
+    }
+
+    .quote-print-table .is-numeric {
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    .quote-print-table .is-center {
+        text-align: center;
+    }
+
+    .quote-print-extras {
+        color: #6b8fc0;
+    }
+
+    .quote-print-summary {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr 1.4fr;
+        gap: 16px;
+        margin-top: 8mm;
+        font-size: 8.5pt;
+    }
+
+    .quote-print-signatures div {
+        display: flex;
+        gap: 8px;
+    }
+
+    .quote-print-signatures dt {
+        font-weight: 700;
+    }
+
+    .quote-print-signature {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .quote-print-grand-totals,
+    .quote-print-section-totals {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .quote-print-grand-totals div,
+    .quote-print-section-totals div {
+        display: grid;
+        grid-template-columns: 1.5fr 1fr 0.6fr;
+        gap: 8px;
+        align-items: baseline;
+    }
+
+    .quote-print-grand-totals dd,
+    .quote-print-section-totals dd {
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    .quote-print-grand-totals .is-premium dd {
+        color: #3f7a33;
+        font-weight: 700;
+    }
+
+    .quote-print-grand-totals .is-total,
+    .quote-print-section-totals .is-total {
+        margin-top: 4mm;
+        color: #6b8fc0;
+        font-size: 15pt;
+        font-weight: 700;
+    }
+
+    .quote-print-outputs {
+        width: 58%;
+        margin-top: 8mm;
+    }
+
+    .quote-print-outputs h3 {
+        color: #6b8fc0;
+        font-size: 11pt;
+        margin-bottom: 3mm;
+    }
+
+    .quote-print-bottom {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 24px;
+        margin-top: 14mm;
+    }
+
+    .quote-print-section-totals {
+        width: 50%;
+        font-size: 9pt;
+    }
+
+    .quote-print-logo {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        margin-top: 8mm;
+        color: #3d3d3d;
+    }
+
+    .quote-print-logo span {
+        font-size: 7pt;
+        font-weight: 700;
+        color: #6b8fc0;
+        letter-spacing: 0.4em;
+    }
+
+    .quote-print-conditions .quote-print-header {
+        margin-bottom: 5mm;
+    }
+
+    .quote-print-clause {
+        margin-bottom: 2mm;
+        font-size: 6.5pt;
+        line-height: 1.35;
+    }
+
+    .quote-print-clause h4 {
+        font-size: 7.5pt;
+        font-weight: 700;
+    }
 }

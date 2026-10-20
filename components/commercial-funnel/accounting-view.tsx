@@ -2,7 +2,8 @@
 
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { CheckCircle2, ChevronRight, Pencil, Plus, Search, Target, Trash2, X } from 'lucide-react';
+import Link from 'next/link';
+import { CheckCircle2, ChevronRight, Megaphone, Pencil, Plus, Search, Target, Trash2, X } from 'lucide-react';
 import {
   ActionFields,
   ClientChipsField,
@@ -123,6 +124,13 @@ interface ObjectiveDrawerInput {
   firstContactId: string;
 }
 
+export interface NewCampaignInput {
+  name: string;
+  note: string;
+  owner: string;
+  clientIds: string[];
+}
+
 interface ObjectiveDrawerProps {
   copy: TrackCopy;
   clients: Client[];
@@ -134,7 +142,11 @@ interface ObjectiveDrawerProps {
   onClose: () => void;
   onSave: (input: ObjectiveDrawerInput) => Promise<void>;
   onDelete?: () => Promise<void>;
+  /** Se presente, «Nuovo» permette di scegliere tra obiettivo e campagna (stessi campi). */
+  onCreateCampaign?: (input: NewCampaignInput) => Promise<void>;
 }
+
+type CreateKind = 'objective' | 'campaign';
 
 function ObjectiveDrawer({
   copy,
@@ -146,8 +158,12 @@ function ObjectiveDrawer({
   onClose,
   onSave,
   onDelete,
+  onCreateCampaign,
 }: ObjectiveDrawerProps) {
   const isEdit = Boolean(objective);
+  const canChooseKind = !isEdit && Boolean(onCreateCampaign);
+  const [kind, setKind] = useState<CreateKind>('objective');
+  const isCampaign = kind === 'campaign';
   const [title, setTitle] = useState(objective?.title || '');
   const [note, setNote] = useState(objective?.note || '');
   const [owner, setOwner] = useState(objective?.owner || defaultOwner);
@@ -171,7 +187,11 @@ function ObjectiveDrawer({
     if (!canSave) return;
     setIsSaving(true);
     try {
-      await onSave({ title: title.trim(), note: note.trim(), owner, clientIds, firstAction, firstContactId });
+      if (isCampaign && onCreateCampaign) {
+        await onCreateCampaign({ name: title.trim(), note: note.trim(), owner, clientIds });
+      } else {
+        await onSave({ title: title.trim(), note: note.trim(), owner, clientIds, firstAction, firstContactId });
+      }
       onClose();
     } finally {
       setIsSaving(false);
@@ -183,19 +203,48 @@ function ObjectiveDrawer({
       <div className="drawer-overlay open" onClick={onClose} aria-hidden />
       <div className="drawer open">
         <div className="drawer-header">
-          <h3>{isEdit ? 'Modifica obiettivo' : `Nuovo obiettivo · ${copy.name}`}</h3>
+          <h3>
+            {isEdit
+              ? 'Modifica obiettivo'
+              : canChooseKind ? `Nuovo · ${copy.name}` : `Nuovo obiettivo · ${copy.name}`}
+          </h3>
           <div className="drawer-close" onClick={onClose} role="button" tabIndex={0}>
             <X size={20} />
           </div>
         </div>
         <form onSubmit={(event) => void handleSubmit(event)}>
           <div className="drawer-body">
+            {canChooseKind && (
+              <div className="form-group">
+                <label>Cosa vuoi creare?</label>
+                <div className="objective-kind-choice" role="radiogroup" aria-label="Cosa vuoi creare">
+                  {([
+                    ['objective', 'Obiettivo', 'Uno o più clienti, azioni con nota e semaforo'],
+                    ['campaign', 'Campagna', 'Pipeline di più clienti con status e statistiche'],
+                  ] as const).map(([value, label, description]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      role="radio"
+                      aria-checked={kind === value}
+                      className={`objective-kind-option${kind === value ? ' is-active' : ''}`}
+                      onClick={() => setKind(value)}
+                    >
+                      <strong>{label}</strong>
+                      <small>{description}</small>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="form-group">
-              <label htmlFor="objective-title">Obiettivo *</label>
+              <label htmlFor="objective-title">{isCampaign ? 'Campagna *' : 'Obiettivo *'}</label>
               <input
                 id="objective-title"
                 className="form-input"
-                placeholder="Es. Vendere il pacchetto NOVA, presentare il team…"
+                placeholder={isCampaign
+                  ? 'Es. Agenzie Milano, follow-up evento…'
+                  : 'Es. Vendere il pacchetto NOVA, presentare il team…'}
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 required
@@ -207,9 +256,11 @@ function ObjectiveDrawer({
               onChange={setClientIds}
               lockedClientIds={lockedClientIds}
               lockedTitle="Ha già azioni in questo obiettivo"
-              removeLabel="Togli dall'obiettivo"
+              removeLabel={isCampaign ? 'Togli dalla campagna' : "Togli dall'obiettivo"}
               placeholder={copy.clientPlaceholder}
-              hint="Con più clienti l'obiettivo funziona come una campagna: per ogni cliente registri azioni preimpostate con una nota."
+              hint={isCampaign
+                ? 'Nella campagna ogni cliente ha il suo status (in contatto, convertito, perso) e le statistiche di pipeline.'
+                : "Con più clienti l'obiettivo funziona come una campagna: per ogni cliente registri azioni preimpostate con una nota."}
             />
             <div className="form-group">
               <label htmlFor="objective-owner">Owner</label>
@@ -236,7 +287,7 @@ function ObjectiveDrawer({
                 onChange={(event) => setNote(event.target.value)}
               />
             </div>
-            {!isEdit && clientIds.length === 1 && (
+            {!isEdit && !isCampaign && clientIds.length === 1 && (
               <div className="objective-first-action">
                 <strong>Prima azione</strong>
                 <ContactSelect
@@ -263,7 +314,7 @@ function ObjectiveDrawer({
             )}
             <button type="button" className="btn btn-secondary" onClick={onClose}>Annulla</button>
             <button type="submit" className="btn btn-primary" disabled={!canSave}>
-              {isSaving ? 'Salvataggio…' : isEdit ? 'Salva obiettivo' : 'Crea obiettivo'}
+              {isSaving ? 'Salvataggio…' : isEdit ? 'Salva obiettivo' : isCampaign ? 'Crea campagna' : 'Crea obiettivo'}
             </button>
           </div>
         </form>
@@ -515,7 +566,48 @@ function ClientHistory({ row, copy }: { row: AccountingClientRow; copy: TrackCop
 const COLUMN_COUNT = 7;
 
 /** Obiettivi di un funnel: Account (clienti caldi) o Sales (new business), stesso schema. */
-export function AccountingView({ track = 'warm', toolbarExtra }: { track?: FunnelTrack; toolbarExtra?: ReactNode }) {
+/** Campagna mostrata nella stessa lista degli obiettivi (Sales): si gestisce nella sua pagina. */
+export interface ObjectiveListCampaign {
+  id: string;
+  name: string;
+  owner: string;
+  note: string;
+  href: string;
+  clientNames: string[];
+  totalClients: number;
+  activeCount: number;
+  convertedCount: number;
+  lostCount: number;
+  redCount: number;
+  isClosed: boolean;
+}
+
+interface AccountingViewProps {
+  track?: FunnelTrack;
+  toolbarExtra?: ReactNode;
+  /** Campagne del funnel, elencate insieme agli obiettivi. */
+  campaigns?: ObjectiveListCampaign[];
+  onCreateCampaign?: (input: NewCampaignInput) => Promise<void>;
+  onCampaignOwnerChange?: (campaignId: string, owner: string) => Promise<void>;
+  onDeleteCampaign?: (campaign: ObjectiveListCampaign) => Promise<void>;
+}
+
+/** Un filtro mostra la campagna se ha clienti in quello stato (Convertito = Won, Perso = Lost). */
+function campaignCountForFilter(campaign: ObjectiveListCampaign, filter: AccountingFilter): number {
+  if (filter === 'open') return campaign.activeCount;
+  if (filter === 'red') return campaign.redCount;
+  if (filter === 'won') return campaign.convertedCount;
+  return campaign.lostCount;
+}
+
+export function AccountingView({
+  track = 'warm',
+  toolbarExtra,
+  campaigns = [],
+  onCreateCampaign,
+  onCampaignOwnerChange,
+  onDeleteCampaign,
+}: AccountingViewProps) {
   const copy = TRACK_COPY[track];
   const { clients, currentOwner, showToast } = useCrm();
   const { workspaceId } = useWorkspace();
@@ -582,12 +674,25 @@ export function AccountingView({ track = 'warm', toolbarExtra }: { track?: Funne
     [actions, activeOwnerFilter, objectives, workspaceClients],
   );
   const allClientRows = useMemo(() => objectiveRows.flatMap((row) => row.clients), [objectiveRows]);
-  const counts = useMemo(() => ({
-    open: allClientRows.filter((row) => matchesFilter(row, 'open')).length,
-    red: allClientRows.filter((row) => matchesFilter(row, 'red')).length,
-    won: allClientRows.filter((row) => matchesFilter(row, 'won')).length,
-    lost: allClientRows.filter((row) => matchesFilter(row, 'lost')).length,
-  }), [allClientRows]);
+  const ownerCampaigns = useMemo(
+    () => campaigns.filter((campaign) => activeOwnerFilter.size === 0
+      || activeOwnerFilter.has(normalizeOwner(campaign.owner) || '')),
+    [activeOwnerFilter, campaigns],
+  );
+  const counts = useMemo(() => {
+    const countFor = (value: AccountingFilter): number => allClientRows.filter((row) => matchesFilter(row, value)).length
+      + ownerCampaigns.reduce((sum, campaign) => sum + campaignCountForFilter(campaign, value), 0);
+    return { open: countFor('open'), red: countFor('red'), won: countFor('won'), lost: countFor('lost') };
+  }, [allClientRows, ownerCampaigns]);
+  const visibleCampaigns = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return ownerCampaigns
+      .filter((campaign) => campaignCountForFilter(campaign, filter) > 0
+        || (filter === 'open' && campaign.totalClients === 0))
+      .filter((campaign) => !query
+        || campaign.name.toLowerCase().includes(query)
+        || campaign.clientNames.some((name) => name.toLowerCase().includes(query)));
+  }, [filter, ownerCampaigns, search]);
   const visibleRows = useMemo(() => {
     const query = search.trim().toLowerCase();
     return objectiveRows
@@ -881,6 +986,70 @@ export function AccountingView({ track = 'warm', toolbarExtra }: { track?: Funne
     );
   };
 
+  const newButtonLabel = onCreateCampaign ? 'Nuovo obiettivo o campagna' : 'Nuovo obiettivo';
+
+  const renderCampaignRow = (campaign: ObjectiveListCampaign) => (
+    <tr key={`campaign:${campaign.id}`} className="mobile-card-row accounting-objective-row accounting-campaign-row">
+      <td className="funnel-col-semaforo is-card-lead">
+        <span
+          className={`funnel-semaforo funnel-semaforo-${campaign.redCount > 0 ? 'red' : 'green'}`}
+          title={campaign.redCount > 0 ? `${campaign.redCount} clienti in ritardo` : 'Nei tempi'}
+        />
+      </td>
+      <td className="is-card-title">
+        <Link href={campaign.href} className="funnel-client-toggle accounting-campaign-link">
+          <ChevronRight size={14} className="row-expand-icon" />
+          <span className="funnel-client-toggle-text">
+            <strong className="accounting-objective-heading">
+              <Megaphone size={14} />
+              {campaign.name}
+              <span className="accounting-kind-badge">{campaign.isClosed ? 'Campagna chiusa' : 'Campagna'}</span>
+            </strong>
+            <small className="funnel-entry-contact">
+              {campaign.totalClients} clienti · {campaign.activeCount} attivi
+              {campaign.convertedCount > 0 ? ` · ${campaign.convertedCount} ${copy.outcome.won.toLowerCase()}` : ''}
+              {campaign.lostCount > 0 ? ` · ${campaign.lostCount} ${copy.outcome.lost.toLowerCase()}` : ''}
+              {campaign.redCount > 0 ? ` · ${campaign.redCount} in ritardo` : ''}
+            </small>
+          </span>
+        </Link>
+      </td>
+      <td data-label="Owner">
+        <select
+          className="table-cell-select"
+          value={normalizeOwner(campaign.owner) || ''}
+          onChange={(event) => void onCampaignOwnerChange?.(campaign.id, event.target.value)}
+          disabled={!onCampaignOwnerChange}
+          aria-label={`Owner di ${campaign.name}`}
+        >
+          <option value="">—</option>
+          {owners.map((item) => (
+            <option key={item} value={item}>{item}</option>
+          ))}
+        </select>
+      </td>
+      <td className="accounting-note-cell is-card-full" data-label="Nota">
+        {campaign.note || <span className="accounting-empty-note">—</span>}
+      </td>
+      <td colSpan={2} className="is-card-hidden" />
+      <td className="accounting-row-actions is-card-actions">
+        <Link href={campaign.href} className="btn-table-action" title="Apri la campagna: clienti, azioni e statistiche">
+          <Pencil size={14} />
+        </Link>
+        {onDeleteCampaign && (
+          <button
+            type="button"
+            className="btn-table-action btn-table-action-danger"
+            title="Elimina campagna"
+            onClick={() => void onDeleteCampaign(campaign)}
+          >
+            <Trash2 size={14} />
+          </button>
+        )}
+      </td>
+    </tr>
+  );
+
   const renderObjectiveRow = (row: AccountingObjectiveRow) => {
     if (!row.isGroup && row.clients[0]) return renderClientRow(row.clients[0], { isGroupChild: false });
     // Gli obiettivi di gruppo sono aperti di default: si ricorda solo chi è stato chiuso.
@@ -1008,7 +1177,7 @@ export function AccountingView({ track = 'warm', toolbarExtra }: { track?: Funne
             disabled={!db}
           >
             <Plus size={16} />
-            <span>Nuovo obiettivo</span>
+            <span>{newButtonLabel}</span>
           </button>
         </div>
       </div>
@@ -1028,18 +1197,21 @@ export function AccountingView({ track = 'warm', toolbarExtra }: { track?: Funne
           <tbody>
             {isLoading ? (
               <tr><td colSpan={COLUMN_COUNT} className="mail-campaigns-empty">Caricamento obiettivi…</td></tr>
-            ) : visibleRows.length === 0 ? (
+            ) : visibleRows.length === 0 && visibleCampaigns.length === 0 ? (
               <tr>
                 <td colSpan={COLUMN_COUNT} className="mail-campaigns-empty">
-                  {objectiveRows.length === 0
-                    ? `Nessun obiettivo in ${copy.name}. Usa «Nuovo obiettivo» per scegliere cosa vuoi ottenere e su quali clienti.`
+                  {objectiveRows.length === 0 && ownerCampaigns.length === 0
+                    ? `Nessun obiettivo in ${copy.name}. Usa «${newButtonLabel}» per scegliere cosa vuoi ottenere e su quali clienti.`
                     : filter === 'open'
                       ? `Nessun obiettivo aperto: tutti i clienti sono chiusi come ${copy.outcome.won} o ${copy.outcome.lost}.`
                       : 'Nessun obiettivo con questi filtri.'}
                 </td>
               </tr>
             ) : (
-              visibleRows.map(renderObjectiveRow)
+              <>
+                {visibleRows.map(renderObjectiveRow)}
+                {visibleCampaigns.map(renderCampaignRow)}
+              </>
             )}
           </tbody>
         </table>
@@ -1077,6 +1249,7 @@ export function AccountingView({ track = 'warm', toolbarExtra }: { track?: Funne
           onDelete={editingObjective && editingLockedClientIds.size === 0
             ? () => handleDeleteObjective(editingObjective)
             : undefined}
+          onCreateCampaign={onCreateCampaign}
         />
       )}
     </>

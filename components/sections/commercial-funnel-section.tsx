@@ -1,17 +1,16 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Download, Plus, Search, X } from 'lucide-react';
+import { Download } from 'lucide-react';
 import {
   buildFunnelCampaignDashboardRow,
   filterCampaignsByWorkspace,
   filterEntriesByVisibleCampaigns,
   filterFunnelEntriesByWorkspace,
   filterVisibleCampaigns,
+  getFunnelEntriesForCampaign,
   isClosedCampaign,
-  searchFunnelEntriesByBrandName,
 } from '@/lib/commercial-funnel/campaigns';
 import {
   readFunnelOwnerFilter,
@@ -32,57 +31,40 @@ import {
   filterCampaignsByTrack,
 } from '@/lib/commercial-funnel/track';
 import { downloadCommercialFunnelExcel } from '@/lib/commercial-funnel/export';
-import { resolveFunnelSemaforo, resolveFunnelStageDisplay } from '@/lib/commercial-funnel/index';
 import { buildFunnelStatsSummary } from '@/lib/commercial-funnel/stats';
-import { formatActionDateDisplay, formatShortItalianDate, getTodayString, isClientInColdSection } from '@/lib/crm/utils';
+import { getTodayString, isClientInColdSection } from '@/lib/crm/utils';
 import { resolveWorkspaceLabel } from '@/lib/constants/workspaces';
-import { CampaignNameCell } from '@/components/mail-campaigns/campaign-name-cell';
-import { CampaignStatusSelect } from '@/components/mail-campaigns/campaign-status-select';
-import { CampaignTableActions } from '@/components/mail-campaigns/campaign-table-actions';
 import { FunnelStatsCharts } from '@/components/commercial-funnel/funnel-stats-charts';
 import { AccountingView } from '@/components/commercial-funnel/accounting-view';
+import type { NewCampaignInput, ObjectiveListCampaign } from '@/components/commercial-funnel/accounting-view';
 import { FunnelClientsView } from '@/components/commercial-funnel/funnel-clients-view';
-import { ClientChipsField, getNamedContacts } from '@/components/commercial-funnel/action-fields';
-import { isObjectiveClient } from '@/lib/commercial-funnel/accounting';
-import { isClientInWorkspace } from '@/lib/crm/workspace-access';
-import { isOwner, OWNERS } from '@/lib/constants/crm';
+import { getNamedContacts } from '@/components/commercial-funnel/action-fields';
+import { isOwner } from '@/lib/constants/crm';
 import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
 import { TopHeader } from '@/components/layout/top-header';
-import type { MailCampaignStatus } from '@/lib/types/mail-campaigns';
 import { FUNNEL_TRACKS } from '@/lib/types/commercial-funnel';
 import type { FunnelClientRef, FunnelTrack } from '@/lib/types/commercial-funnel';
 import type { Owner } from '@/lib/types/crm';
 
-const BRAND_SEARCH_MIN_LENGTH = 2;
 const SALES_PAGE_VIEWS: readonly [SalesPageView, string][] = [
-  ['objectives', 'Obiettivi'],
-  ['campaigns', 'Campagne'],
-  ['clients', 'Clienti'],
+  ['list', 'Obiettivi e campagne'],
+  ['clients', 'Clienti campagne'],
 ];
 
 export function CommercialFunnelSection() {
   const router = useRouter();
   const {
     clients,
-    currentOwner,
     mailCampaigns,
     commercialFunnelEntries,
     addClientsToFunnel,
     saveMailCampaign,
     updateMailCampaignOwner,
-    updateMailCampaignStatus,
     deleteMailCampaignById,
   } = useCrm();
   const { workspaceId } = useWorkspace();
-  const [showForm, setShowForm] = useState(false);
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [owner, setOwner] = useState<Owner | ''>('');
-  const [newCampaignClientIds, setNewCampaignClientIds] = useState<string[]>([]);
-  const [isCreating, setIsCreating] = useState(false);
-  const [brandSearch, setBrandSearch] = useState('');
-  const [pageView, setPageView] = useState<SalesPageView>('objectives');
+  const [pageView, setPageView] = useState<SalesPageView>('list');
   const [hideClosedCampaigns, setHideClosedCampaigns] = useState(true);
   const [hideClosedPreferenceReady, setHideClosedPreferenceReady] = useState(false);
   const [track, setTrack] = useState<FunnelTrack>('cold');
@@ -152,152 +134,84 @@ export function CommercialFunnelSection() {
     () => filterVisibleCampaigns(scopedCampaigns, hideClosedCampaigns),
     [hideClosedCampaigns, scopedCampaigns],
   );
-  const visibleCampaignIds = useMemo(
-    () => new Set(visibleCampaigns.map((campaign) => campaign.id)),
-    [visibleCampaigns],
-  );
   const visibleEntries = useMemo(
-    () => filterEntriesByVisibleCampaigns(scopedEntries, visibleCampaignIds),
-    [scopedEntries, visibleCampaignIds],
+    () => filterEntriesByVisibleCampaigns(scopedEntries, new Set(visibleCampaigns.map((campaign) => campaign.id))),
+    [scopedEntries, visibleCampaigns],
   );
-  // Toggle owner: le campagne si filtrano per owner della campagna, i clienti per owner del contatto.
+  // Vista Clienti: il toggle owner filtra i clienti per owner del contatto.
   const workspaceOwners = useMemo(() => getOwnersForWorkspace(workspaceId), [workspaceId]);
   const activeOwnerFilter = useMemo(
     () => new Set(ownerFilter.filter((item) => workspaceOwners.includes(item as Owner))),
     [ownerFilter, workspaceOwners],
   );
-  const clientOwnerById = useMemo(
-    () => new Map(clients.map((client) => [client.id, client.owner])),
-    [clients],
-  );
-  const ownerCampaigns = useMemo(
-    () => (activeOwnerFilter.size === 0
-      ? visibleCampaigns
-      : visibleCampaigns.filter((campaign) => activeOwnerFilter.has(normalizeOwner(campaign.owner) || ''))),
-    [activeOwnerFilter, visibleCampaigns],
-  );
+  const clientById = useMemo(() => new Map(clients.map((client) => [client.id, client])), [clients]);
   const ownerEntries = useMemo(
     () => (activeOwnerFilter.size === 0
       ? visibleEntries
       : visibleEntries.filter((entry) => {
-        const entryOwner = normalizeOwner(entry.owner) || normalizeOwner(clientOwnerById.get(entry.clientId));
+        const entryOwner = normalizeOwner(entry.owner) || normalizeOwner(clientById.get(entry.clientId)?.owner);
         return activeOwnerFilter.has(entryOwner || '');
       })),
-    [activeOwnerFilter, clientOwnerById, visibleEntries],
+    [activeOwnerFilter, clientById, visibleEntries],
+  );
+  const clientsStats = useMemo(() => buildFunnelStatsSummary(ownerEntries), [ownerEntries]);
+
+  // Le campagne stanno nella stessa lista degli obiettivi; clienti e statistiche si vedono nella loro pagina.
+  const listCampaigns = useMemo<ObjectiveListCampaign[]>(
+    () => visibleCampaigns.map((campaign) => {
+      const row = buildFunnelCampaignDashboardRow(campaign, scopedEntries);
+      return {
+        id: campaign.id,
+        name: campaign.name,
+        owner: campaign.owner,
+        note: campaign.description,
+        href: `/funnel/${campaign.id}`,
+        clientNames: getFunnelEntriesForCampaign(scopedEntries, campaign.id)
+          .map((entry) => clientById.get(entry.clientId)?.name || ''),
+        totalClients: row.totalClients,
+        activeCount: row.activeCount,
+        convertedCount: row.convertedCount,
+        lostCount: row.lostCount,
+        redCount: row.redSemaforoCount,
+        isClosed: isClosedCampaign(campaign),
+      };
+    }),
+    [clientById, scopedEntries, visibleCampaigns],
   );
 
-  // I totali seguono la vista: contatti dell'owner (Clienti) o contatti delle sue campagne (Campagne).
-  const workspaceStats = useMemo(() => {
-    if (pageView === 'clients' || activeOwnerFilter.size === 0) return buildFunnelStatsSummary(ownerEntries);
-    const ownerCampaignIds = new Set(ownerCampaigns.map((campaign) => campaign.id));
-    return buildFunnelStatsSummary(visibleEntries.filter((entry) => ownerCampaignIds.has(entry.campaignId)));
-  }, [activeOwnerFilter, ownerCampaigns, ownerEntries, pageView, visibleEntries]);
-
-  const rows = useMemo(
-    () => ownerCampaigns.map((campaign) => buildFunnelCampaignDashboardRow(
-      campaign,
-      visibleEntries,
-    )),
-    [ownerCampaigns, visibleEntries],
-  );
-
-  const brandSearchResults = useMemo(
-    () => searchFunnelEntriesByBrandName(
-      brandSearch,
-      visibleEntries,
-      clients,
-      ownerCampaigns,
+  // Dal «Nuovo» unico: stessi campi dell'obiettivo; la campagna parte attiva con i clienti scelti.
+  const handleCreateCampaign = async (input: NewCampaignInput): Promise<void> => {
+    const campaignId = await saveMailCampaign({
       workspaceId,
-    ),
-    [brandSearch, clients, visibleEntries, ownerCampaigns, workspaceId],
-  );
-
-  const filteredRows = useMemo(() => {
-    const query = brandSearch.trim().toLowerCase();
-    if (query.length < BRAND_SEARCH_MIN_LENGTH) return rows;
-    const matchingCampaignIds = new Set(brandSearchResults.map((result) => result.campaignId));
-    if (matchingCampaignIds.size === 0) return [];
-    return rows.filter((row) => matchingCampaignIds.has(row.campaign.id));
-  }, [brandSearch, brandSearchResults, rows]);
-
-  const salesClients = useMemo(
-    () => clients
-      .filter((client) => isClientInWorkspace(client, workspaceId) && isObjectiveClient(client, track, clients))
-      .sort((left, right) => left.name.localeCompare(right.name, 'it')),
-    [clients, track, workspaceId],
-  );
-
-  const openCampaignForm = (): void => {
-    setName('');
-    setDescription('');
-    setOwner(isOwner(currentOwner || '') ? (currentOwner as Owner) : '');
-    setNewCampaignClientIds([]);
-    setShowForm(true);
-  };
-
-  // Come «Nuovo obiettivo»: nome, clienti, owner e nota in un passo; la campagna parte subito.
-  const handleCreate = async (event: React.FormEvent): Promise<void> => {
-    event.preventDefault();
-    if (!name.trim() || newCampaignClientIds.length === 0 || isCreating) return;
-    setIsCreating(true);
-    try {
-      const campaignId = await saveMailCampaign({
-        workspaceId,
-        funnelTrack: track,
-        name: name.trim(),
-        description: description.trim(),
-        status: 'Attiva',
-        startDate: getTodayString(),
-        endDate: '',
-        owner,
-      });
-      const refs: FunnelClientRef[] = newCampaignClientIds.map((clientId) => {
-        const client = clients.find((item) => item.id === clientId);
-        return {
-          clientId,
-          contactId: getNamedContacts(client)[0]?.id || '',
-          clientSource: client && isClientInColdSection(client) ? 'cold' : 'main',
-        };
-      });
-      await addClientsToFunnel(campaignId, refs, workspaceId);
-      setShowForm(false);
-      router.push(`/funnel/${campaignId}`);
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
-  const handleRenameCampaign = async (campaignId: string, name: string): Promise<void> => {
-    const campaign = mailCampaigns.find((item) => item.id === campaignId);
-    if (!campaign) return;
-    await saveMailCampaign({
-      id: campaign.id,
-      name,
-      description: campaign.description,
-      status: campaign.status,
-      startDate: campaign.startDate,
-      endDate: campaign.endDate,
-      owner: campaign.owner,
-      createdAt: campaign.createdAt,
+      funnelTrack: track,
+      name: input.name,
+      description: input.note,
+      status: 'Attiva',
+      startDate: getTodayString(),
+      endDate: '',
+      owner: isOwner(input.owner) ? input.owner : '',
     });
+    const refs: FunnelClientRef[] = input.clientIds.map((clientId) => {
+      const client = clientById.get(clientId);
+      return {
+        clientId,
+        contactId: getNamedContacts(client)[0]?.id || '',
+        clientSource: client && isClientInColdSection(client) ? 'cold' : 'main',
+      };
+    });
+    await addClientsToFunnel(campaignId, refs, workspaceId);
+    router.push(`/funnel/${campaignId}`);
   };
 
-  const handleOwnerChange = async (campaignId: string, nextOwner: Owner | ''): Promise<void> => {
-    await updateMailCampaignOwner(campaignId, nextOwner);
+  const handleCampaignOwnerChange = async (campaignId: string, nextOwner: string): Promise<void> => {
+    await updateMailCampaignOwner(campaignId, isOwner(nextOwner) ? nextOwner : '');
   };
 
-  const handleStatusChange = async (
-    campaignId: string,
-    nextStatus: MailCampaignStatus,
-  ): Promise<void> => {
-    await updateMailCampaignStatus(campaignId, nextStatus);
-  };
-
-  const handleDeleteCampaign = async (campaignId: string, campaignName: string): Promise<void> => {
-    if (!window.confirm(`Eliminare la campagna "${campaignName}"?\n\nVerranno rimossi anche clienti e dati del funnel collegati.`)) {
+  const handleDeleteCampaign = async (campaign: ObjectiveListCampaign): Promise<void> => {
+    if (!window.confirm(`Eliminare la campagna "${campaign.name}"?\n\nVerranno rimossi anche clienti e dati del funnel collegati.`)) {
       return;
     }
-    await deleteMailCampaignById(campaignId);
+    await deleteMailCampaignById(campaign.id);
   };
 
   const handleDownloadExcel = (): void => {
@@ -309,7 +223,6 @@ export function CommercialFunnelSection() {
     });
   };
 
-  const isBrandSearchActive = brandSearch.trim().length >= BRAND_SEARCH_MIN_LENGTH;
   const salesViewToggle = (
     <div className="task-view-toggle" role="group" aria-label="Vista Sales">
       {SALES_PAGE_VIEWS.map(([view, label]) => (
@@ -325,7 +238,18 @@ export function CommercialFunnelSection() {
       ))}
     </div>
   );
-  const displayRows = isBrandSearchActive ? filteredRows : rows;
+
+  const closedCampaignsChip = closedCampaignCount > 0 ? (
+    <button
+      type="button"
+      className={`clients-filter-chip ${hideClosedCampaigns ? 'is-active' : ''}`}
+      onClick={() => setHideClosedCampaigns((prev) => !prev)}
+      title={hideClosedCampaigns ? 'Mostra campagne chiuse' : 'Nascondi campagne chiuse'}
+    >
+      {hideClosedCampaigns ? 'Campagne chiuse nascoste' : 'Campagne chiuse visibili'}
+      <span className="clients-filter-chip-count">{closedCampaignCount}</span>
+    </button>
+  ) : null;
 
   return (
     <>
@@ -354,300 +278,67 @@ export function CommercialFunnelSection() {
           </div>
           {track === 'warm' ? (
             <AccountingView track="warm" />
-          ) : pageView === 'objectives' ? (
-            <AccountingView track="cold" toolbarExtra={salesViewToggle} />
-          ) : (
-          <>
-          <div className="table-filter-bar">
-            <div className="filter-left funnel-filter-left">
-              <div className="search-box funnel-brand-search-box">
-                <Search size={18} />
-                <input
-                  className="search-input"
-                  placeholder="Cerca brand nel funnel..."
-                  value={brandSearch}
-                  onChange={(event) => setBrandSearch(event.target.value)}
-                />
-              </div>
-            </div>
-            <div className="filter-right">
-              {salesViewToggle}
-              {closedCampaignCount > 0 ? (
-                <button
-                  type="button"
-                  className={`clients-filter-chip ${hideClosedCampaigns ? 'is-active' : ''}`}
-                  onClick={() => setHideClosedCampaigns((prev) => !prev)}
-                  title={hideClosedCampaigns ? 'Mostra campagne chiuse' : 'Nascondi campagne chiuse'}
-                >
-                  {hideClosedCampaigns ? 'Chiuse nascoste' : 'Chiuse visibili'}
-                  <span className="clients-filter-chip-count">{closedCampaignCount}</span>
-                </button>
-              ) : null}
-              <button type="button" className="btn btn-secondary" onClick={handleDownloadExcel}>
-                <Download size={16} />
-                <span>Scarica Excel</span>
-              </button>
-              <button type="button" className="btn btn-primary" onClick={openCampaignForm}>
-                <Plus size={16} />
-                <span>Nuova campagna</span>
-              </button>
-            </div>
-          </div>
-          <div className="funnel-owner-filter" role="group" aria-label="Filtra per owner">
-            <span className="tasks-filter-label">Owner:</span>
-            <button
-              type="button"
-              className={`clients-filter-chip${activeOwnerFilter.size === 0 ? ' is-active' : ''}`}
-              aria-pressed={activeOwnerFilter.size === 0}
-              onClick={() => changeOwnerFilter([])}
-            >
-              Tutti
-            </button>
-            {workspaceOwners.map((ownerName) => (
-              <button
-                key={ownerName}
-                type="button"
-                className={`clients-filter-chip${activeOwnerFilter.has(ownerName) ? ' is-active' : ''}`}
-                aria-pressed={activeOwnerFilter.has(ownerName)}
-                title={pageView === 'clients'
-                  ? `Solo i contatti di ${ownerName}`
-                  : `Solo le campagne di ${ownerName}`}
-                onClick={() => toggleOwnerFilter(ownerName)}
-              >
-                Solo {ownerName.split(' ')[0]}
-              </button>
-            ))}
-          </div>
-          <FunnelStatsCharts title={`Totali ${FUNNEL_TRACK_LABELS[track]}`} stats={workspaceStats} />
-          {pageView === 'clients' ? (
-            <FunnelClientsView
-              entries={ownerEntries}
-              clients={clients}
-              mailCampaigns={visibleCampaigns}
-              showCampaignColumn
+          ) : pageView === 'list' ? (
+            <AccountingView
+              track="cold"
+              toolbarExtra={(
+                <>
+                  {salesViewToggle}
+                  {closedCampaignsChip}
+                </>
+              )}
+              campaigns={listCampaigns}
+              onCreateCampaign={handleCreateCampaign}
+              onCampaignOwnerChange={handleCampaignOwnerChange}
+              onDeleteCampaign={handleDeleteCampaign}
             />
           ) : (
             <>
-          {isBrandSearchActive && (
-            <div className="funnel-brand-search-panel glass-card">
-              {brandSearchResults.length === 0 ? (
-                <p className="funnel-brand-search-message">Nessun brand trovato nel funnel.</p>
-              ) : (
-                <table className="analysis-table funnel-brand-search-table mobile-card-table">
-                  <thead>
-                    <tr>
-                      <th>Brand</th>
-                      <th>Campagna</th>
-                      <th>Stage</th>
-                      <th>Semaforo</th>
-                      <th> </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {brandSearchResults.map((result) => {
-                      const entry = commercialFunnelEntries.find((item) => item.id === result.entryId);
-                      const status = entry ? resolveFunnelStageDisplay(entry) : null;
-                      const semaforo = entry ? resolveFunnelSemaforo(entry.actions) : 'green';
-                      const entryHref = `/funnel/${result.campaignId}?entry=${encodeURIComponent(result.entryId)}`;
-                      return (
-                        <tr
-                          key={result.entryId}
-                          className="funnel-brand-search-row mobile-card-row"
-                          onClick={() => router.push(entryHref)}
-                        >
-                          <td className="is-card-title">{result.clientName}</td>
-                          <td data-label="Campagna">{result.campaignName}</td>
-                          <td data-label="Stage">
-                            {status?.label || '—'}
-                            {status?.date ? ` (${formatActionDateDisplay(status.date)})` : ''}
-                          </td>
-                          <td data-label="Semaforo">
-                            <span
-                              className={`funnel-semaforo funnel-semaforo-${semaforo}`}
-                              title={semaforo === 'red' ? 'Fuori tempo (oltre 5 giorni)' : 'In tempo (entro 5 giorni)'}
-                              aria-label={semaforo === 'red' ? 'Semaforo rosso' : 'Semaforo verde'}
-                            />
-                          </td>
-                          <td className="is-card-actions">
-                            <Link
-                              href={entryHref}
-                              className="funnel-brand-search-link"
-                              onClick={(event) => event.stopPropagation()}
-                            >
-                              Apri
-                            </Link>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          )}
-          <div className="commercial-funnel-table-wrap glass-card">
-            <table className="analysis-table commercial-funnel-table mobile-card-table">
-              <thead>
-                <tr>
-                  <th>Campagna</th>
-                  <th>Owner</th>
-                  <th>Stato</th>
-                  <th>Inizio</th>
-                  <th>Clienti</th>
-                  <th>Attivi</th>
-                  <th>Convertiti</th>
-                  <th>Persi</th>
-                  <th>Semaforo</th>
-                  <th> </th>
-                </tr>
-              </thead>
-              <tbody>
-                {displayRows.length === 0 ? (
-                  <tr>
-                    <td colSpan={10} className="mail-campaigns-empty">
-                      {isBrandSearchActive
-                        ? 'Nessuna campagna corrisponde alla ricerca.'
-                        : hideClosedCampaigns && closedCampaignCount > 0
-                          ? 'Tutte le campagne visibili sono chiuse. Mostrale con «Chiuse nascoste».'
-                          : `Nessuna campagna in ${FUNNEL_TRACK_LABELS[track]}. Creane una nuova.`}
-                    </td>
-                  </tr>
-                ) : (
-                  displayRows.map(({ campaign, totalClients, activeCount, convertedCount, lostCount, redSemaforoCount }) => (
-                    <tr key={campaign.id} className="mobile-card-row">
-                      <td className="is-card-title">
-                        <CampaignNameCell campaign={campaign} onSaveName={handleRenameCampaign} />
-                      </td>
-                      <td data-label="Owner">
-                        <select
-                          className="table-cell-select"
-                          value={campaign.owner}
-                          onChange={(event) => void handleOwnerChange(
-                            campaign.id,
-                            event.target.value as Owner | '',
-                          )}
-                        >
-                          <option value="">—</option>
-                          {OWNERS.map((profile) => (
-                            <option key={profile} value={profile}>{profile}</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td data-label="Stato">
-                        <CampaignStatusSelect
-                          value={campaign.status}
-                          onChange={(nextStatus) => void handleStatusChange(campaign.id, nextStatus)}
-                        />
-                      </td>
-                      <td className="funnel-campaign-date" data-label="Inizio">{campaign.startDate ? formatShortItalianDate(campaign.startDate) : '—'}</td>
-                      <td className="analysis-num is-card-stat" data-label="Clienti">{totalClients}</td>
-                      <td className="analysis-num is-card-stat" data-label="Attivi">{activeCount}</td>
-                      <td className="analysis-num funnel-converted-count is-card-stat" data-label="Convertiti">{convertedCount}</td>
-                      <td className="analysis-num is-card-stat" data-label="Persi">{lostCount}</td>
-                      <td className="analysis-num" data-label="Semaforo">
-                        <span
-                          className={`funnel-semaforo-count${redSemaforoCount > 0 ? ' has-red' : ''}`}
-                          title={redSemaforoCount > 0
-                            ? `${redSemaforoCount} clienti oltre 5 giorni senza prossima azione`
-                            : 'Nessun cliente oltre 5 giorni'}
-                        >
-                          <span
-                            className={`funnel-semaforo ${redSemaforoCount > 0 ? 'funnel-semaforo-red' : 'funnel-semaforo-green'}`}
-                            aria-hidden
-                          />
-                          {redSemaforoCount}
-                        </span>
-                      </td>
-                      <td className="is-card-actions">
-                        <CampaignTableActions
-                          manageHref={`/funnel/${campaign.id}`}
-                          manageLabel="Apri campagna"
-                          onDelete={() => void handleDeleteCampaign(campaign.id, campaign.name)}
-                        />
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+              <div className="table-filter-bar">
+                <div className="filter-left" />
+                <div className="filter-right">
+                  {salesViewToggle}
+                  {closedCampaignsChip}
+                  <button type="button" className="btn btn-secondary" onClick={handleDownloadExcel}>
+                    <Download size={16} />
+                    <span>Scarica Excel</span>
+                  </button>
+                </div>
+              </div>
+              <div className="funnel-owner-filter" role="group" aria-label="Filtra per owner">
+                <span className="tasks-filter-label">Owner:</span>
+                <button
+                  type="button"
+                  className={`clients-filter-chip${activeOwnerFilter.size === 0 ? ' is-active' : ''}`}
+                  aria-pressed={activeOwnerFilter.size === 0}
+                  onClick={() => changeOwnerFilter([])}
+                >
+                  Tutti
+                </button>
+                {workspaceOwners.map((ownerName) => (
+                  <button
+                    key={ownerName}
+                    type="button"
+                    className={`clients-filter-chip${activeOwnerFilter.has(ownerName) ? ' is-active' : ''}`}
+                    aria-pressed={activeOwnerFilter.has(ownerName)}
+                    title={`Solo i contatti di ${ownerName}`}
+                    onClick={() => toggleOwnerFilter(ownerName)}
+                  >
+                    Solo {ownerName.split(' ')[0]}
+                  </button>
+                ))}
+              </div>
+              <FunnelStatsCharts title={`Totali ${FUNNEL_TRACK_LABELS[track]}`} stats={clientsStats} />
+              <FunnelClientsView
+                entries={ownerEntries}
+                clients={clients}
+                mailCampaigns={visibleCampaigns}
+                showCampaignColumn
+              />
             </>
-          )}
-          </>
           )}
         </section>
       </div>
-      {showForm && (
-        <>
-          <div className="drawer-overlay open" onClick={() => setShowForm(false)} />
-          <div className="drawer open">
-            <div className="drawer-header">
-              <h3>Nuova campagna · {FUNNEL_TRACK_LABELS[track]}</h3>
-              <div className="drawer-close" onClick={() => setShowForm(false)} role="button" tabIndex={0}>
-                <X size={20} />
-              </div>
-            </div>
-            <form onSubmit={(event) => void handleCreate(event)}>
-              <div className="drawer-body">
-                <div className="form-group">
-                  <label htmlFor="campaign-name">Campagna *</label>
-                  <input
-                    id="campaign-name"
-                    className="form-input"
-                    placeholder="Es. Agenzie Milano, follow-up evento…"
-                    value={name}
-                    onChange={(event) => setName(event.target.value)}
-                    required
-                  />
-                </div>
-                <ClientChipsField
-                  clients={salesClients}
-                  clientIds={newCampaignClientIds}
-                  onChange={setNewCampaignClientIds}
-                  removeLabel="Togli dalla campagna"
-                  placeholder="Cerca un cliente senza fatturato..."
-                  hint="Per un solo cliente puoi usare anche un obiettivo: la campagna serve per lavorare più clienti insieme."
-                />
-                <div className="form-group">
-                  <label htmlFor="campaign-owner">Owner</label>
-                  <select
-                    id="campaign-owner"
-                    className="form-select"
-                    value={owner}
-                    onChange={(event) => setOwner(event.target.value as Owner | '')}
-                  >
-                    <option value="">—</option>
-                    {OWNERS.map((profile) => (
-                      <option key={profile} value={profile}>{profile}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="campaign-note">Nota (opzionale)</label>
-                  <textarea
-                    id="campaign-note"
-                    className="form-textarea"
-                    rows={2}
-                    placeholder="Contesto, messaggio, prossimi passi…"
-                    value={description}
-                    onChange={(event) => setDescription(event.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="drawer-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>Annulla</button>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={isCreating || !name.trim() || newCampaignClientIds.length === 0}
-                >
-                  {isCreating ? 'Creazione…' : 'Crea campagna'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </>
-      )}
     </>
   );
 }

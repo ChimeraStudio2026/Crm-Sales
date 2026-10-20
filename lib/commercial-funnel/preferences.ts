@@ -32,18 +32,17 @@ export function writeFunnelTrackPreference(track: FunnelTrack): void {
   }
 }
 
-/** Vista di Sales: obiettivi (come Account), campagne o elenco clienti delle campagne. */
-export type SalesPageView = 'objectives' | 'campaigns' | 'clients';
+/** Vista di Sales: obiettivi e campagne in un'unica lista, oppure i clienti delle campagne. */
+export type SalesPageView = 'list' | 'clients';
 
 export const SALES_PAGE_VIEW_STORAGE_KEY = 'crm-sales-page-view';
 
 export function readSalesPageViewPreference(): SalesPageView {
-  if (typeof window === 'undefined') return 'objectives';
+  if (typeof window === 'undefined') return 'list';
   try {
-    const value = window.localStorage.getItem(SALES_PAGE_VIEW_STORAGE_KEY);
-    return value === 'campaigns' || value === 'clients' ? value : 'objectives';
+    return window.localStorage.getItem(SALES_PAGE_VIEW_STORAGE_KEY) === 'clients' ? 'clients' : 'list';
   } catch {
-    return 'objectives';
+    return 'list';
   }
 }
 

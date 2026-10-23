@@ -8,11 +8,12 @@ import {
 } from '@/lib/crm/client-duplicates';
 import type { DuplicateCandidate } from '@/lib/crm/client-duplicates';
 import { formatCurrency } from '@/lib/crm/utils';
+import { getClientTotalRevenue } from '@/lib/crm/revenue';
 import type { Client } from '@/lib/types/crm';
 import { useCrm } from '@/providers/crm-provider';
 
 function totalRevenue(client: Client): number {
-  return (client.rev2023 || 0) + (client.rev2024 || 0) + (client.rev2025 || 0) + (client.rev2026 || 0);
+  return getClientTotalRevenue(client);
 }
 
 function ClientSummary({ client, isPrimary, onChoose }: { client: Client; isPrimary: boolean; onChoose: () => void }) {

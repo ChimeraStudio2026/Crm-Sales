@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import { CheckCircle2, CloudUpload, Eye, X } from 'lucide-react';
 import {
   ANALYSIS_YEAR,
+  REVENUE_YEARS,
   SUPPORTED_IMPORT_YEARS,
 } from '@/lib/constants/crm';
 import {
@@ -135,7 +136,7 @@ export function ImportSection() {
                 <h3>Trascina il tuo file Excel qui</h3>
                 <p>
                   O clicca per selezionare (.xlsx, .xls o .csv). Non usare .xsl (non è Excel).
-                  Supportati import 2023–2026.
+                  Supportati import {REVENUE_YEARS[0]}–{REVENUE_YEARS[REVENUE_YEARS.length - 1]}.
                 </p>
                 <span className="btn btn-secondary">Seleziona File</span>
               </div>

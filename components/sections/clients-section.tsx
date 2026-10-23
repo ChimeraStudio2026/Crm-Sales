@@ -12,6 +12,8 @@ import {
   RELATIONSHIPS,
 } from '@/lib/constants/crm';
 import { resolveAutoRelationship } from '@/lib/crm/relationship-rules';
+import { addRevenueByYear, createEmptyRevenueByYear, REVENUE_FIELDS } from '@/lib/crm/revenue';
+import type { ClientRevenueByYear, ClientRevenueField } from '@/lib/crm/revenue';
 import {
   formatCurrency,
   shouldHighlightIncompleteClient,
@@ -32,10 +34,10 @@ import { downloadClientsExcel } from '@/lib/crm/clients-export';
 import { resolveWorkspaceLabel } from '@/lib/constants/workspaces';
 import type { Client, Relationship, SortState } from '@/lib/types/crm';
 
-const REVENUE_COLUMNS = ['rev2023', 'rev2024', 'rev2025', 'rev2026'] as const;
+const REVENUE_COLUMNS = REVENUE_FIELDS;
 
-function isRevenueColumn(columnId: string): columnId is (typeof REVENUE_COLUMNS)[number] {
-  return REVENUE_COLUMNS.includes(columnId as (typeof REVENUE_COLUMNS)[number]);
+function isRevenueColumn(columnId: string): columnId is ClientRevenueField {
+  return (REVENUE_COLUMNS as readonly string[]).includes(columnId);
 }
 
 function buildClientsTableColumnOrder(showRev2023: boolean, showRev2024: boolean): string[] {
@@ -128,14 +130,10 @@ export function ClientsSection() {
   }, [clients]);
   // Fatturato del gruppo: il cliente principale mostra anche quello delle sue ragioni sociali.
   const groupRevenueById = useMemo(() => {
-    const totals = new Map<string, Record<(typeof REVENUE_COLUMNS)[number], number>>();
+    const totals = new Map<string, ClientRevenueByYear>();
     clients.forEach((client) => {
       if (!client.parentClientId) return;
-      const total = totals.get(client.parentClientId) || { rev2023: 0, rev2024: 0, rev2025: 0, rev2026: 0 };
-      REVENUE_COLUMNS.forEach((column) => {
-        total[column] += Number(client[column]) || 0;
-      });
-      totals.set(client.parentClientId, total);
+      totals.set(client.parentClientId, addRevenueByYear(totals.get(client.parentClientId) || createEmptyRevenueByYear(), client));
     });
     return totals;
   }, [clients]);
@@ -336,6 +334,7 @@ export function ClientsSection() {
             </select>
           </td>
         );
+      case 'rev2027':
       case 'rev2026':
       case 'rev2025':
       case 'rev2024':

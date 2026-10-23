@@ -1,6 +1,7 @@
 import { ANALYSIS_YEARS, EXCEL_REV_EPSILON, isAnalysisYear } from '@/lib/constants/crm';
 import { normalizeOkrClientName } from '@/lib/analysis/okr-timeline';
 import { resolveCanonicalClientBrandName } from '@/lib/crm/client-brand-aliases';
+import { getClientRevenue } from '@/lib/crm/revenue';
 import { isClientInActiveSection } from '@/lib/crm/utils';
 import type { Client, OkrRecord } from '@/lib/types/crm';
 
@@ -37,13 +38,6 @@ export interface RetentionYearTransition {
   rows: RetentionClientRow[];
 }
 
-const REVENUE_FIELD_BY_YEAR: Record<number, 'rev2023' | 'rev2024' | 'rev2025' | 'rev2026'> = {
-  2023: 'rev2023',
-  2024: 'rev2024',
-  2025: 'rev2025',
-  2026: 'rev2026',
-};
-
 function hasRevenue(amount: number): boolean {
   return amount > EXCEL_REV_EPSILON;
 }
@@ -53,12 +47,6 @@ function createEmptyRevenueByYear(): Record<number, number> {
     acc[year] = 0;
     return acc;
   }, {});
-}
-
-function getClientRevForYear(client: Client, year: number): number {
-  const field = REVENUE_FIELD_BY_YEAR[year];
-  if (!field) return 0;
-  return Number(client[field]) || 0;
 }
 
 /** Una ragione sociale conta sempre come il suo macro cliente. */
@@ -148,7 +136,7 @@ export function buildClientYearRevenueMap(
       ANALYSIS_YEARS.forEach((year) => {
         const okrRevenue = entry.revenueByYear[year] || 0;
         if (!hasRevenue(okrRevenue)) {
-          entry.revenueByYear[year] = members.reduce((sum, member) => sum + getClientRevForYear(member, year), 0);
+          entry.revenueByYear[year] = members.reduce((sum, member) => sum + getClientRevenue(member, year), 0);
         }
       });
     });

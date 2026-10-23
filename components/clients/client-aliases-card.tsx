@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Layers, Unlink, X } from 'lucide-react';
 import { ClientSearchSelect } from '@/components/clients/client-search-select';
 import { formatCurrency } from '@/lib/crm/utils';
+import { getClientTotalRevenue } from '@/lib/crm/revenue';
 import { isClientInWorkspace } from '@/lib/crm/workspace-access';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { deleteClientAlias, fetchClientAliases } from '@/lib/supabase/client-aliases-database';
@@ -16,7 +17,7 @@ interface ClientAliasesCardProps {
 }
 
 function totalRevenue(client: Client): number {
-  return (client.rev2023 || 0) + (client.rev2024 || 0) + (client.rev2025 || 0) + (client.rev2026 || 0);
+  return getClientTotalRevenue(client);
 }
 
 /**

@@ -7,6 +7,7 @@ import { DesktopLogoSetting } from '@/components/settings/desktop-logo-setting';
 import { ThemeModeSetting } from '@/components/settings/theme-mode-setting';
 import { PwaInstallSetting } from '@/components/settings/pwa-install-setting';
 import { TopHeader } from '@/components/layout/top-header';
+import { ANALYSIS_YEAR } from '@/lib/constants/crm';
 
 const APOLLO_SECRETS_URL = 'https://supabase.com/dashboard/project/ftkqrtzovyezlhlabmpn/functions/secrets';
 const APOLLO_DOCS_URL = 'https://docs.apollo.io/';
@@ -183,9 +184,9 @@ export function SettingsSection() {
               </div>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.6 }}>
                 • <strong>Freddo:</strong> nessun fatturato in nessun anno<br />
-                • <strong>Nuovo Cliente:</strong> fattura nel 2026 ed è il suo primo anno<br />
-                • <strong>Ricorrente:</strong> fattura nel 2026 e anche in almeno un anno precedente<br />
-                • <strong>Da recuperare:</strong> ha fatturato negli anni passati ma non nel 2026<br />
+                • <strong>Nuovo Cliente:</strong> fattura nel {ANALYSIS_YEAR} ed è il suo primo anno<br />
+                • <strong>Ricorrente:</strong> fattura nel {ANALYSIS_YEAR} e anche in almeno un anno precedente<br />
+                • <strong>Da recuperare:</strong> ha fatturato negli anni passati ma non nel {ANALYSIS_YEAR}<br />
                 • <strong>Eliminato:</strong> l&apos;unico rapporto da scegliere a mano; tutti gli altri sono automatici e non si possono cambiare
               </p>
             </div>

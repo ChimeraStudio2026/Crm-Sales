@@ -161,7 +161,7 @@ export function filterOkrRecordsAtTimelineDay(
   });
 }
 
-export function formatTimelineDateLabel(dayOfYear: number, year = 2026): string {
+export function formatTimelineDateLabel(dayOfYear: number, year = ANALYSIS_YEAR): string {
   const { throughMonth, throughDay } = getTimelineDateParts(year, dayOfYear);
   const monthName = new Date(year, throughMonth - 1, 1).toLocaleDateString('it-IT', { month: 'long' });
   return `${throughDay} ${monthName} ${year}`;

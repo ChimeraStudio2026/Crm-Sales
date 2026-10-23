@@ -39,6 +39,7 @@ interface ClientRow {
   rev_2024: number;
   rev_2025: number;
   rev_2026: number;
+  rev_2027: number;
   action: string;
   action_date: string | null;
   email: string;
@@ -147,6 +148,7 @@ function clientToRow(client: Client, includeHistoricalRevenue: boolean): Record<
     manual_relationship: !!client.manualRelationship,
     rev_2025: Number(client.rev2025) || 0,
     rev_2026: Number(client.rev2026) || 0,
+    rev_2027: Number(client.rev2027) || 0,
     action: client.action || '',
     action_date: client.actionDate ? client.actionDate : null,
     email: normalizedContacts[0]?.email || client.email || '',
@@ -179,6 +181,7 @@ function rowToClient(row: ClientRow): Client {
     rev2024: Number(row.rev_2024) || 0,
     rev2025: Number(row.rev_2025) || 0,
     rev2026: Number(row.rev_2026) || 0,
+    rev2027: Number(row.rev_2027) || 0,
     action: row.action || '',
     actionDate: row.action_date || '',
     email: contacts[0]?.email || row.email || '',

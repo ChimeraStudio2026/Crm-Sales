@@ -1,3 +1,4 @@
+import { getClientTotalRevenue } from '@/lib/crm/revenue';
 import type { Client } from '@/lib/types/crm';
 
 /** Forme giuridiche e parole di servizio ignorate nel confronto dei nomi. */
@@ -204,7 +205,7 @@ function resolveClientCreatedAt(client: Client): number {
 }
 
 function resolveTotalRevenue(client: Client): number {
-  return (client.rev2023 || 0) + (client.rev2024 || 0) + (client.rev2025 || 0) + (client.rev2026 || 0);
+  return getClientTotalRevenue(client);
 }
 
 /**

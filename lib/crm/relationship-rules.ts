@@ -1,5 +1,7 @@
 import type { Client, Relationship } from '@/lib/types/crm';
-import { ANALYSIS_YEAR, ANALYSIS_YEARS, RELATIONSHIPS } from '@/lib/constants/crm';
+import { ANALYSIS_YEAR, RELATIONSHIPS, REVENUE_YEARS } from '@/lib/constants/crm';
+import { addRevenueByYear, createEmptyRevenueByYear, getClientRevenue } from '@/lib/crm/revenue';
+import type { ClientRevenueByYear } from '@/lib/crm/revenue';
 
 export const RELATIONSHIP_INDEX: Record<Relationship, number | null> = {
   Freddo: null,
@@ -32,29 +34,17 @@ export function isManualOnlyRelationship(relationship: Relationship): boolean {
   return relationship === 'Eliminato';
 }
 
-function revenueOfYear(client: Pick<Client, 'rev2023' | 'rev2024' | 'rev2025' | 'rev2026'>, year: number): number {
-  const byYear: Record<number, number> = {
-    2023: client.rev2023,
-    2024: client.rev2024,
-    2025: client.rev2025,
-    2026: client.rev2026,
-  };
-  return Number(byYear[year]) || 0;
-}
-
 /**
- * Rapporto automatico dal fatturato (anno corrente = ANALYSIS_YEAR):
+ * Rapporto automatico dal fatturato (anno corrente = ANALYSIS_YEAR, il 2027 dal 1° gennaio):
  * - Freddo: mai fatturato;
- * - Nuovo Cliente: fattura quest'anno ed è il primo anno;
+ * - Nuovo Cliente: fattura quest'anno (o ha già fatturato registrato per l'anno dopo) ed è il primo anno;
  * - Ricorrente: fattura quest'anno e anche in almeno un anno precedente;
  * - Da recuperare: ha fatturato in passato ma non quest'anno.
  * Stessa regola del trigger clients_auto_relationship nel database.
  */
-export function resolveAutoRelationship(
-  client: Pick<Client, 'rev2023' | 'rev2024' | 'rev2025' | 'rev2026'>,
-): Relationship {
-  const hasCurrentYear = revenueOfYear(client, ANALYSIS_YEAR) > 0;
-  const hasPreviousYears = ANALYSIS_YEARS.some((year) => year < ANALYSIS_YEAR && revenueOfYear(client, year) > 0);
+export function resolveAutoRelationship(client: ClientRevenueByYear): Relationship {
+  const hasCurrentYear = REVENUE_YEARS.some((year) => year >= ANALYSIS_YEAR && getClientRevenue(client, year) > 0);
+  const hasPreviousYears = REVENUE_YEARS.some((year) => year < ANALYSIS_YEAR && getClientRevenue(client, year) > 0);
   if (hasCurrentYear) return hasPreviousYears ? 'Ricorrente' : 'Nuovo Cliente';
   return hasPreviousYears ? 'Da recuperare' : 'Freddo';
 }
@@ -71,19 +61,11 @@ export function getRelationshipStars(relationship: Relationship): string {
   return RELATIONSHIP_STARS[relationship];
 }
 
-type RevenueByYear = Pick<Client, 'rev2023' | 'rev2024' | 'rev2025' | 'rev2026'>;
-
 /** Fatturato del cliente più quello delle sue ragioni sociali (clienti con parentClientId). */
-function buildGroupRevenue(clients: Client[]): Map<string, RevenueByYear> {
-  const totals = new Map<string, RevenueByYear>();
+function buildGroupRevenue(clients: Client[]): Map<string, ClientRevenueByYear> {
+  const totals = new Map<string, ClientRevenueByYear>();
   const add = (id: string, client: Client): void => {
-    const current = totals.get(id) || { rev2023: 0, rev2024: 0, rev2025: 0, rev2026: 0 };
-    totals.set(id, {
-      rev2023: current.rev2023 + (Number(client.rev2023) || 0),
-      rev2024: current.rev2024 + (Number(client.rev2024) || 0),
-      rev2025: current.rev2025 + (Number(client.rev2025) || 0),
-      rev2026: current.rev2026 + (Number(client.rev2026) || 0),
-    });
+    totals.set(id, addRevenueByYear(totals.get(id) || createEmptyRevenueByYear(), client));
   };
   clients.forEach((client) => {
     add(client.id, client);

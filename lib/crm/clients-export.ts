@@ -1,4 +1,6 @@
 import * as XLSX from 'xlsx';
+import { REVENUE_YEARS } from '@/lib/constants/crm';
+import { getClientRevenue } from '@/lib/crm/revenue';
 import type { Client } from '@/lib/types/crm';
 
 function formatContacts(client: Client): string {
@@ -20,10 +22,7 @@ export function downloadClientsExcel(clients: Client[], workspaceLabel: string):
     Owner: client.owner,
     'Origine cliente': client.clientOrigin,
     Rapporto: client.relationship,
-    'Fatturato 2023': client.rev2023,
-    'Fatturato 2024': client.rev2024,
-    'Fatturato 2025': client.rev2025,
-    'Fatturato 2026': client.rev2026,
+    ...Object.fromEntries(REVENUE_YEARS.map((year) => [`Fatturato ${year}`, getClientRevenue(client, year)])),
     'Ultima azione': client.action,
     'Data azione': client.actionDate,
     Email: client.email,

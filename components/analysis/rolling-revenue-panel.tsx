@@ -7,6 +7,7 @@ import {
   formatRollingMonthLabel,
   formatRollingMonthShortLabel,
 } from '@/lib/analysis/rolling-revenue';
+import { REVENUE_YEARS } from '@/lib/constants/crm';
 import { formatCurrency } from '@/lib/crm/utils';
 import { createBrowserSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
 import { fetchAllOkrRecords } from '@/lib/supabase/database';
@@ -141,7 +142,7 @@ export function RollingRevenuePanel() {
             <p className="analysis-empty-hint">Caricamento OKR da Supabase...</p>
           ) : rollingPoints.length === 0 ? (
             <p className="analysis-empty-hint">
-              Servono almeno 12 mesi di calendario con OKR datati (2023–2026).
+              Servono almeno 12 mesi di calendario con OKR datati ({REVENUE_YEARS[0]}–{REVENUE_YEARS[REVENUE_YEARS.length - 1]}).
               {totalOkrCount === 0
                 ? ' Nessun OKR in Supabase: importa gli Excel storici.'
                 : ' Verifica che l\'import Excel abbia colonna data o mese compilata.'}

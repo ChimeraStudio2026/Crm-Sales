@@ -2,7 +2,7 @@
 
 import { PlusCircle } from 'lucide-react';
 import { usePathname } from 'next/navigation';
-import { resolvePageMeta } from '@/lib/constants/crm';
+import { ANALYSIS_YEAR, resolvePageMeta } from '@/lib/constants/crm';
 import { isWorkspaceScopedPath } from '@/lib/constants/workspaces';
 import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
@@ -16,7 +16,7 @@ interface TopHeaderProps {
 
 export function TopHeader({ onQuickAdd }: TopHeaderProps) {
   const pathname = usePathname();
-  const { totalRevenue2026 } = useCrm();
+  const { totalRevenueCurrentYear } = useCrm();
   const { access } = useWorkspace();
   const meta = resolvePageMeta(pathname);
   const showWorkspaceSelector = access.canSwitchWorkspace && isWorkspaceScopedPath(pathname);
@@ -33,9 +33,9 @@ export function TopHeader({ onQuickAdd }: TopHeaderProps) {
         <ThemeToggleButton />
         {showRevenue && (
           <div className="quick-stats-badge">
-            <span className="quick-stats-label-long">Fatturato 2026: </span>
-            <span className="quick-stats-label-short">Fatt. 2026 </span>
-            <strong id="header-total-revenue">{formatCurrency(totalRevenue2026)}</strong>
+            <span className="quick-stats-label-long">Fatturato {ANALYSIS_YEAR}: </span>
+            <span className="quick-stats-label-short">Fatt. {ANALYSIS_YEAR} </span>
+            <strong id="header-total-revenue">{formatCurrency(totalRevenueCurrentYear)}</strong>
           </div>
         )}
         {onQuickAdd && (

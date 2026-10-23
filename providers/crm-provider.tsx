@@ -53,6 +53,7 @@ import {
   fetchCommercialFunnelEntries,
 } from '@/lib/supabase/commercial-funnel-database';
 import { createMailCampaignActions } from '@/providers/mail-campaign-actions';
+import { getClientRevenue } from '@/lib/crm/revenue';
 import { createCommercialFunnelActions } from '@/providers/commercial-funnel-actions';
 import type { FunnelActionOptions } from '@/providers/commercial-funnel-actions';
 import { createPropositivitaActions } from '@/providers/propositivita-actions';
@@ -147,7 +148,7 @@ interface CrmContextValue {
   analysisYear: number;
   analysisForecasts: AnalysisForecasts;
   analysisExpanded: Set<string>;
-  totalRevenue2026: number;
+  totalRevenueCurrentYear: number;
   currentOwner: Owner | null;
   showToast: (message: string, type?: ToastType) => void;
   toasts: ToastMessage[];
@@ -705,8 +706,9 @@ export function CrmProvider({ children }: CrmProviderProps) {
     loadState();
   }, [db, refreshApolloStatus, showToast, supabaseConfigured]);
 
-  const totalRevenue2026 = useMemo(
-    () => clients.filter(isClientInActiveSection).reduce((sum, c) => sum + (c.rev2026 || 0), 0),
+  // Fatturato dell'anno corrente (2026; 2027 dal 1° gennaio 2027) per l'header.
+  const totalRevenueCurrentYear = useMemo(
+    () => clients.filter(isClientInActiveSection).reduce((sum, c) => sum + getClientRevenue(c, ANALYSIS_YEAR), 0),
     [clients],
   );
 
@@ -761,6 +763,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
         rev2024: input.rev2024 || 0,
         rev2025: input.rev2025 || 0,
         rev2026: input.rev2026 || 0,
+        rev2027: input.rev2027 || 0,
         action: trimmedAction,
         actionDate: trimmedAction
           ? resolveActionDateOnTextChange('', trimmedAction, DEFAULT_ACTION_DATE)
@@ -803,6 +806,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
           rev2024: 0,
           rev2025: input.rev2025 || 0,
           rev2026: input.rev2026 || 0,
+          rev2027: input.rev2027 || 0,
           action: trimmedAction,
           actionDate: trimmedAction
             ? resolveActionDateOnTextChange('', trimmedAction, DEFAULT_ACTION_DATE)
@@ -1418,7 +1422,7 @@ export function CrmProvider({ children }: CrmProviderProps) {
     analysisYear,
     analysisForecasts,
     analysisExpanded,
-    totalRevenue2026,
+    totalRevenueCurrentYear,
     currentOwner,
     showToast,
     toasts,

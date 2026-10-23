@@ -40,6 +40,7 @@ export interface Client {
   rev2024: number;
   rev2025: number;
   rev2026: number;
+  rev2027: number;
   action: string;
   actionDate: string;
   email: string;

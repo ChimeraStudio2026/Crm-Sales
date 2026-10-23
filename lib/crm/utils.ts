@@ -1,11 +1,12 @@
 import type { Client, ClientContact, Relationship } from '@/lib/types/crm';
-import { ACTION_DATE_STALE_DAYS, COLD_CLIENT_REV_THRESHOLD, DEFAULT_ACTION_DATE, EXCEL_IMPORT_ACTION_PREFIX } from '@/lib/constants/crm';
+import { ACTION_DATE_STALE_DAYS, ANALYSIS_YEAR, COLD_CLIENT_REV_THRESHOLD, DEFAULT_ACTION_DATE, EXCEL_IMPORT_ACTION_PREFIX } from '@/lib/constants/crm';
 import {
   applyAutoRelationships,
   normalizeStoredRelationship,
   resolveAutoRelationship,
 } from '@/lib/crm/relationship-rules';
 import { normalizeClientProductOffers } from '@/lib/crm/product-offers';
+import { REVENUE_FIELDS, getClientRevenue } from '@/lib/crm/revenue';
 
 export function createUniqueId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -243,7 +244,7 @@ export function applyColdClientPromotion(
   if (synced.relationship !== 'Freddo') {
     return { promoted: false, client: synced };
   }
-  if (synced.rev2026 > COLD_CLIENT_REV_THRESHOLD) {
+  if (getClientRevenue(synced, ANALYSIS_YEAR) > COLD_CLIENT_REV_THRESHOLD) {
     return {
       promoted: true,
       client: {
@@ -287,10 +288,9 @@ export function reconcileImportedClientsToMainList(clients: Client[]): Client[] 
 export function normalizeClients(clients: Client[]): Client[] {
   return clients.map((client) => {
     const normalized = { ...client };
-    normalized.rev2023 = Number(normalized.rev2023) || 0;
-    normalized.rev2024 = Number(normalized.rev2024) || 0;
-    normalized.rev2025 = Number(normalized.rev2025) || 0;
-    normalized.rev2026 = Number(normalized.rev2026) || 0;
+    for (const field of REVENUE_FIELDS) {
+      normalized[field] = Number(normalized[field]) || 0;
+    }
     if (normalized.clientOrigin === undefined) {
       normalized.clientOrigin = '';
     }

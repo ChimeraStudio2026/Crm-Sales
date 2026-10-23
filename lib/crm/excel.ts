@@ -1,6 +1,8 @@
 import * as XLSX from 'xlsx';
 import type { OkrRecord, ParsedExcelClient } from '@/lib/types/crm';
 import { normalizeProductType, parseOkrMonthNumber, parseQuarterFromMonth } from '@/lib/analysis/index';
+import { getRevenueField } from '@/lib/crm/revenue';
+import type { ClientRevenueField } from '@/lib/crm/revenue';
 import {
   ANALYSIS_YEAR,
   PREVIOUS_ANALYSIS_YEAR,
@@ -348,17 +350,10 @@ export function isSupportedImportYear(year: number): boolean {
   return SUPPORTED_IMPORT_YEARS.includes(year as (typeof SUPPORTED_IMPORT_YEARS)[number]);
 }
 
-export type ClientRevenueField = 'rev2023' | 'rev2024' | 'rev2025' | 'rev2026';
-
-const REVENUE_FIELD_BY_YEAR: Record<number, ClientRevenueField> = {
-  2023: 'rev2023',
-  2024: 'rev2024',
-  2025: 'rev2025',
-  2026: 'rev2026',
-};
+export type { ClientRevenueField };
 
 export function getRevenueFieldForImportYear(year: number): ClientRevenueField {
-  return REVENUE_FIELD_BY_YEAR[year] ?? 'rev2026';
+  return getRevenueField(year) ?? getRevenueField(ANALYSIS_YEAR) ?? 'rev2026';
 }
 
 function parseRowYearValue(raw: unknown): number | null {

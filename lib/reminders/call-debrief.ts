@@ -1,4 +1,6 @@
+import { REVENUE_YEARS } from '@/lib/constants/crm';
 import { resolveCanonicalClientBrandName } from '@/lib/crm/client-brand-aliases';
+import { getClientRevenue } from '@/lib/crm/revenue';
 import { PROPOSAL_STATUS_ACCEPTED } from '@/lib/types/sales-proposals';
 import type { SalesProposal } from '@/lib/types/sales-proposals';
 import type { Client } from '@/lib/types/crm';
@@ -46,13 +48,9 @@ function resolveAcceptedOn(proposal: SalesProposal): string {
 
 /** Fatturato negli anni prima di quello dell'accettazione: se c'è, il cliente non è nuovo. */
 function hasRevenueBefore(clients: Client[], year: number): boolean {
-  const revenueByYear = (client: Client): Array<[number, number]> => [
-    [2023, client.rev2023],
-    [2024, client.rev2024],
-    [2025, client.rev2025],
-    [2026, client.rev2026],
-  ];
-  return clients.some((client) => revenueByYear(client).some(([revenueYear, amount]) => revenueYear < year && amount > 0));
+  return clients.some((client) => REVENUE_YEARS.some(
+    (revenueYear) => revenueYear < year && getClientRevenue(client, revenueYear) > 0,
+  ));
 }
 
 /**

@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Sparkles, X } from 'lucide-react';
-import { CLIENT_TYPES } from '@/lib/constants/crm';
+import { CLIENT_TYPES, REVENUE_YEARS } from '@/lib/constants/crm';
+import { addRevenueByYear, createEmptyRevenueByYear, REVENUE_FIELD_BY_YEAR } from '@/lib/crm/revenue';
+import type { ClientRevenueByYear } from '@/lib/crm/revenue';
 import { resolveAutoRelationship } from '@/lib/crm/relationship-rules';
 import { DEFAULT_WORKSPACE_ID } from '@/lib/constants/workspaces';
 import {
@@ -38,16 +40,13 @@ export function ClientDrawer({ client, isCold, workspaceId, onClose }: ClientDra
   const [clientOrigin, setClientOrigin] = useState<Client['clientOrigin']>('');
   // Il rapporto è automatico dal fatturato; si sceglie solo «Eliminato».
   const [relationship, setRelationship] = useState<Client['relationship']>('Freddo');
-  const [rev2023, setRev2023] = useState(0);
-  const [rev2024, setRev2024] = useState(0);
-  const [rev2025, setRev2025] = useState(0);
-  const [rev2026, setRev2026] = useState(0);
+  const [revenue, setRevenue] = useState<ClientRevenueByYear>(createEmptyRevenueByYear);
   const [description, setDescription] = useState('');
   const [contacts, setContacts] = useState<ClientContact[]>([
     { id: createUniqueId('contact'), email: '', name: '', role: '', phone: '' },
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const autoRelationship = resolveAutoRelationship({ rev2023, rev2024, rev2025, rev2026 });
+  const autoRelationship = resolveAutoRelationship(revenue);
 
   useEffect(() => {
     if (client) {
@@ -56,10 +55,7 @@ export function ClientDrawer({ client, isCold, workspaceId, onClose }: ClientDra
       setOwner(availableOwners.includes(client.owner) ? client.owner : availableOwners[0]);
       setClientOrigin(client.clientOrigin || '');
       setRelationship(client.relationship);
-      setRev2023(client.rev2023);
-      setRev2024(client.rev2024);
-      setRev2025(client.rev2025);
-      setRev2026(client.rev2026);
+      setRevenue(addRevenueByYear(createEmptyRevenueByYear(), client));
       setDescription(client.description);
       setContacts(client.contacts.length > 0 ? client.contacts : [
         { id: createUniqueId('contact'), email: '', name: '', role: '', phone: '' },
@@ -85,10 +81,7 @@ export function ClientDrawer({ client, isCold, workspaceId, onClose }: ClientDra
           owner,
           clientOrigin,
           relationship: client && relationship === 'Eliminato' ? 'Eliminato' : autoRelationship,
-          rev2023,
-          rev2024,
-          rev2025,
-          rev2026,
+          ...revenue,
           description,
           contacts: filledContacts,
           manualRelationship: client ? relationship === 'Eliminato' : false,
@@ -158,22 +151,23 @@ export function ClientDrawer({ client, isCold, workspaceId, onClose }: ClientDra
                 Si calcola dal fatturato: Freddo, Nuovo Cliente, Ricorrente o Da recuperare. Solo «Eliminato» si sceglie a mano.
               </small>
             </div>
-            <div className="form-group">
-              <label htmlFor="form-rev-2023">Fatturato 2023 (€)</label>
-              <input id="form-rev-2023" type="number" className="form-input" value={rev2023} step={0.01} onChange={(e) => setRev2023(parseFloat(e.target.value) || 0)} />
-            </div>
-            <div className="form-group">
-              <label htmlFor="form-rev-2024">Fatturato 2024 (€)</label>
-              <input id="form-rev-2024" type="number" className="form-input" value={rev2024} step={0.01} onChange={(e) => setRev2024(parseFloat(e.target.value) || 0)} />
-            </div>
-            <div className="form-group">
-              <label htmlFor="form-rev-2025">Fatturato 2025 (€)</label>
-              <input id="form-rev-2025" type="number" className="form-input" value={rev2025} min={0} step={0.01} onChange={(e) => setRev2025(parseFloat(e.target.value) || 0)} />
-            </div>
-            <div className="form-group">
-              <label htmlFor="form-rev-2026">Fatturato 2026 (€)</label>
-              <input id="form-rev-2026" type="number" className="form-input" value={rev2026} min={0} step={0.01} onChange={(e) => setRev2026(parseFloat(e.target.value) || 0)} />
-            </div>
+            {REVENUE_YEARS.map((year) => {
+              const field = REVENUE_FIELD_BY_YEAR[year];
+              return (
+                <div key={year} className="form-group">
+                  <label htmlFor={`form-rev-${year}`}>Fatturato {year} (€)</label>
+                  <input
+                    id={`form-rev-${year}`}
+                    type="number"
+                    className="form-input"
+                    value={revenue[field]}
+                    min={year >= 2025 ? 0 : undefined}
+                    step={0.01}
+                    onChange={(e) => setRevenue((prev) => ({ ...prev, [field]: parseFloat(e.target.value) || 0 }))}
+                  />
+                </div>
+              );
+            })}
               </>
             ) : (
               <p className="client-drawer-cold-note">

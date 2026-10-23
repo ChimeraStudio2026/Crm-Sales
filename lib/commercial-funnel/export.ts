@@ -7,6 +7,8 @@ import {
   resolveFunnelSemaforo,
   resolveFunnelStageDisplay,
 } from '@/lib/commercial-funnel/index';
+import { REVENUE_YEARS } from '@/lib/constants/crm';
+import { getClientRevenue } from '@/lib/crm/revenue';
 import { getTodayString } from '@/lib/crm/utils';
 import type { CommercialFunnelEntry } from '@/lib/types/commercial-funnel';
 import type { Client } from '@/lib/types/crm';
@@ -48,10 +50,7 @@ export function buildFunnelExportRows(input: FunnelExcelExportInput): FunnelExpo
         Relazione: client?.relationship || '',
         'Origine cliente': client?.clientOrigin || '',
         'Cliente cold': client?.isColdClient ? 'Sì' : 'No',
-        'Rev 2023': client?.rev2023 ?? '',
-        'Rev 2024': client?.rev2024 ?? '',
-        'Rev 2025': client?.rev2025 ?? '',
-        'Rev 2026': client?.rev2026 ?? '',
+        ...Object.fromEntries(REVENUE_YEARS.map((year) => [`Rev ${year}`, client ? getClientRevenue(client, year) : ''])),
         Contatto: contact?.name || '',
         'Email contatto': contact?.email || '',
         'Ruolo contatto': contact?.role || '',

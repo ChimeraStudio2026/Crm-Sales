@@ -3,11 +3,13 @@
 import { Fragment, useMemo, useState } from 'react';
 import { ChevronRight, Edit, FilterX, Search, Sparkles, Trash2 } from 'lucide-react';
 import {
+  ANALYSIS_YEAR,
   CLIENT_TYPES,
   COLD_CLIENT_CATEGORIES,
   COLD_TABLE_COLUMN_ORDER,
   CRM_TABLE_COLUMN_DEFS,
 } from '@/lib/constants/crm';
+import { REVENUE_FIELDS } from '@/lib/crm/revenue';
 import { getOwnersForWorkspace } from '@/lib/crm/workspace-clients';
 import {
   formatCurrency,
@@ -36,7 +38,7 @@ function sortClients(list: Client[], sort: SortState): Client[] {
   return [...list].sort((a, b) => {
     let valA: string | number = a[col] as string | number;
     let valB: string | number = b[col] as string | number;
-    if (col === 'rev2025' || col === 'rev2026') {
+    if ((REVENUE_FIELDS as readonly string[]).includes(col)) {
       valA = Number(a[col]) || 0;
       valB = Number(b[col]) || 0;
     } else if (typeof valA === 'string') {
@@ -185,10 +187,10 @@ export function ColdClientsSection() {
             />
           </td>
         );
+      case 'rev2027':
       case 'rev2026':
-        return <td key={columnId} style={{ textAlign: 'right' }}>{formatCurrency(client.rev2026)}</td>;
       case 'rev2025':
-        return <td key={columnId} style={{ textAlign: 'right' }}>{formatCurrency(client.rev2025)}</td>;
+        return <td key={columnId} style={{ textAlign: 'right' }}>{formatCurrency(client[columnId])}</td>;
       case 'actions':
         return (
           <td key={columnId}>
@@ -314,7 +316,7 @@ export function ColdClientsSection() {
           </div>
           <p className="cold-section-hint">
             Prospect con cui non avete <strong>mai lavorato</strong>. I clienti importati da OKR/Excel restano in Lista Clienti.
-            Se imposti <strong>Fatturato 2026</strong> &gt; €1, il cliente passa alla lista principale.
+            Se imposti <strong>Fatturato {ANALYSIS_YEAR}</strong> &gt; €1, il cliente passa alla lista principale.
           </p>
           <div className="cold-clients-accordion">
             {COLD_CLIENT_CATEGORIES.map((category) => {

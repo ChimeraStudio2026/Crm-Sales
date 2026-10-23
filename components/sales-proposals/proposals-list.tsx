@@ -6,6 +6,8 @@ import {
   formatProposalCurrency,
   formatProposalDateLabel,
   getProposalCreatedYear,
+  getProposalMoveYears,
+  getProposalYear,
   resolveProposalValue,
 } from '@/lib/sales-proposals/stats';
 import type { SalesProposal } from '@/lib/types/sales-proposals';
@@ -19,6 +21,9 @@ interface ProposalsListProps {
   proposals: SalesProposal[];
   yearOptions: number[];
   defaultYear: number;
+  currentYear: number;
+  /** Sposta la proposta in un anno successivo; null la riporta all'anno di creazione. */
+  onMoveYear: (proposal: SalesProposal, year: number | null) => Promise<void>;
 }
 
 function resolveStatusClassName(stato: string): string {
@@ -34,17 +39,27 @@ function resolveProposalNumber(proposal: SalesProposal): number {
   return match ? Number(match[1]) : 0;
 }
 
-export function ProposalsList({ proposals, yearOptions, defaultYear }: ProposalsListProps) {
+export function ProposalsList({ proposals, yearOptions, defaultYear, currentYear, onMoveYear }: ProposalsListProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [selectedYear, setSelectedYear] = useState<number | null>(defaultYear);
   const [search, setSearch] = useState('');
   const [sortDescending, setSortDescending] = useState(true);
   const [openProposalId, setOpenProposalId] = useState<number | null>(null);
+  const [movingProposalId, setMovingProposalId] = useState<number | null>(null);
+
+  const moveYear = async (proposal: SalesProposal, year: number | null): Promise<void> => {
+    setMovingProposalId(proposal.id);
+    try {
+      await onMoveYear(proposal, year);
+    } finally {
+      setMovingProposalId(null);
+    }
+  };
 
   const rows = useMemo(() => {
     const query = search.trim().toLowerCase();
     return proposals
-      .filter((proposal) => selectedYear === null || getProposalCreatedYear(proposal) === selectedYear)
+      .filter((proposal) => selectedYear === null || getProposalYear(proposal) === selectedYear)
       .filter((proposal) => statusFilter === 'all' || proposal.stato === statusFilter)
       .filter((proposal) => {
         if (!query) return true;
@@ -129,6 +144,7 @@ export function ProposalsList({ proposals, yearOptions, defaultYear }: Proposals
               </th>
               <th>Cliente</th>
               <th>Categoria</th>
+              <th title="Anno in cui la proposta conta: si può spostare solo in un anno successivo">Anno</th>
               <th className="analysis-num">Valore</th>
               <th>Aggiornata</th>
             </tr>
@@ -136,12 +152,14 @@ export function ProposalsList({ proposals, yearOptions, defaultYear }: Proposals
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={7} className="proposals-empty">Nessuna proposta con questi filtri.</td>
+                <td colSpan={8} className="proposals-empty">Nessuna proposta con questi filtri.</td>
               </tr>
             ) : (
               rows.map((proposal) => {
                 const value = resolveProposalValue(proposal);
                 const isOpen = openProposalId === proposal.id;
+                const createdYear = getProposalCreatedYear(proposal);
+                const moveYears = getProposalMoveYears(proposal, currentYear);
                 return (
                   <Fragment key={proposal.id}>
                     <tr className={isOpen ? 'is-open' : ''}>
@@ -164,12 +182,32 @@ export function ProposalsList({ proposals, yearOptions, defaultYear }: Proposals
                       <td className="proposals-list-name">{proposal.nome}</td>
                       <td>{proposal.cliente || '—'}</td>
                       <td>{proposal.categoria || '—'}</td>
+                      <td className="proposals-list-col-year">
+                        {moveYears.length > 0 || proposal.annoRiferimento ? (
+                          <select
+                            className={`table-cell-select${proposal.annoRiferimento ? ' is-moved' : ''}`}
+                            aria-label={`Anno della proposta ${proposal.nome}`}
+                            title={proposal.annoRiferimento ? `Creata nel ${createdYear}, spostata nel ${proposal.annoRiferimento}` : 'Sposta in un anno successivo'}
+                            value={getProposalYear(proposal) ?? ''}
+                            disabled={movingProposalId === proposal.id}
+                            onChange={(event) => {
+                              const year = Number(event.target.value);
+                              void moveYear(proposal, year === createdYear ? null : year);
+                            }}
+                          >
+                            <option value={createdYear ?? ''}>{createdYear}</option>
+                            {Array.from(new Set([...moveYears, ...(proposal.annoRiferimento ? [proposal.annoRiferimento] : [])]))
+                              .sort((left, right) => left - right)
+                              .map((year) => <option key={year} value={year}>→ {year}</option>)}
+                          </select>
+                        ) : (createdYear ?? '—')}
+                      </td>
                       <td className="analysis-num">{value === null ? '—' : formatProposalCurrency(value)}</td>
                       <td>{proposal.ultimoAggiornamento ? formatProposalDateLabel(proposal.ultimoAggiornamento) : '—'}</td>
                     </tr>
                     {isOpen && (
                       <tr className="proposals-list-detail-row">
-                        <td colSpan={7}>
+                        <td colSpan={8}>
                           <dl className="proposals-list-detail">
                             <div><dt>Descrizione</dt><dd>{proposal.descrizione || '—'}</dd></div>
                             <div><dt>Contattato da</dt><dd>{proposal.contattatoDa || '—'}</dd></div>

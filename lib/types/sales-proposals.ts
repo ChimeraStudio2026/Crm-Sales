@@ -3,6 +3,9 @@ export const PROPOSAL_STATUS_REJECTED = 'No' as const;
 
 export const PROPOSAL_YEAR_OPTIONS_BASE = [2025, 2026] as const;
 
+/** Una proposta si può contare in un anno successivo fino a questo numero di anni dopo quello in corso. */
+export const PROPOSAL_FUTURE_YEARS = 1;
+
 export const KNOWN_PROPOSAL_CATEGORIES = [
   'Mini Prod',
   'Content Base',
@@ -33,6 +36,8 @@ export interface SalesProposal {
   workspaceId: string;
   importBatch: string;
   createdAt: string;
+  /** Anno in cui la proposta conta nel CRM se spostata in avanti; null = anno di creazione. */
+  annoRiferimento: number | null;
 }
 
 export interface SalesProposalImportRow {

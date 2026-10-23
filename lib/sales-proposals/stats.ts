@@ -3,6 +3,7 @@ import {
   KNOWN_PROPOSAL_CATEGORIES,
   PROPOSAL_STATUS_ACCEPTED,
   PROPOSAL_STATUS_REJECTED,
+  PROPOSAL_FUTURE_YEARS,
   PROPOSAL_YEAR_OPTIONS_BASE,
   type CategoryTicketStat,
   type ProposalDetailGroup,
@@ -84,15 +85,29 @@ export function getProposalCreatedYear(proposal: SalesProposal): number | null {
   return date.getUTCFullYear();
 }
 
+/** Anno in cui la proposta conta: quello in cui è stata spostata, altrimenti quello di creazione. */
+export function getProposalYear(proposal: SalesProposal): number | null {
+  return proposal.annoRiferimento ?? getProposalCreatedYear(proposal);
+}
+
+/** Anni successivi alla creazione in cui si può spostare la proposta (fino all'anno prossimo). */
+export function getProposalMoveYears(proposal: SalesProposal, currentYear: number): number[] {
+  const createdYear = getProposalCreatedYear(proposal);
+  if (!createdYear) return [];
+  const years: number[] = [];
+  for (let year = createdYear + 1; year <= currentYear + PROPOSAL_FUTURE_YEARS; year += 1) years.push(year);
+  return years;
+}
+
 export function filterProposalsByYear(proposals: SalesProposal[], year: number): SalesProposal[] {
-  return proposals.filter((proposal) => getProposalCreatedYear(proposal) === year);
+  return proposals.filter((proposal) => getProposalYear(proposal) === year);
 }
 
 export function collectProposalYears(proposals: SalesProposal[], currentYear: number): number[] {
   const years = new Set<number>(PROPOSAL_YEAR_OPTIONS_BASE);
-  years.add(currentYear);
+  for (let year = currentYear; year <= currentYear + PROPOSAL_FUTURE_YEARS; year += 1) years.add(year);
   proposals.forEach((proposal) => {
-    const year = getProposalCreatedYear(proposal);
+    const year = getProposalYear(proposal);
     if (year) years.add(year);
   });
   return Array.from(years).sort((left, right) => left - right);

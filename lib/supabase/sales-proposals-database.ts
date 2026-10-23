@@ -25,6 +25,7 @@ interface SalesProposalRow {
   workspace_id: string | null;
   import_batch: string;
   created_at: string;
+  anno_riferimento: number | null;
 }
 
 function parseNullableNumber(value: number | string | null): number | null {
@@ -54,6 +55,7 @@ function rowToProposal(row: SalesProposalRow): SalesProposal {
     workspaceId: row.workspace_id || DEFAULT_WORKSPACE_ID,
     importBatch: row.import_batch,
     createdAt: row.created_at,
+    annoRiferimento: row.anno_riferimento ?? null,
   };
 }
 
@@ -123,6 +125,16 @@ export async function upsertSalesProposalsFromImport(
     });
     if (error) throw error;
   }
+}
+
+/** Sposta la proposta in un anno successivo (null = torna all'anno di creazione). */
+export async function updateSalesProposalReferenceYear(
+  db: SupabaseClient,
+  proposalId: number,
+  year: number | null,
+): Promise<void> {
+  const { error } = await db.from('sales_proposals').update({ anno_riferimento: year }).eq('id', proposalId);
+  if (error) throw error;
 }
 
 /** @deprecated Usa upsertSalesProposalsFromImport */

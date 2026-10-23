@@ -136,10 +136,8 @@ export const CRM_TABLE_COLUMN_DEFS = {
   actions: { label: 'Azioni', sortKey: null, align: 'center' as const, defaultWidth: 100, minWidth: 90, noExpand: true, noSort: true },
 };
 
-// Le colonne degli anni futuri (il 2027 finché è il 2026) compaiono dal 1° gennaio di quell'anno.
 export const MAIN_TABLE_HIDDEN_COLUMNS = new Set([
   'contacts', 'action', 'actionDate', 'rev2023', 'rev2024',
-  ...REVENUE_YEARS.filter((year) => year > ANALYSIS_YEAR).map((year) => `rev${year}`),
 ]);
 
 export const DEFAULT_TABLE_COLUMN_ORDER = Object.keys(CRM_TABLE_COLUMN_DEFS).filter(

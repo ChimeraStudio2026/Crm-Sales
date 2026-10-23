@@ -10,7 +10,7 @@ import { ProposalsImportCard } from '@/components/sales-proposals/proposals-impo
 import { ProposalsList } from '@/components/sales-proposals/proposals-list';
 import { ProposalsWeeklyReview } from '@/components/sales-proposals/proposals-weekly-review';
 import { createBrowserSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
-import { fetchSalesProposals } from '@/lib/supabase/sales-proposals-database';
+import { fetchSalesProposals, updateSalesProposalReferenceYear } from '@/lib/supabase/sales-proposals-database';
 import {
   buildCategoryTicketStats,
   buildProposalCategoryGroups,
@@ -74,6 +74,18 @@ export function SalesProposalsSection() {
   useEffect(() => {
     void loadProposals();
   }, [loadProposals]);
+
+  const handleMoveYear = useCallback(async (proposal: SalesProposal, year: number | null): Promise<void> => {
+    const db = createBrowserSupabaseClient();
+    if (!db) return;
+    try {
+      await updateSalesProposalReferenceYear(db, proposal.id, year);
+      setProposals((prev) => prev.map((item) => (item.id === proposal.id ? { ...item, annoRiferimento: year } : item)));
+      showToast(year ? `${proposal.nome} ora conta nel ${year}.` : `${proposal.nome} torna nel suo anno di creazione.`, 'success');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Spostamento non riuscito.', 'danger');
+    }
+  }, [showToast]);
 
   const yearOptions = useMemo(
     () => collectProposalYears(proposals, currentYear),
@@ -269,6 +281,8 @@ export function SalesProposalsSection() {
                     proposals={proposals}
                     yearOptions={yearOptions}
                     defaultYear={selectedYear}
+                    currentYear={currentYear}
+                    onMoveYear={handleMoveYear}
                   />
                 </>
               )}

@@ -12629,3 +12629,13 @@ a.btn:hover {
         grid-template-columns: 1fr;
     }
 }
+
+.proposals-list-col-year {
+    width: 1%;
+    white-space: nowrap;
+}
+
+.proposals-list-col-year .table-cell-select.is-moved {
+    color: var(--accent-primary);
+    font-weight: 700;
+}

@@ -41,6 +41,7 @@ import {
 import type { AccountObjective, AccountingOutcome, ClientAction } from '@/lib/types/client-actions';
 import type { Client } from '@/lib/types/crm';
 import { useCrm } from '@/providers/crm-provider';
+import { useOptionalReminders } from '@/providers/reminders-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
 
 type AccountingFilter = 'open' | 'red' | 'won' | 'lost';
@@ -627,6 +628,7 @@ export function AccountingView({
 }: AccountingViewProps) {
   const copy = COPY;
   const { clients, currentOwner, showToast } = useCrm();
+  const reminders = useOptionalReminders();
   const { workspaceId } = useWorkspace();
   const db = useMemo(() => createBrowserSupabaseClient(), []);
   const [actions, setActions] = useState<ClientAction[]>([]);
@@ -770,6 +772,7 @@ export function AccountingView({
       outcome: null,
     });
     setActions((prev) => [saved, ...prev]);
+    reminders?.noteClientAction(saved);
   };
 
   const handleSaveAction = async (objective: AccountObjective, input: NewActionInput): Promise<void> => {
@@ -874,6 +877,7 @@ export function AccountingView({
         outcome: input.outcome,
       });
       setActions((prev) => [saved, ...prev]);
+      reminders?.noteClientAction(saved);
       showToast(`${row.client.name} chiuso come ${copy.outcome[input.outcome]}.`, 'success');
     } catch (error) {
       showToast(`Errore chiusura: ${error instanceof Error ? error.message : 'errore'}`, 'danger');

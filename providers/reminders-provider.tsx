@@ -9,19 +9,26 @@ import type { CallDebriefReminder } from '@/lib/reminders/call-debrief';
 import { useSalesProposals } from '@/lib/sales-proposals/use-sales-proposals';
 import { createBrowserSupabaseClient } from '@/lib/supabase/client';
 import { fetchClientAliases } from '@/lib/supabase/client-aliases-database';
-import { fetchClientActionsByType, insertClientAction } from '@/lib/supabase/client-actions-database';
+import { fetchAllClientActions, insertClientAction } from '@/lib/supabase/client-actions-database';
+import { buildStaleClientReminders } from '@/lib/reminders/stale-clients';
+import type { StaleClientReminder } from '@/lib/reminders/stale-clients';
 import { CALL_DEBRIEF_ACTION_TYPE } from '@/lib/types/client-actions';
+import type { ClientAction } from '@/lib/types/client-actions';
 import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
 
 interface RemindersContextValue {
   /** Tutti i reminder call debrief del workspace (scaduti e in arrivo). */
   callDebriefReminders: CallDebriefReminder[];
+  /** Clienti senza proposte né azioni da più di tre settimane. */
+  staleClientReminders: StaleClientReminder[];
   isLoading: boolean;
   error: string;
   /** Reminder da fare adesso sui clienti di chi è collegato: alimenta il badge in sidebar. */
   myDueCount: number;
   markCallDebriefDone: (reminder: CallDebriefReminder, note: string) => Promise<void>;
+  /** Un'azione registrata altrove (scheda cliente, obiettivi): aggiorna subito i reminder. */
+  noteClientAction: (action: ClientAction) => void;
 }
 
 const RemindersContext = createContext<RemindersContextValue | null>(null);
@@ -31,27 +38,27 @@ export function isReminderDue(reminder: CallDebriefReminder): boolean {
 }
 
 export function RemindersProvider({ children }: { children: React.ReactNode }) {
-  const { clients, currentOwner, showToast } = useCrm();
+  const { clients, commercialFunnelEntries, currentOwner, showToast } = useCrm();
   const { workspaceId } = useWorkspace();
   const db = useMemo(() => createBrowserSupabaseClient(), []);
   const { proposals, isLoading: isLoadingProposals, error: proposalsError } = useSalesProposals(workspaceId);
   const [aliasesByClientId, setAliasesByClientId] = useState<Map<string, string[]>>(() => new Map());
-  const [doneClientIds, setDoneClientIds] = useState<Set<string>>(() => new Set());
+  const [clientActions, setClientActions] = useState<ClientAction[]>([]);
   const [isLoadingActions, setIsLoadingActions] = useState(Boolean(db));
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (!db) return;
     let cancelled = false;
-    Promise.all([fetchClientAliases(db), fetchClientActionsByType(db, CALL_DEBRIEF_ACTION_TYPE)])
-      .then(([aliases, doneActions]) => {
+    Promise.all([fetchClientAliases(db), fetchAllClientActions(db)])
+      .then(([aliases, actions]) => {
         if (cancelled) return;
         const byClient = new Map<string, string[]>();
         aliases.forEach((alias) => {
           byClient.set(alias.clientId, [...(byClient.get(alias.clientId) || []), alias.aliasName]);
         });
         setAliasesByClientId(byClient);
-        setDoneClientIds(new Set(doneActions.map((action) => action.clientId)));
+        setClientActions(actions);
       })
       .catch((loadError) => {
         if (!cancelled) setError(loadError instanceof Error ? loadError.message : 'Errore lettura reminder.');
@@ -64,15 +71,38 @@ export function RemindersProvider({ children }: { children: React.ReactNode }) {
     };
   }, [db]);
 
+  const workspaceClients = useMemo(
+    () => clients.filter((client) => isClientInWorkspace(client, workspaceId)),
+    [clients, workspaceId],
+  );
+  const doneClientIds = useMemo(
+    () => new Set(clientActions
+      .filter((action) => action.actionType === CALL_DEBRIEF_ACTION_TYPE)
+      .map((action) => action.clientId)),
+    [clientActions],
+  );
+
   const callDebriefReminders = useMemo(
     () => buildCallDebriefReminders({
-      clients: clients.filter((client) => isClientInWorkspace(client, workspaceId)),
+      clients: workspaceClients,
       proposals,
       aliasesByClientId,
       doneClientIds,
       today: getTodayString(),
     }),
-    [aliasesByClientId, clients, doneClientIds, proposals, workspaceId],
+    [aliasesByClientId, doneClientIds, proposals, workspaceClients],
+  );
+
+  const staleClientReminders = useMemo(
+    () => buildStaleClientReminders({
+      clients: workspaceClients,
+      proposals,
+      aliasesByClientId,
+      clientActions,
+      funnelEntries: commercialFunnelEntries,
+      today: getTodayString(),
+    }),
+    [aliasesByClientId, clientActions, commercialFunnelEntries, proposals, workspaceClients],
   );
 
   const myDueCount = useMemo(() => {
@@ -105,7 +135,7 @@ export function RemindersProvider({ children }: { children: React.ReactNode }) {
   const markCallDebriefDone = useCallback(async (reminder: CallDebriefReminder, note: string): Promise<void> => {
     if (!db) return;
     try {
-      await insertClientAction(db, {
+      const action: ClientAction = {
         id: createUniqueId('client-action'),
         clientId: reminder.client.id,
         actionType: CALL_DEBRIEF_ACTION_TYPE,
@@ -116,8 +146,9 @@ export function RemindersProvider({ children }: { children: React.ReactNode }) {
         contactId: '',
         redAfterDays: null,
         outcome: null,
-      });
-      setDoneClientIds((prev) => new Set(prev).add(reminder.client.id));
+      };
+      const saved = await insertClientAction(db, action);
+      setClientActions((prev) => [saved, ...prev]);
       showToast(`Call debrief con ${reminder.client.name} segnata come fatta.`, 'success');
     } catch (saveError) {
       showToast(`Errore salvataggio: ${saveError instanceof Error ? saveError.message : 'errore'}`, 'danger');
@@ -125,13 +156,19 @@ export function RemindersProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentOwner, db, showToast]);
 
+  const noteClientAction = useCallback((action: ClientAction): void => {
+    setClientActions((prev) => [action, ...prev.filter((item) => item.id !== action.id)]);
+  }, []);
+
   const value = useMemo<RemindersContextValue>(() => ({
     callDebriefReminders,
+    staleClientReminders,
     isLoading: isLoadingProposals || isLoadingActions,
     error: proposalsError || error,
     myDueCount,
     markCallDebriefDone,
-  }), [callDebriefReminders, error, isLoadingActions, isLoadingProposals, markCallDebriefDone, myDueCount, proposalsError]);
+    noteClientAction,
+  }), [noteClientAction, callDebriefReminders, staleClientReminders, error, isLoadingActions, isLoadingProposals, markCallDebriefDone, myDueCount, proposalsError]);
 
   return <RemindersContext.Provider value={value}>{children}</RemindersContext.Provider>;
 }

@@ -13,6 +13,7 @@ import {
 import { CLIENT_ACTION_TYPES } from '@/lib/types/client-actions';
 import type { ClientAction, ClientActionType } from '@/lib/types/client-actions';
 import { useCrm } from '@/providers/crm-provider';
+import { useOptionalReminders } from '@/providers/reminders-provider';
 
 const HISTORY_PREVIEW_LIMIT = 5;
 
@@ -22,6 +23,7 @@ interface ClientLastActionCardProps {
 
 export function ClientLastActionCard({ clientId }: ClientLastActionCardProps) {
   const { clients, commercialFunnelEntries, mailCampaigns, currentOwner, showToast } = useCrm();
+  const reminders = useOptionalReminders();
   const db = useMemo(() => createBrowserSupabaseClient(), []);
   const [clientActions, setClientActions] = useState<ClientAction[]>([]);
   const [isLoading, setIsLoading] = useState(Boolean(db));
@@ -97,6 +99,7 @@ export function ClientLastActionCard({ clientId }: ClientLastActionCardProps) {
         outcome: null,
       });
       setClientActions((prev) => [saved, ...prev]);
+      reminders?.noteClientAction(saved);
       resetForm();
       showToast('Azione registrata.', 'success');
     } catch (error) {

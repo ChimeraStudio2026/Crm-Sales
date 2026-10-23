@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarClock, Check, FileText, PhoneCall } from 'lucide-react';
+import { CalendarClock, Check, FileText, Hourglass, PhoneCall } from 'lucide-react';
 import { ClientDrawer } from '@/components/drawers/client-drawer';
 import { TopHeader } from '@/components/layout/top-header';
 import { normalizeOwner } from '@/lib/crm/owners';
@@ -9,6 +9,8 @@ import { formatActionDateDisplay } from '@/lib/crm/utils';
 import { getOwnersForWorkspace } from '@/lib/crm/workspace-clients';
 import { CALL_DEBRIEF_DELAY_DAYS } from '@/lib/reminders/call-debrief';
 import type { CallDebriefReminder } from '@/lib/reminders/call-debrief';
+import { STALE_CLIENT_DAYS } from '@/lib/reminders/stale-clients';
+import type { StaleClientReminder } from '@/lib/reminders/stale-clients';
 import { formatProposalCurrency, resolveProposalValue } from '@/lib/sales-proposals/stats';
 import type { Client } from '@/lib/types/crm';
 import { useCrm } from '@/providers/crm-provider';
@@ -87,10 +89,53 @@ function CallDebriefCard({
   );
 }
 
+const STALE_ACTIVITY_LABELS: Record<NonNullable<StaleClientReminder['lastActivity']>['kind'], string> = {
+  azione: 'Ultima azione',
+  campagna: 'Ultima azione in campagna',
+  proposta: 'Ultima proposta',
+};
+
+function formatStaleSince(reminder: StaleClientReminder): string {
+  if (reminder.daysSince === null) return 'Mai sentito';
+  const weeks = Math.floor(reminder.daysSince / 7);
+  return reminder.daysSince >= 14 ? `Fermo da ${weeks} settimane` : `Fermo da ${reminder.daysSince} giorni`;
+}
+
+function StaleClientRow({
+  reminder,
+  showOwner,
+  onOpenClient,
+}: {
+  reminder: StaleClientReminder;
+  showOwner: boolean;
+  onOpenClient: (client: Client) => void;
+}) {
+  const { lastActivity } = reminder;
+  return (
+    <li className={`reminder-stale-row${reminder.daysSince === null || reminder.daysSince > STALE_CLIENT_DAYS * 2 ? ' is-late' : ''}`}>
+      <div className="reminder-stale-main">
+        <button type="button" className="reminder-card-client" onClick={() => onOpenClient(reminder.client)}>
+          {reminder.client.name}
+        </button>
+        <small>
+          {reminder.client.relationship}
+          {showOwner ? ` · ${reminder.client.owner || 'Senza owner'}` : ''}
+        </small>
+      </div>
+      <span className="reminder-stale-last">
+        {lastActivity
+          ? `${STALE_ACTIVITY_LABELS[lastActivity.kind]}: ${lastActivity.label} · ${formatActionDateDisplay(lastActivity.day)}`
+          : 'Nessuna proposta o azione registrata'}
+      </span>
+      <span className="reminder-stale-since">{formatStaleSince(reminder)}</span>
+    </li>
+  );
+}
+
 export function ReminderSection() {
   const { currentOwner } = useCrm();
   const { workspaceId } = useWorkspace();
-  const { callDebriefReminders, isLoading, error, markCallDebriefDone } = useReminders();
+  const { callDebriefReminders, staleClientReminders, isLoading, error, markCallDebriefDone } = useReminders();
   const owners = useMemo(() => getOwnersForWorkspace(workspaceId), [workspaceId]);
   const [ownerFilter, setOwnerFilter] = useState<string | null>(null);
   const [openClient, setOpenClient] = useState<Client | null>(null);
@@ -102,13 +147,17 @@ export function ReminderSection() {
   }, [currentOwner, ownerFilter]);
 
   const activeOwner = ownerFilter ?? ALL_OWNERS;
-  const visibleReminders = useMemo(
-    () => callDebriefReminders.filter((reminder) => !activeOwner
-      || normalizeOwner(reminder.client.owner) === normalizeOwner(activeOwner)),
-    [activeOwner, callDebriefReminders],
-  );
+  const isOwnedBy = (client: Client, owner: string): boolean => !owner
+    || normalizeOwner(client.owner) === normalizeOwner(owner);
+  const visibleReminders = callDebriefReminders.filter((reminder) => isOwnedBy(reminder.client, activeOwner));
   const dueReminders = visibleReminders.filter(isReminderDue);
   const upcomingReminders = visibleReminders.filter((reminder) => !isReminderDue(reminder));
+  const visibleStaleClients = staleClientReminders.filter((reminder) => isOwnedBy(reminder.client, activeOwner));
+  // Sul tab di ogni persona: call da fare adesso + clienti fermi.
+  const countFor = (owner: string): number => callDebriefReminders
+    .filter((reminder) => isReminderDue(reminder) && isOwnedBy(reminder.client, owner)).length
+    + staleClientReminders.filter((reminder) => isOwnedBy(reminder.client, owner)).length;
+  const ownerName = activeOwner ? activeOwner.split(' ')[0] : '';
 
   return (
     <>
@@ -117,14 +166,15 @@ export function ReminderSection() {
         <section className="app-section active">
           <div className="table-filter-bar">
             <div className="filter-left">
-              <div className="proposals-list-chips" role="group" aria-label="Reminder di">
+              <div className="proposals-list-chips" role="tablist" aria-label="Reminder di">
                 <button
                   type="button"
                   className={`clients-filter-chip${activeOwner === ALL_OWNERS ? ' is-active' : ''}`}
                   aria-pressed={activeOwner === ALL_OWNERS}
                   onClick={() => setOwnerFilter(ALL_OWNERS)}
                 >
-                  Tutti
+                  Tutto il team
+                  {!isLoading && <span className="clients-filter-chip-count">{countFor(ALL_OWNERS)}</span>}
                 </button>
                 {owners.map((owner) => (
                   <button
@@ -136,6 +186,7 @@ export function ReminderSection() {
                     onClick={() => setOwnerFilter(owner)}
                   >
                     {owner.split(' ')[0]}
+                    {!isLoading && <span className="clients-filter-chip-count">{countFor(owner)}</span>}
                   </button>
                 ))}
               </div>
@@ -160,7 +211,7 @@ export function ReminderSection() {
             ) : error ? (
               <p className="reminder-empty">Reminder non disponibili: {error}</p>
             ) : dueReminders.length === 0 ? (
-              <p className="reminder-empty">Nessuna call debrief da fare{activeOwner ? ` per ${activeOwner.split(' ')[0]}` : ''}. 🎉</p>
+              <p className="reminder-empty">Nessuna call debrief da fare{ownerName ? ` per ${ownerName}` : ''}. 🎉</p>
             ) : (
               <div className="reminder-cards">
                 {dueReminders.map((reminder) => (
@@ -188,6 +239,41 @@ export function ReminderSection() {
                   ))}
                 </ul>
               </div>
+            )}
+          </div>
+
+          <div className="reminder-group">
+            <div className="reminder-group-head">
+              <h2>
+                <Hourglass size={18} />
+                Clienti fermi
+                {!isLoading && visibleStaleClients.length > 0 && (
+                  <span className="reminder-count">{visibleStaleClients.length}</span>
+                )}
+              </h2>
+              <p>
+                Clienti senza nuove proposte né azioni (azioni cliente, obiettivi, campagne) da più di
+                {` ${STALE_CLIENT_DAYS / 7}`} settimane. Prima chi è fermo da più tempo: apri il cliente e registra
+                un'azione per toglierlo dalla lista.
+              </p>
+            </div>
+            {isLoading ? (
+              <p className="reminder-empty">Caricamento clienti…</p>
+            ) : error ? (
+              <p className="reminder-empty">Reminder non disponibili: {error}</p>
+            ) : visibleStaleClients.length === 0 ? (
+              <p className="reminder-empty">Nessun cliente fermo{ownerName ? ` per ${ownerName}` : ''}. 🎉</p>
+            ) : (
+              <ul className="reminder-stale-list">
+                {visibleStaleClients.map((reminder) => (
+                  <StaleClientRow
+                    key={reminder.client.id}
+                    reminder={reminder}
+                    showOwner={!activeOwner}
+                    onOpenClient={setOpenClient}
+                  />
+                ))}
+              </ul>
             )}
           </div>
         </section>

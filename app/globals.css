@@ -12639,3 +12639,65 @@ a.btn:hover {
     color: var(--accent-primary);
     font-weight: 700;
 }
+
+.reminder-group + .reminder-group {
+    margin-top: 28px;
+}
+
+.reminder-stale-list {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.reminder-stale-row {
+    display: grid;
+    grid-template-columns: minmax(180px, 1.2fr) minmax(0, 2fr) auto;
+    align-items: center;
+    gap: 6px 16px;
+    padding: 10px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+    font-size: 0.85rem;
+}
+
+.reminder-stale-row.is-late {
+    box-shadow: inset 4px 0 0 #f64330;
+}
+
+.reminder-stale-main {
+    display: grid;
+    min-width: 0;
+}
+
+.reminder-stale-main small {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+.reminder-stale-last {
+    min-width: 0;
+    color: var(--text-secondary);
+    overflow-wrap: anywhere;
+}
+
+.reminder-stale-since {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--pill-red-fg);
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .reminder-stale-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .reminder-stale-last {
+        grid-column: 1 / -1;
+        grid-row: 2;
+    }
+}

@@ -134,9 +134,13 @@ function StaleClientRow({
 
 export function ReminderSection() {
   const { currentOwner } = useCrm();
-  const { workspaceId } = useWorkspace();
+  const { workspaceId, access } = useWorkspace();
   const { callDebriefReminders, staleClientReminders, isLoading, error, markCallDebriefDone } = useReminders();
-  const owners = useMemo(() => getOwnersForWorkspace(workspaceId), [workspaceId]);
+  // Accesso personale: solo la propria scheda.
+  const owners = useMemo(
+    () => (access.scopeOwner ? [access.scopeOwner] : getOwnersForWorkspace(workspaceId)),
+    [access.scopeOwner, workspaceId],
+  );
   const [ownerFilter, setOwnerFilter] = useState<string | null>(null);
   const [openClient, setOpenClient] = useState<Client | null>(null);
 
@@ -146,7 +150,7 @@ export function ReminderSection() {
     if (currentOwner) setOwnerFilter(currentOwner);
   }, [currentOwner, ownerFilter]);
 
-  const activeOwner = ownerFilter ?? ALL_OWNERS;
+  const activeOwner = access.scopeOwner ?? ownerFilter ?? ALL_OWNERS;
   const isOwnedBy = (client: Client, owner: string): boolean => !owner
     || normalizeOwner(client.owner) === normalizeOwner(owner);
   const visibleReminders = callDebriefReminders.filter((reminder) => isOwnedBy(reminder.client, activeOwner));
@@ -167,6 +171,7 @@ export function ReminderSection() {
           <div className="table-filter-bar">
             <div className="filter-left">
               <div className="proposals-list-chips" role="tablist" aria-label="Reminder di">
+                {!access.scopeOwner && (
                 <button
                   type="button"
                   className={`clients-filter-chip${activeOwner === ALL_OWNERS ? ' is-active' : ''}`}
@@ -176,6 +181,7 @@ export function ReminderSection() {
                   Tutto il team
                   {!isLoading && <span className="clients-filter-chip-count">{countFor(ALL_OWNERS)}</span>}
                 </button>
+                )}
                 {owners.map((owner) => (
                   <button
                     key={owner}

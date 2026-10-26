@@ -629,7 +629,7 @@ export function AccountingView({
   const copy = COPY;
   const { clients, currentOwner, showToast } = useCrm();
   const reminders = useOptionalReminders();
-  const { workspaceId } = useWorkspace();
+  const { workspaceId, access } = useWorkspace();
   const db = useMemo(() => createBrowserSupabaseClient(), []);
   const [actions, setActions] = useState<ClientAction[]>([]);
   const [objectives, setObjectives] = useState<AccountObjective[]>([]);
@@ -642,15 +642,20 @@ export function AccountingView({
   const [objectiveDrawer, setObjectiveDrawer] = useState<{ objective?: AccountObjective } | null>(null);
   const [ownerFilter, setOwnerFilter] = useState<string[]>([]);
   const [kindFilter, setKindFilter] = useState<KindFilter>('all');
-  const owners = useMemo(() => getOwnersForWorkspace(workspaceId), [workspaceId]);
+  // Accesso personale: si vedono e si assegnano solo obiettivi e campagne propri.
+  const scopeOwner = access.scopeOwner;
+  const owners = useMemo(
+    () => (scopeOwner ? [scopeOwner] : getOwnersForWorkspace(workspaceId)),
+    [scopeOwner, workspaceId],
+  );
   // «I miei» per primo, poi gli altri owner del workspace.
   const ownerChips = useMemo(
     () => [...owners].sort((left, right) => Number(right === currentOwner) - Number(left === currentOwner)),
     [currentOwner, owners],
   );
   const activeOwnerFilter = useMemo(
-    () => new Set(ownerFilter.filter((item) => (owners as readonly string[]).includes(item))),
-    [ownerFilter, owners],
+    () => new Set(scopeOwner ? [scopeOwner] : ownerFilter.filter((item) => (owners as readonly string[]).includes(item))),
+    [ownerFilter, owners, scopeOwner],
   );
 
   useEffect(() => {
@@ -1199,6 +1204,7 @@ export function AccountingView({
         </div>
         <div className="filter-right">
           {toolbarExtra}
+          {!scopeOwner && (
           <div className="proposals-list-chips" role="group" aria-label="Filtra per owner">
             <button
               type="button"
@@ -1223,6 +1229,7 @@ export function AccountingView({
               </button>
             ))}
           </div>
+          )}
           <button
             type="button"
             className="btn btn-primary"

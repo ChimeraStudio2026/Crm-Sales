@@ -30,6 +30,8 @@ import {
   sumProposalValues,
 } from '@/lib/sales-proposals/stats';
 import { ANALYSIS_YEAR } from '@/lib/constants/crm';
+import { normalizeOwner } from '@/lib/crm/owners';
+import { normalizeClientKey } from '@/lib/reminders/shared';
 import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
 import type { ProposalDetailFilter, SalesProposal } from '@/lib/types/sales-proposals';
@@ -42,10 +44,10 @@ function resolveDefaultYear(years: number[], currentYear: number): number {
 }
 
 export function SalesProposalsSection() {
-  const { showToast } = useCrm();
-  const { workspaceId } = useWorkspace();
+  const { clients, showToast } = useCrm();
+  const { workspaceId, access } = useWorkspace();
   const currentYear = new Date().getFullYear();
-  const [proposals, setProposals] = useState<SalesProposal[]>([]);
+  const [allProposals, setProposals] = useState<SalesProposal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [detailFilter, setDetailFilter] = useState<ProposalDetailFilter | null>(null);
@@ -74,6 +76,18 @@ export function SalesProposalsSection() {
   useEffect(() => {
     void loadProposals();
   }, [loadProposals]);
+
+  // Accesso personale: solo le proposte contattate da sé o dei propri clienti.
+  const proposals = useMemo(() => {
+    const scopeOwner = access.scopeOwner;
+    if (!scopeOwner) return allProposals;
+    const firstName = scopeOwner.split(' ')[0].toLowerCase();
+    const ownClientKeys = new Set(clients
+      .filter((client) => normalizeOwner(client.owner) === scopeOwner)
+      .map((client) => normalizeClientKey(client.name)));
+    return allProposals.filter((proposal) => proposal.contattatoDa.trim().toLowerCase() === firstName
+      || (proposal.cliente && ownClientKeys.has(normalizeClientKey(proposal.cliente))));
+  }, [access.scopeOwner, allProposals, clients]);
 
   const handleMoveYear = useCallback(async (proposal: SalesProposal, year: number | null): Promise<void> => {
     const db = createBrowserSupabaseClient();
@@ -183,13 +197,15 @@ export function SalesProposalsSection() {
               {latestBatch ? ` · proposte aggiornate al ${formatProposalDateLabel(latestBatch)}` : ''}.
             </p>
           ) : null}
+          {access.navMode !== 'personal' && (
           <ProposalsImportCard
             workspaceId={workspaceId}
-            existingProposals={proposals}
+            existingProposals={allProposals}
             isDisabled={isLoading}
             onImported={loadProposals}
             onToast={showToast}
           />
+          )}
           {isLoading ? (
             <p className="proposals-empty">Caricamento proposte...</p>
           ) : viewMode === 'weekly' ? (

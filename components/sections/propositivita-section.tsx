@@ -7,7 +7,7 @@ import { ClientSearchSelect } from '@/components/clients/client-search-select';
 import { CreativeStageModal } from '@/components/propositivita/creative-stage-modal';
 import { useCrm } from '@/providers/crm-provider';
 import { useWorkspace } from '@/providers/workspace-provider';
-import { isClientInWorkspace } from '@/lib/crm/workspace-access';
+import { isClientInWorkspace, isOwnedByScope } from '@/lib/crm/workspace-access';
 import { getDefaultOwnerForWorkspace, getOwnersForWorkspace } from '@/lib/crm/workspace-clients';
 import { CRM_WORKSPACES, resolveClientWorkspaceIdsForCreativeCompany, resolveWorkspaceLabel, type WorkspaceId } from '@/lib/constants/workspaces';
 import { formatCurrency, getTodayString, isClientInActiveSection, isClientInColdSection } from '@/lib/crm/utils';
@@ -268,14 +268,17 @@ export function PropositivitaSection() {
     removeSpecialDiscount,
     currentOwner,
   } = useCrm();
-  const { workspaceId } = useWorkspace();
+  const { workspaceId, access } = useWorkspace();
+  // Accesso personale: solo proposte creative e sconti di cui si è owner.
+  const scopeOwner = access.scopeOwner;
   const allOwners = useMemo(() => {
+    if (scopeOwner) return [scopeOwner];
     const ownerSet = new Set<string>();
     CRM_WORKSPACES.forEach((workspace) => {
       getOwnersForWorkspace(workspace.id).forEach((owner) => ownerSet.add(owner));
     });
     return [...ownerSet];
-  }, []);
+  }, [scopeOwner]);
   const allClients = useMemo(
     () => [...clients].sort((left, right) => left.name.localeCompare(right.name, 'it')),
     [clients],
@@ -349,12 +352,12 @@ export function PropositivitaSection() {
     [clients, creativeWorkspaceId],
   );
   const formOwners = useMemo(
-    () => getOwnersForWorkspace(creativeWorkspaceId),
-    [creativeWorkspaceId],
+    () => (scopeOwner ? [scopeOwner] : getOwnersForWorkspace(creativeWorkspaceId)),
+    [creativeWorkspaceId, scopeOwner],
   );
   const discountOwners = useMemo(
-    () => getOwnersForWorkspace(workspaceId),
-    [workspaceId],
+    () => (scopeOwner ? [scopeOwner] : getOwnersForWorkspace(workspaceId)),
+    [scopeOwner, workspaceId],
   );
   const filterableClients = useMemo(() => {
     if (!filterCompanyId) return allClients;
@@ -388,16 +391,18 @@ export function PropositivitaSection() {
       .filter((proposal) => {
         if (filterCompanyId && proposal.workspaceId !== filterCompanyId) return false;
         if (filterClientId && proposal.clientId !== filterClientId) return false;
+        if (!isOwnedByScope(access, proposal.owner)) return false;
         if (filterOwner && proposal.owner !== filterOwner) return false;
         if (filterStage && proposal.stage !== filterStage) return false;
         if (filterStaleDays > 0 && getCreativeProposalIdleDays(proposal) < filterStaleDays) return false;
         return true;
       })
       .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
-  }, [creativeProposals, filterCompanyId, filterClientId, filterOwner, filterStage, filterStaleDays]);
+  }, [access, creativeProposals, filterCompanyId, filterClientId, filterOwner, filterStage, filterStaleDays]);
   const workspaceDiscounts = useMemo(
-    () => filterSpecialDiscountsByWorkspace(specialDiscounts, workspaceId),
-    [specialDiscounts, workspaceId],
+    () => filterSpecialDiscountsByWorkspace(specialDiscounts, workspaceId)
+      .filter((discount) => isOwnedByScope(access, discount.owner)),
+    [access, specialDiscounts, workspaceId],
   );
   const filteredDiscounts = useMemo(() => {
     return workspaceDiscounts
@@ -437,14 +442,14 @@ export function PropositivitaSection() {
     setCreativeReference('');
     setCreativeDeadline('');
     setCreativeStage('idea_nata');
-    setCreativeOwner(getDefaultOwnerForWorkspace(workspaceId));
+    setCreativeOwner(scopeOwner ?? getDefaultOwnerForWorkspace(workspaceId));
   };
 
   const handleCreativeWorkspaceChange = (companyId: WorkspaceId): void => {
     setCreativeWorkspaceId(companyId);
     setCreativeClientId('');
     setCreativeContactId('');
-    setCreativeOwner(getDefaultOwnerForWorkspace(companyId));
+    setCreativeOwner(scopeOwner ?? getDefaultOwnerForWorkspace(companyId));
   };
 
   const handleCreativeClientChange = (clientId: string): void => {

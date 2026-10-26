@@ -1488,6 +1488,7 @@ body.crm-col-resizing {
 .cell-owner-jeck { --chip-color: #2a86b8; --chip-fill: #e0f1fb; }
 .cell-owner-virgi { --chip-color: #9333ea; --chip-fill: #f4e4fe; }
 .cell-owner-martina { --chip-color: #0d9488; --chip-fill: #ccfbf1; }
+.cell-owner-federica { --chip-color: #db2777; --chip-fill: #fce7f3; }
 
 /* Rapporto */
 .cell-rapporto-top20 { --chip-color: #ca8a04; --chip-fill: #fdf8dc; }
@@ -7555,6 +7556,7 @@ body:has(.login-page) {
 [data-theme="dark"] .cell-owner-jeck,
 [data-theme="dark"] .cell-owner-virgi,
 [data-theme="dark"] .cell-owner-martina,
+[data-theme="dark"] .cell-owner-federica,
 [data-theme="dark"] .cell-rapporto-top20,
 [data-theme="dark"] .cell-rapporto-ricorrente,
 [data-theme="dark"] .cell-rapporto-nuovo,

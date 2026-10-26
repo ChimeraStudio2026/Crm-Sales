@@ -2,6 +2,7 @@ import {
   CHIMERA_OWNERS,
   isOwnerValue,
   normalizeOwner,
+  OWNER_FEDERICA_SANTOCCHIA,
   OWNER_JECK_SCARDY,
   OWNER_MARTINA_GAVAZZI,
   OWNER_MARTINO,
@@ -50,6 +51,7 @@ export const OWNER_ZOD_ENUM = [
   OWNER_VIRGINIA_VELCICH,
   OWNER_JECK_SCARDY,
   OWNER_MARTINA_GAVAZZI,
+  OWNER_FEDERICA_SANTOCCHIA,
   OWNER_MARTINO,
 ] as const satisfies readonly Owner[];
 
@@ -63,6 +65,7 @@ export function resolveOwnerFromEmail(email: string | null | undefined): Owner |
   if (normalizedEmail.includes('martino.ilacqua')) return OWNER_MARTINO;
   if (normalizedEmail.includes('velcich')) return OWNER_VIRGINIA_VELCICH;
   if (normalizedEmail.includes('martina.gavazzi')) return OWNER_MARTINA_GAVAZZI;
+  if (normalizedEmail.includes('federica.santocchia')) return OWNER_FEDERICA_SANTOCCHIA;
   if (normalizedEmail.includes('jeck')) return OWNER_JECK_SCARDY;
   return null;
 }

@@ -23,6 +23,7 @@ import {
 import type { SalesPageView } from '@/lib/commercial-funnel/preferences';
 import { normalizeOwner } from '@/lib/crm/owners';
 import { getOwnersForWorkspace } from '@/lib/crm/workspace-clients';
+import { isOwnedByScope } from '@/lib/crm/workspace-access';
 import { downloadCommercialFunnelExcel } from '@/lib/commercial-funnel/export';
 import { buildFunnelStatsSummary } from '@/lib/commercial-funnel/stats';
 import { getTodayString, isClientInColdSection } from '@/lib/crm/utils';
@@ -56,7 +57,7 @@ export function CommercialFunnelSection() {
     updateMailCampaignOwner,
     deleteMailCampaignById,
   } = useCrm();
-  const { workspaceId } = useWorkspace();
+  const { workspaceId, access } = useWorkspace();
   const [pageView, setPageView] = useState<SalesPageView>('list');
   const [hideClosedCampaigns, setHideClosedCampaigns] = useState(true);
   const [hideClosedPreferenceReady, setHideClosedPreferenceReady] = useState(false);
@@ -90,10 +91,12 @@ export function CommercialFunnelSection() {
     writeHideClosedFunnelCampaignsPreference(hideClosedCampaigns);
   }, [hideClosedCampaigns, hideClosedPreferenceReady]);
 
-  // Sales e Account non sono più separati: tutte le campagne del workspace in una lista.
+  // Sales e Account non sono più separati: tutte le campagne del workspace in una lista
+  // (con accesso personale solo quelle di cui si è owner).
   const scopedCampaigns = useMemo(
-    () => filterCampaignsByWorkspace(mailCampaigns, workspaceId),
-    [mailCampaigns, workspaceId],
+    () => filterCampaignsByWorkspace(mailCampaigns, workspaceId)
+      .filter((campaign) => isOwnedByScope(access, campaign.owner)),
+    [access, mailCampaigns, workspaceId],
   );
   const scopedEntries = useMemo(
     () => filterEntriesByVisibleCampaigns(
@@ -115,7 +118,10 @@ export function CommercialFunnelSection() {
     [scopedEntries, visibleCampaigns],
   );
   // Vista Clienti: il toggle owner filtra i clienti per owner del contatto.
-  const workspaceOwners = useMemo(() => getOwnersForWorkspace(workspaceId), [workspaceId]);
+  const workspaceOwners = useMemo(
+    () => (access.scopeOwner ? [] : getOwnersForWorkspace(workspaceId)),
+    [access.scopeOwner, workspaceId],
+  );
   const activeOwnerFilter = useMemo(
     () => new Set(ownerFilter.filter((item) => workspaceOwners.includes(item as Owner))),
     [ownerFilter, workspaceOwners],
@@ -258,6 +264,7 @@ export function CommercialFunnelSection() {
                   </button>
                 </div>
               </div>
+              {workspaceOwners.length > 0 && (
               <div className="funnel-owner-filter" role="group" aria-label="Filtra per owner">
                 <span className="tasks-filter-label">Owner:</span>
                 <button
@@ -281,6 +288,7 @@ export function CommercialFunnelSection() {
                   </button>
                 ))}
               </div>
+              )}
               <FunnelStatsCharts title="Totali campagne" stats={clientsStats} />
               <FunnelClientsView
                 entries={ownerEntries}

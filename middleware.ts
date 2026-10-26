@@ -1,8 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import {
-  isPathAllowedForTinytoast,
-  isTinytoastUserEmail,
+  isPathAllowedForAccess,
   resolveWorkspaceAccess,
 } from '@/lib/crm/workspace-access';
 
@@ -64,9 +63,10 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     redirectUrl.search = '';
     return NextResponse.redirect(redirectUrl);
   }
-  if (user && isTinytoastUserEmail(user.email) && !isPathAllowedForTinytoast(request.nextUrl.pathname)) {
+  const access = user ? resolveWorkspaceAccess(user.email) : null;
+  if (access && !isPublicPath(request.nextUrl.pathname) && !isPathAllowedForAccess(access, request.nextUrl.pathname)) {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = '/funnel';
+    redirectUrl.pathname = access.homePath;
     redirectUrl.search = '';
     return NextResponse.redirect(redirectUrl);
   }

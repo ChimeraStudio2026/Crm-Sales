@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { isPathAllowedForTinytoast } from '@/lib/crm/workspace-access';
+import { isPathAllowedForAccess } from '@/lib/crm/workspace-access';
 import { useWorkspace } from '@/providers/workspace-provider';
 
 interface WorkspaceRouteGuardProps {
@@ -16,10 +16,9 @@ export function WorkspaceRouteGuard({ children }: WorkspaceRouteGuardProps) {
 
   useEffect(() => {
     if (!isReady) return;
-    if (access.navMode !== 'tinytoast') return;
-    if (isPathAllowedForTinytoast(pathname)) return;
+    if (isPathAllowedForAccess(access, pathname)) return;
     router.replace(access.homePath);
-  }, [access.homePath, access.navMode, isReady, pathname, router]);
+  }, [access, isReady, pathname, router]);
 
   if (!isReady) {
     return (
@@ -29,7 +28,7 @@ export function WorkspaceRouteGuard({ children }: WorkspaceRouteGuardProps) {
     );
   }
 
-  if (access.navMode === 'tinytoast' && !isPathAllowedForTinytoast(pathname)) {
+  if (!isPathAllowedForAccess(access, pathname)) {
     return null;
   }
 

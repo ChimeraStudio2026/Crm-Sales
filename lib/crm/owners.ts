@@ -3,12 +3,14 @@ import type { Owner } from '@/lib/types/crm';
 export const OWNER_VIRGINIA_VELCICH = 'Virginia Velcich' as const;
 export const OWNER_JECK_SCARDY = 'Jeck Scardy' as const;
 export const OWNER_MARTINA_GAVAZZI = 'Martina Gavazzi' as const;
+export const OWNER_FEDERICA_SANTOCCHIA = 'Federica Santocchia' as const;
 export const OWNER_MARTINO = 'Martino' as const;
 
 export const CHIMERA_OWNERS: readonly Owner[] = [
   OWNER_JECK_SCARDY,
   OWNER_VIRGINIA_VELCICH,
   OWNER_MARTINA_GAVAZZI,
+  OWNER_FEDERICA_SANTOCCHIA,
 ];
 
 export const ALL_OWNERS: readonly Owner[] = [
@@ -21,9 +23,11 @@ const LEGACY_OWNER_ALIASES: Record<string, Owner> = {
   Virgi: OWNER_VIRGINIA_VELCICH,
   Virginia: OWNER_VIRGINIA_VELCICH,
   Martina: OWNER_MARTINA_GAVAZZI,
+  Federica: OWNER_FEDERICA_SANTOCCHIA,
   [OWNER_JECK_SCARDY]: OWNER_JECK_SCARDY,
   [OWNER_VIRGINIA_VELCICH]: OWNER_VIRGINIA_VELCICH,
   [OWNER_MARTINA_GAVAZZI]: OWNER_MARTINA_GAVAZZI,
+  [OWNER_FEDERICA_SANTOCCHIA]: OWNER_FEDERICA_SANTOCCHIA,
   [OWNER_MARTINO]: OWNER_MARTINO,
 };
 
@@ -46,6 +50,7 @@ export function resolveOwnerChipClassName(owner: string): string {
   if (normalized === OWNER_JECK_SCARDY) return 'cell-owner-jeck';
   if (normalized === OWNER_VIRGINIA_VELCICH) return 'cell-owner-virgi';
   if (normalized === OWNER_MARTINA_GAVAZZI) return 'cell-owner-martina';
+  if (normalized === OWNER_FEDERICA_SANTOCCHIA) return 'cell-owner-federica';
   if (normalized === OWNER_MARTINO) return 'cell-origin-martino';
   return 'cell-owner';
 }

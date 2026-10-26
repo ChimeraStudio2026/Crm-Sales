@@ -11,6 +11,7 @@ import { getFunnelEntriesForCampaign } from '@/lib/commercial-funnel/campaigns';
 import { buildFunnelStatsSummary } from '@/lib/commercial-funnel/stats';
 import { filterCampaignsByWorkspace } from '@/lib/commercial-funnel/campaigns';
 import { useCrm } from '@/providers/crm-provider';
+import { isOwnedByScope } from '@/lib/crm/workspace-access';
 import { useWorkspace } from '@/providers/workspace-provider';
 import { TopHeader } from '@/components/layout/top-header';
 import { formatShortItalianDate } from '@/lib/crm/utils';
@@ -24,12 +25,12 @@ type CampaignDetailView = 'table' | 'clients';
 
 export function FunnelCampaignDetailSection({ campaignId, focusEntryId }: FunnelCampaignDetailSectionProps) {
   const { clients, mailCampaigns, commercialFunnelEntries, updateMailCampaignStatus } = useCrm();
-  const { workspaceId } = useWorkspace();
+  const { workspaceId, access } = useWorkspace();
   const [detailView, setDetailView] = useState<CampaignDetailView>('table');
 
   const campaign = mailCampaigns.find((item) => item.id === campaignId);
   const isCampaignInWorkspace = campaign
-    ? filterCampaignsByWorkspace([campaign], workspaceId).length > 0
+    ? filterCampaignsByWorkspace([campaign], workspaceId).length > 0 && isOwnedByScope(access, campaign.owner)
     : false;
   const entries = useMemo(
     () => getFunnelEntriesForCampaign(commercialFunnelEntries, campaignId),

@@ -144,6 +144,6 @@ const { command, options } = parseArgs(process.argv.slice(2));
 if (command === 'plan') {
   plan(options);
 } else {
-  console.error('Uso: node --experimental-strip-types scripts/cerbero-okr-sync.mjs plan --divisions <file.json> [--year <anno, default l'anno corrente>] [--out <dir>]');
+  console.error("Uso: node --experimental-strip-types scripts/cerbero-okr-sync.mjs plan --divisions <file.json> [--year <anno, default l'anno corrente>] [--out <dir>]");
   process.exit(1);
 }
